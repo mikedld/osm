@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stats — Portugal</title>
+  <style type="text/css">
+  body { font-family: sans-serif; font-size: 10pt; }
+  #stats th, #stats td { padding: 0px 8px; }
+  #stats td:nth-of-type(3) { text-align: right; }
+  #stats td:nth-of-type(4) { text-align: right; }
+  .stale { color: red; }
+  .diff { font-weight: bold; color: green; }
+  </style>
+</head>
+<body>
+
+<table id="stats">
+  <tr>
+    <th>Name</th>
+    <th>Date</th>
+    <th>Total</th>
+    <th>Diff</th>
+  </tr>
+</table>
+
+<script>
+document.addEventListener('DOMContentLoaded', async (event) => {
+  const response = await fetch('./stats.json');
+  const stats = await response.json();
+
+  const table = document.getElementById('stats');
+  Object.entries(stats).forEach(([id, info]) => {
+    const titleEl = document.createElement('a');
+    titleEl.textContent = info.title;
+    titleEl.href = `./${id}.html`;
+
+    const dateEl = document.createElement('span');
+    dateEl.textContent = info.date;
+    if ((new Date(info.date) - new Date()) / 86400000 >= 1) {
+      dateEl.className = "stale";
+    }
+
+    const diffEl = document.createElement('span');
+    diffEl.textContent = info.diff;
+    if (info.diff > 0) {
+      diffEl.className = "diff";
+    }
+
+    const row = table.insertRow();
+    row.insertCell(0).appendChild(titleEl);
+    row.insertCell(1).appendChild(dateEl);
+    row.insertCell(2).appendChild(document.createTextNode(info.total));
+    row.insertCell(3).appendChild(diffEl);
+  });
+});
+</script>
+
+</body>
+</html>
