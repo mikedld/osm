@@ -2,6 +2,7 @@ import __main__
 
 import datetime
 import fcntl
+import itertools
 import json
 import re
 from hashlib import sha256
@@ -16,6 +17,7 @@ from .config import ENABLE_CACHE
 BASE_DIR = Path(__main__.__file__).parent
 BASE_NAME = Path(__main__.__file__).stem
 
+DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 PT_ARTICLES = {"e", "a", "o", "de", "do", "da", "dos", "das"}
 
 
@@ -91,6 +93,17 @@ def titleize(name):
         word if word in PT_ARTICLES else word.capitalize()
         for word in re.split(r"\b", name.lower()))
 
+
+def opening_weekdays(days):
+    ranges =[]
+    for k, g in itertools.groupby(enumerate(days), lambda x: x[0] - x[1]):
+        g = list(g)
+        ranges.append((g[0][1],g[-1][1]))
+    ranges = [
+        DAYS[a] if a == b else (f"{DAYS[a]},{DAYS[b]}" if a == b - 1 else f"{DAYS[a]}-{DAYS[b]}")
+        for a, b in ranges
+    ]
+    return ",".join(ranges)
 
 def write_diff(name, ref, diff):
     #for d in diff:
