@@ -9,6 +9,7 @@ from hashlib import sha256
 from pathlib import Path
 
 import requests
+from humanize import naturaltime
 from jinja2 import Environment, FileSystemLoader
 
 from .config import ENABLE_CACHE
@@ -112,6 +113,8 @@ def write_diff(name, ref, diff):
     #    print(d.diff())
 
     env = Environment(loader = FileSystemLoader(BASE_DIR / "templates"))
+    env.filters["fromisoformat"] = datetime.datetime.fromisoformat
+    env.filters["naturaltime"] = naturaltime
     env.filters["lat"] = lambda x: x.lat
     env.filters["lon"] = lambda x: x.lon
     template = env.get_template("diff.jinja")

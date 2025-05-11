@@ -35,7 +35,15 @@
 <hr/>
 
 {% for d in diff if d.kind != "old" -%}
-<p>Store #{{ d[ref] | e }} (<a href="https://www.openstreetmap.org/?mlat={{ d.lat }}&mlon={{ d.lon }}#map=19/{{ d.lat }}/{{ d.lon }}">{{ d.lat }},{{ d.lon }}</a>) (to {% if d.kind == "new" %}add{% elif d.kind == "del" %}remove{% elif d.kind == "mod" %}modify{% else %}?{% endif %}):<p>
+<p>Store #{{ (d[ref] or "???") | e }}
+(<a href="https://www.openstreetmap.org/?mlat={{ d.lat }}&mlon={{ d.lon }}#map=19/{{ d.lat }}/{{ d.lon }}">{{ d.lat }},{{ d.lon }}</a>)
+{% if d.kind != "new" -%}
+(<a href="https://www.openstreetmap.org/node/{{ d.data["id"] }}/history/{{ d.data["version"] }}">v{{ d.data["version"] }}</a>,
+<a href="https://www.openstreetmap.org/changeset/{{ d.data["changeset"] }}">#{{ d.data["changeset"] }}</a>,
+<a href="https://www.openstreetmap.org/user/{{ d.data["user"] | e }}">{{ d.data["user"] | e }}</a>,
+<abbr title="{{ d.data["timestamp"] | e }}">{{ d.data["timestamp"] | fromisoformat | naturaltime }}</abbr>)
+{%- endif %}
+(to {% if d.kind == "new" %}add{% elif d.kind == "del" %}remove{% elif d.kind == "mod" %}modify{% else %}?{% endif %}):<p>
 <ul>
 {% for key, value in d.data["tags"] | dictsort -%}
 <li><b>{{ key | e }}</b> = {% if key in d.old_tags -%}
