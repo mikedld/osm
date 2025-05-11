@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
         d["contact:website"] = "https://www.starbucks.pt/"
         d["contact:facebook"] = "StarbucksPortugal"
-        d["contact:twitter"] = "Mercadona_pt"
+        d["contact:twitter"] = "starbucksPTG"
         d["contact:instagram"] = "starbucksptg"
         d["contact:tiktok"] = "starbucksportugal"
         d["contact:email"] = "starbucks@starbucks.pt"
