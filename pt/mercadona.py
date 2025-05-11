@@ -56,7 +56,7 @@ def fetch_data(url):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; nwr["{REF}"](area.p);')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr["{REF}"](area.p); nwr[shop][name=Mercadona][!"{REF}"](area.p); );')["elements"]]
 
     # data_url = "https://www.mercadona.com/estaticos/cargas/data.js"
     data_url = "https://storage.googleapis.com/pro-bucket-wcorp-files/json/data.js"
