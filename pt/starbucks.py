@@ -17,6 +17,7 @@ REF = "ref:starbucks"
 CITIES = {
     "lisbon": "lisboa",
     "oporto": "porto",
+    "portimao": "portimão",
     "vila nova de gaia porto": "vila nova de gaia",
 }
 
