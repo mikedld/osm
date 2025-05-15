@@ -84,7 +84,7 @@ if __name__ == "__main__":
         public_id = nd["id"]
         d = next((od for od in old_data if od[REF] == public_id), None)
         if d is None:
-            coord = nd["coordinates"].split(",")
+            coord = re.split("[,;]", nd["coordinates"])
 
             d = DiffDict()
             d.data["type"] = "node"
