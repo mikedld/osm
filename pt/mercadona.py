@@ -11,7 +11,7 @@ from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_quer
 from impl.config import ENABLE_CACHE
 
 
-REF = "ref:mercadona"
+REF = "ref"
 
 STREET_ABBREVS = [
     [r"\bav\. ", "avenida "],
@@ -56,7 +56,7 @@ def fetch_data(url):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr["{REF}"](area.p); nwr[shop][name=Mercadona][!"{REF}"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name=Mercadona](area.p); );')["elements"]]
 
     # data_url = "https://www.mercadona.com/estaticos/cargas/data.js"
     data_url = "https://storage.googleapis.com/pro-bucket-wcorp-files/json/data.js"

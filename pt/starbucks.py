@@ -12,7 +12,7 @@ from impl.common import DiffDict, cache_name, overpass_query, titleize, opening_
 from impl.config import ENABLE_CACHE
 
 
-REF = "ref:starbucks"
+REF = "ref"
 
 CITIES = {
     "lisbon": "lisboa",
@@ -36,7 +36,7 @@ def fetch_data(url):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr["{REF}"](area.p); nwr[amenity][name=Starbucks][!"{REF}"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[amenity][name=Starbucks](area.p); );')["elements"]]
 
     continent_data_url = "https://www.starbucks.pt/api/v2/stores/?filter[coordinates][latitude]=39.681823&filter[coordinates][longitude]=-8.003540&filter[radius]=250"
     madeira_data_url = "https://www.starbucks.pt/api/v2/stores/?filter[coordinates][latitude]=32.771436&filter[coordinates][longitude]=-16.704712&filter[radius]=250"
