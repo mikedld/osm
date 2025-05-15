@@ -12,7 +12,7 @@ import requests
 from humanize import naturaltime
 from jinja2 import Environment, FileSystemLoader
 
-from .config import ENABLE_CACHE
+from .config import ENABLE_OVERPASS_CACHE
 
 
 BASE_DIR = Path(__main__.__file__).parent
@@ -73,7 +73,7 @@ class Locker:
 
 
 def cache_name(key):
-    return f"{BASE_DIR}/{BASE_NAME}-{str(datetime.date.today())}-{sha256(key.encode()).hexdigest()[:10]}"
+    return f"{BASE_DIR}/{BASE_NAME}-{str(datetime.date.today())}-{sha256(key.encode()).hexdigest()[:10]}.cache"
 
 
 def overpass_query(query):
@@ -82,7 +82,7 @@ def overpass_query(query):
     if not cache_file.exists():
         # print(f"Querying Overpass: {full_query}")
         result = requests.post("http://overpass-api.de/api/interpreter", data=full_query).json()
-        if ENABLE_CACHE:
+        if ENABLE_OVERPASS_CACHE:
             cache_file.write_text(json.dumps(result))
     else:
         result = json.loads(cache_file.read_text())
