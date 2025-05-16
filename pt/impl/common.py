@@ -106,7 +106,7 @@ def opening_weekdays(days):
     ]
     return ",".join(ranges)
 
-def write_diff(name, ref, diff):
+def write_diff(title, ref, diff, html=True, osm=True):
     #for d in diff:
     #    if d.kind == "old":
     #        continue
@@ -117,11 +117,27 @@ def write_diff(name, ref, diff):
     env.filters["naturaltime"] = naturaltime
     env.filters["lat"] = lambda x: x.lat
     env.filters["lon"] = lambda x: x.lon
-    template = env.get_template("diff.jinja")
-    output = template.render(name=name, ref=ref, diff=diff)
 
-    with open(f"{BASE_DIR}/{BASE_NAME}.html", "w+") as f:
-        print(output, file=f)
+    context = {
+        "name": BASE_NAME,
+        "title": title,
+        "ref": ref,
+        "diff": diff,
+        "have_html": html,
+        "have_osm": osm,
+    }
+
+    if html:
+        template = env.get_template("diff_html.jinja")
+        output = template.render(context)
+        with open(f"{BASE_DIR}/{BASE_NAME}.html", "w+") as f:
+            print(output, file=f)
+
+    if osm:
+        template_osm = env.get_template("diff_osm.jinja")
+        output_osm = template_osm.render(context)
+        with open(f"{BASE_DIR}/{BASE_NAME}.osm", "w+") as f:
+            print(output_osm, file=f)
 
     with Locker("stats"):
         stats = {}
@@ -129,7 +145,7 @@ def write_diff(name, ref, diff):
         if stats_file.exists():
             stats = json.loads(stats_file.read_text())
         stats[BASE_NAME] = {
-            "title": name,
+            "title": title,
             "date": datetime.datetime.now(datetime.UTC).strftime("%FT%TZ"),
             "total": len(diff),
             "diff": sum(1 for d in diff if d.kind != "old"),

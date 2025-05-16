@@ -1,0 +1,56 @@
+meta {
+  title: "mikedld's osm style";
+  version: "1.0";
+  description: "Visualize diff elements in different colors";
+  author: "mikedld";
+}
+
+node[x-dld-kind]::modified_layer {
+  symbol-shape: circle;
+  symbol-size: 50;
+  symbol-fill-opacity: 0.3;
+  z-index: -5;
+}
+
+node[x-dld-kind=old]::modified_layer {
+  symbol-fill-color: #0000ff;
+}
+
+node[x-dld-kind=new]::modified_layer {
+  symbol-fill-color: #00ff00;
+}
+
+node[x-dld-kind=mod]::modified_layer {
+  symbol-fill-color: #ff00ff;
+}
+
+node[x-dld-kind=del]::modified_layer {
+  symbol-fill-color: #ff0000;
+}
+
+way[x-dld-kind]::modified_layer,
+node[x-dld-kind] < way::modified_layer {
+  width: 40;
+  opacity: 0.3;
+  z-index: -5;
+}
+
+way[x-dld-kind=old]::modified_layer,
+node[x-dld-kind=old] < way::modified_layer {
+  color: #0000ff;
+}
+
+way[x-dld-kind=new]::modified_layer,
+node[x-dld-kind=new] < way::modified_layer {
+  color: #00ff00;
+}
+
+way[x-dld-kind=mod]::modified_layer,
+node[x-dld-kind=mod] < way::modified_layer {
+  color: #ff00ff;
+}
+
+way[x-dld-kind=del]::modified_layer,
+node[x-dld-kind=del] < way::modified_layer {
+  color: #ff0000;
+}

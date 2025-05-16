@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ name }} — Portugal</title>
+  <title>{{ title }} — Portugal</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
   <style type="text/css">
@@ -28,7 +28,8 @@
 
 <p>
   Total: {{ diff | length }}<br/>
-  Need attention: {{ att_count.value }}{% if att_count.value > 0 %} (see below){% endif %}
+  Need attention: {{ att_count.value }}{% if att_count.value > 0 %} (see below){% endif %}<br/>
+  Download: <a href="./{{ name }}.osm">{{ name }}.osm</a> (+<a href="./style.mapcss">JOSM mapcss style</a>)
 </p>
 
 {% if att_count.value > 0 -%}
