@@ -6,6 +6,7 @@ import itertools
 import json
 import re
 from hashlib import sha256
+from math import atan2, cos, pow, radians, sin, sqrt
 from pathlib import Path
 
 import requests
@@ -95,6 +96,15 @@ def titleize(name):
         for word in re.split(r"\b", name.lower()))
 
 
+def distance(a, b):
+    dlat = radians(b[0]) - radians(a[0])
+    dlon = radians(b[1]) - radians(a[1])
+    a = pow(sin(dlat / 2), 2) + cos(radians(a[0])) * cos(radians(b[0])) * pow(sin(dlon / 2), 2)
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    d = 6371000 * c
+    return d
+
+
 def opening_weekdays(days):
     ranges =[]
     for k, g in itertools.groupby(enumerate(days), lambda x: x[0] - x[1]):
@@ -105,6 +115,21 @@ def opening_weekdays(days):
         for a, b in ranges
     ]
     return ",".join(ranges)
+
+
+# https://stackoverflow.com/a/78259311/583456
+def gregorian_easter(year):
+    century = year // 100
+    lunar_adj = (8 * century + 13) // 25
+    solar_adj = -century + century // 4
+    total_adj = solar_adj + lunar_adj
+    leap_months = (210 * year - year % 19 + 19 * total_adj + 266) // 570
+    full_moon = (6725 * year + 18) // 19 + 30 * leap_months - lunar_adj + year // 4 + 3
+    if 286 <= (total_adj + year % 19 * 11) % 30 * 19 - year % 19 <= 312:
+        full_moon -= 1
+    week = full_moon // 7 - 38
+    return datetime.date.fromordinal(week * 7)
+
 
 def write_diff(title, ref, diff, html=True, osm=True):
     #for d in diff:
