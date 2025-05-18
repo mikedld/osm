@@ -56,6 +56,8 @@ if __name__ == "__main__":
             d.data["lon"] = float(coord["longitude"])
             old_data.append(d)
 
+        tags_to_reset = set()
+
         d[REF] = public_id
         d["amenity"] = "cafe"
         d["cuisine"] = "coffee_shop"
@@ -91,16 +93,22 @@ if __name__ == "__main__":
         phone = nd["phoneNumber"].lstrip("0")
         if len(phone) == 12 and phone.startswith("351"):
             phone = phone[3:]
-        if phone:
-            phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}" if len(phone) == 9 else "???"
-        d["contact:phone"] = phone
-
+        if phone and len(phone) == 9:
+            phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+            if phone[5:6] == "9":
+                d["contact:mobile"] = phone
+                tags_to_reset.add("contact:phone")
+            else:
+                d["contact:phone"] = phone
+                tags_to_reset.add("contact:mobile")
         d["contact:website"] = "https://www.starbucks.pt/"
         d["contact:facebook"] = "StarbucksPortugal"
         d["contact:twitter"] = "starbucksPTG"
         d["contact:instagram"] = "starbucksptg"
         d["contact:tiktok"] = "starbucksportugal"
         d["contact:email"] = "starbucks@starbucks.pt"
+
+        tags_to_reset.update({"phone", "mobile", "website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"
@@ -115,7 +123,11 @@ if __name__ == "__main__":
             d["addr:postcode"] = f"{postcode[:4]}-{postcode[4:]}"
 
         if d.kind == "new" and not d["addr:street"] and not (d["addr:housenumber"] or d["nohousenumber"]):
-            d["addr:*"] = "; ".join([x for x in (nd["address"]["streetAddressLine1"], nd["address"]["streetAddressLine2"], nd["address"]["streetAddressLine3"]) if x])
+            d["x-dld-addr"] = "; ".join([x for x in (nd["address"]["streetAddressLine1"], nd["address"]["streetAddressLine2"], nd["address"]["streetAddressLine3"]) if x])
+
+        for key in tags_to_reset:
+            if d[key]:
+                d[key] = ""
 
     for d in old_data:
         if d.kind == "new":

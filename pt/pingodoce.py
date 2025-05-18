@@ -110,11 +110,12 @@ if __name__ == "__main__":
                 d["source:opening_hours"] = "website"
 
         phone = re.sub(r"[^0-9]+", "", nd["contact"])
-        if phone.startswith("9"):
-            d["contact:mobile"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+        phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+        if phone[5:6] == "9":
+            d["contact:mobile"] = phone
             tags_to_reset.add("contact:phone")
         else:
-            d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+            d["contact:phone"] = phone
             tags_to_reset.add("contact:mobile")
         d["contact:website"] = nd["permalink"]
         d["contact:facebook"] = "pingodoce"

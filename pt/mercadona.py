@@ -79,6 +79,8 @@ if __name__ == "__main__":
             d.data["lon"] = nd["lg"]
             old_data.append(d)
 
+        tags_to_reset = set()
+
         d[REF] = public_id
         d["shop"] = "supermarket"
         d["name"] = "Mercadona"
@@ -92,7 +94,13 @@ if __name__ == "__main__":
         else:
             d["opening_hours"] = "???"
 
-        d["contact:phone"] = f"+351 {nd['tf'][0:3]} {nd['tf'][3:6]} {nd['tf'][6:9]}"
+        phone = f"+351 {nd['tf'][0:3]} {nd['tf'][3:6]} {nd['tf'][6:9]}"
+        if phone[5:6] == "9":
+            d["contact:mobile"] = phone
+            tags_to_reset.add("contact:phone")
+        else:
+            d["contact:phone"] = phone
+            tags_to_reset.add("contact:mobile")
         d["contact:website"] = "https://www.mercadona.pt/"
         d["contact:facebook"] = "MercadonaPortugal"
         d["contact:twitter"] = "Mercadona_pt"
@@ -100,6 +108,8 @@ if __name__ == "__main__":
         d["contact:instagram"] = "mercadona_portugal"
         d["contact:linkedin"] = "https://www.linkedin.com/company/mercadonaportugal"
         d["contact:email"] = "apoiocliente@mercadona.com"
+
+        tags_to_reset.update({"phone", "mobile", "website"})
 
         if d["source:addr"] != "survey":
             d["source:addr"] = "website"
@@ -130,7 +140,11 @@ if __name__ == "__main__":
                     d["nohousenumber"] = ""
                 d["addr:housenumber"] = m[2]
         else:
-            d["addr"] = nd["dr"]
+            d["x-dld-addr"] = nd["dr"]
+
+        for key in tags_to_reset:
+            if d[key]:
+                d[key] = ""
 
         custom_oh = nd.get("fs")
         if custom_oh:
