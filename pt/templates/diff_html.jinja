@@ -11,10 +11,12 @@
   #map { width: 100%; height: 50vh; }
   .oldv { background-color: red; color: white; }
   .newv { background-color: green; color: white; }
-  img.diff-old {}
-  img.diff-new { filter: hue-rotate(250deg); }
-  img.diff-mod { filter: hue-rotate(90deg); }
-  img.diff-del { filter: hue-rotate(150deg); }
+  .diff-old {}
+  .diff-new { filter: hue-rotate(250deg); }
+  .diff-mod { filter: hue-rotate(90deg); }
+  .diff-del { filter: hue-rotate(150deg); }
+  .legend { padding: 8px; background-color: #444444; color: #ffffff; line-height: 10pt; }
+  .legend-icon { display: inline-block; width: 1.6em; height: 8pt; background: #3a8ece; border: 1px solid #cccccc; position: relative; top: 1pt; }
   </style>
 </head>
 <body>
@@ -83,6 +85,15 @@ document.addEventListener('DOMContentLoaded', (event) => {
       .addTo(map);
     marker._icon.classList.add(`diff-${k}`);
   }
+
+  var legend = L.control({position: 'bottomright'});
+  legend.onAdd = function (map) {
+    const div = L.DomUtil.create('div', 'legend');
+    const items = [['old', 'All good'], ['new', 'To add'], ['mod', 'To modify'], ['del', 'To remove']];
+    div.innerHTML = items.map(item => `<span class="legend-icon diff-${item[0]}"></span>&nbsp;${item[1]}`).join('<br/>');
+    return div;
+  };
+  legend.addTo(map);
 });
 </script>
 
