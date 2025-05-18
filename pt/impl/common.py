@@ -19,6 +19,8 @@ from .config import ENABLE_OVERPASS_CACHE
 BASE_DIR = Path(__main__.__file__).parent
 BASE_NAME = Path(__main__.__file__).stem
 
+CACHE_DIR = BASE_DIR / "cache"
+
 DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 PT_ARTICLES = {"e", "a", "o", "de", "do", "da", "dos", "das"}
 
@@ -74,7 +76,7 @@ class Locker:
 
 
 def cache_name(key):
-    return f"{BASE_DIR}/{BASE_NAME}-{str(datetime.date.today())}-{sha256(key.encode()).hexdigest()[:10]}.cache"
+    return f"{CACHE_DIR}/{BASE_NAME}-{str(datetime.date.today())}-{sha256(key.encode()).hexdigest()[:10]}.cache"
 
 
 def overpass_query(query):
