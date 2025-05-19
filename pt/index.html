@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
   const stats = await response.json();
 
   const table = document.getElementById('stats');
-  Object.entries(stats).forEach(([id, info]) => {
+  Object.entries(stats).sort().forEach(([id, info]) => {
     const titleEl = document.createElement('a');
     titleEl.textContent = info.title;
     titleEl.href = `./${id}.html`;
