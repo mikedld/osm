@@ -88,7 +88,8 @@ def fetch_store_data(store):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][name~"Auchan"](area.p); nwr[shop][name~"Minipreço"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][name~"Auchan"](area.p); ' +
+        f'nwr[amenity][amenity!=fuel][amenity!=charging_station][amenity!=parking][name~"Auchan"](area.p); nwr[shop][name~"Minipreço"](area.p); );')["elements"]]
 
     data_url = "https://www.auchan.pt/pt/lojas"
     new_data = fetch_stores_data(data_url)
@@ -114,18 +115,22 @@ if __name__ == "__main__":
             old_data.append(d)
             new_node_id -= 1
 
-        name = re.sub(r"^(Auchan( Supermercado)?|My Auchan|Auchan).+", r"\1", nd["name"])
+        name = re.sub(r"^(Auchan( Supermercado)?|My Auchan( Saúde e Bem-Estar)?|Auchan).+", r"\1", nd["name"])
         branch = re.sub(r"[ ]{2,}", " ", nd["name"][len(name):]).strip()
         is_super = name == "Auchan Supermercado"
         is_my = name == "My Auchan"
+        is_my_saude = name == "My Auchan Saúde e Bem-Estar"
         tags_to_reset = set()
 
         d[REF] = public_id
-        d["shop"] = "convenience" if is_my else "supermarket"
-        d["name"] = "MyAuchan" if is_my else name
+        if is_my_saude:
+            d["amenity"] = "pharmacy"
+        else:
+            d["shop"] = "convenience" if is_my else "supermarket"
+        d["name"] = name.replace("My Auchan", "MyAuchan")
         d["branch"] = branch
-        d["brand"] = "MyAuchan" if is_my else "Auchan"
-        d["brand:wikidata"] = "Q115800307" if is_my else "Q758603"
+        d["brand"] = "MyAuchan" if is_my or is_my_saude else "Auchan"
+        d["brand:wikidata"] = "Q115800307" if is_my or is_my_saude else "Q758603"
         d["brand:wikipedia"] = "pt:Auchan"
 
         if old_name := d.old_tags.get("name"):
