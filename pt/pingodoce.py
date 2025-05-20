@@ -15,6 +15,8 @@ from impl.config import ENABLE_CACHE
 
 REF = "ref"
 
+DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
 
 def fetch_data(url):
     cache_file = Path(f"{cache_name(url)}.json")
@@ -80,7 +82,6 @@ if __name__ == "__main__":
             if "opening_hours" in d.old_tags:
                 d["source:opening_hours"] = "website"
         elif schedule := nd["schedules"]["full"]:
-            DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             schedule = [
                 {
                     "d": DAYS.index(k),

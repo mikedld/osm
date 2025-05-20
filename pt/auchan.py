@@ -17,12 +17,15 @@ from impl.config import ENABLE_CACHE
 
 REF = "ref"
 
-CITIES = {
-    "lisbon": "lisboa",
-    "oporto": "porto",
-    "portimao": "portimão",
-    "vila nova de gaia porto": "vila nova de gaia",
+EVENTS_MAPPING = {
+    r"Horário feriados: (\d{2}:\d{2}) - (\d{2}:\d{2})": r"PH \1-\2",
+    r"Horário feriados: (\d{1}:\d{2}) - (\d{2}:\d{2})": r"PH 0\1-\2",
+    r"Horário vésperas de feriado: (\d{2}:\d{2}) - (\d{2}:\d{2})": r"PH -1 days \1-\2",
+    r"Encerramento: domingo de Páscoa, 25 de dezembro e 1 de janeiro": r"easter,Dec 25,Jan 01 off",
+    r"Encerramento véspera de Ano Novo: (\d{2}:\d{2})": r"Dec 31 {opens-}\1",
+    r"Encerramento véspera de Natal: (\d{2}:\d{2})": r"Dec 24 {opens-}\1",
 }
+DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
 class PageParser(HTMLParser):
@@ -140,16 +143,7 @@ if __name__ == "__main__":
         if d["operator"] not in (None, "Auchan"):
             tags_to_reset.add("operator")
 
-        EVENTS_MAPPING = {
-            r"Horário feriados: (\d{2}:\d{2}) - (\d{2}:\d{2})": r"PH \1-\2",
-            r"Horário feriados: (\d{1}:\d{2}) - (\d{2}:\d{2})": r"PH 0\1-\2",
-            r"Horário vésperas de feriado: (\d{2}:\d{2}) - (\d{2}:\d{2})": r"PH -1 days \1-\2",
-            r"Encerramento: domingo de Páscoa, 25 de dezembro e 1 de janeiro": r"easter,Dec 25,Jan 01 off",
-            r"Encerramento véspera de Ano Novo: (\d{2}:\d{2})": r"Dec 31 {opens-}\1",
-            r"Encerramento véspera de Natal: (\d{2}:\d{2})": r"Dec 24 {opens-}\1",
-        }
         if schedule := nd["openingHoursSpecification"]:
-            DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
             opens = set(x["opens"] for x in schedule)
             schedule = [
                 {
