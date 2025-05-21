@@ -130,10 +130,10 @@ if __name__ == "__main__":
                 d[key] = ""
 
     for d in old_data:
-        if d.kind == "new":
+        if d.kind != "old":
             continue
         ref = d[REF]
-        if any(nd for nd in new_data if ref == nd["storeNumber"]):
+        if ref and any(nd for nd in new_data if ref == nd["storeNumber"]):
             continue
         d.kind = "del"
 

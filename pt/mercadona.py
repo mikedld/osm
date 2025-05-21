@@ -159,10 +159,10 @@ if __name__ == "__main__":
     custom_ohs_file.write_text(json.dumps(custom_ohs))
 
     for d in old_data:
-        if d.kind == "new":
+        if d.kind != "old":
             continue
         ref = d[REF]
-        if any(nd for nd in new_data if ref == str(nd["site_public_id"]) or ref[1:] == str(nd["id"])[1:]):
+        if ref and any(nd for nd in new_data if ref == str(nd["site_public_id"]) or ref[1:] == str(nd["id"])[1:]):
             continue
         d.kind = "del"
 
