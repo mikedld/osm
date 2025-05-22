@@ -175,8 +175,8 @@ def write_diff(title, ref, diff, html=True, osm=True):
             "title": title,
             "date": datetime.datetime.now(datetime.UTC).strftime("%FT%TZ"),
             "total": len(diff),
-            "new": sum(1 for d in diff if d.kind == "new"),
-            "mod": sum(1 for d in diff if d.kind == "mod"),
-            "del": sum(1 for d in diff if d.kind == "del"),
+            "new": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "new"],
+            "mod": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "mod"],
+            "del": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "del"],
         }
         stats_file.write_text(json.dumps(stats))

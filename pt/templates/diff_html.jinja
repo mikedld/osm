@@ -5,18 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title }} — Portugal</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster-src.js" integrity="sha384-xLgzMQOvDhPE6lQoFpJJOFU2aMYsKD5eSSt9q3aR1RREx3Y+XsnqtSDZd+PhAcob" crossorigin=""></script>
   <style type="text/css">
   body { font-family: sans-serif; font-size: 10pt; }
   #map { width: 100%; height: 50vh; }
   .oldv { background-color: red; color: white; }
   .newv { background-color: green; color: white; }
-  .diff-old {}
-  .diff-new { filter: hue-rotate(250deg); }
-  .diff-mod { filter: hue-rotate(90deg); }
-  .diff-del { filter: hue-rotate(150deg); }
-  .legend { padding: 8px; background-color: #444444; color: #ffffff; line-height: 10pt; }
-  .legend-icon { display: inline-block; width: 1.6em; height: 8pt; background: #3a8ece; border: 1px solid #cccccc; position: relative; top: 1pt; }
+  .tbl-diff-new { font-weight: bold; color: green; }
+  .tbl-diff-mod { font-weight: bold; color: magenta; }
+  .tbl-diff-del { font-weight: bold; color: red; }
+  .icn-diff { padding: 1px !important; background: #ffffff; border: 3px solid; }
+  .icn-diff-old { border-color: grey; }
+  .icn-diff-new { border-color: green; }
+  .icn-diff-mod { border-color: magenta; }
+  .icn-diff-del { border-color: red; }
+  .diff-cluster-wrapper { display: flex; justify-content: center; align-items: center; }
+  .diff-cluster, .legend { padding: 3px 6px; background-color: #444444; color: #ffffff; white-space: nowrap; border-radius: 5px; }
+  .legend > * { vertical-align: middle; }
+  .icn-legend { display: inline-block; width: 4px; height: 4px; margin-bottom: 3px;}
   </style>
 </head>
 <body>
@@ -38,7 +46,7 @@
 <hr/>
 
 {% for d in diff if d.kind != "old" -%}
-<p>Store #{{ (d[ref] or "???") | e }}
+<p id="id-{{ d.data["id"] }}">Store #{{ (d[ref] or "???") | e }}
 (<a href="https://www.openstreetmap.org/?mlat={{ d.lat }}&mlon={{ d.lon }}#map=19/{{ d.lat }}/{{ d.lon }}">{{ d.lat }},{{ d.lon }}</a>)
 {% if d.kind != "new" -%}
 (<a href="https://www.openstreetmap.org/{{ d.data["type"] }}/{{ d.data["id"] }}/history/{{ d.data["version"] }}">v{{ d.data["version"] }}</a>,
@@ -79,18 +87,41 @@ document.addEventListener('DOMContentLoaded', (event) => {
     {%- endfor %}
   ];
 
+  const group = L.markerClusterGroup({
+    iconCreateFunction: cluster => {
+      const markers = cluster.getAllChildMarkers();
+      const counts = {};
+      for (let i = 0; i < markers.length; i++) {
+        const kind = markers[i].options._diff_kind;
+        counts[kind] ||= 0;
+        ++counts[kind];
+      }
+      return L.divIcon({
+        html: '<div class="diff-cluster">' + ['new', 'mod', 'del', 'old'].filter(k => Object.keys(counts).includes(k)).map(k => `<span class="tbl-diff-${k}">${counts[k]}</span>`).join('/') + '</div>',
+        className: 'diff-cluster-wrapper',
+      });
+    }
+  });
+  const icons = {};
   for (const [t, c, k] of points) {
-    const marker = L.marker(c, { title: t })
-      .on('click', () => window.open(`https://www.openstreetmap.org/?mlat=${c[0]}&mlon=${c[1]}#map=19/${c[0]}/${c[1]}`))
-      .addTo(map);
-    marker._icon.classList.add(`diff-${k}`);
+    if (!icons[k]) {
+      icons[k] = L.icon({
+        iconUrl: `./images/{{ name }}.png`,
+        iconSize: L.point(16, 16),
+        className: `icn-diff icn-diff-${k}`,
+      });
+    }
+    const marker = L.marker(c, { title: t, icon: icons[k], _diff_kind: k })
+      .on('click', () => window.open(`https://www.openstreetmap.org/?mlat=${c[0]}&mlon=${c[1]}#map=19/${c[0]}/${c[1]}`));
+    group.addLayer(marker);
   }
+  map.addLayer(group);
 
-  var legend = L.control({position: 'bottomright'});
+  const legend = L.control({position: 'bottomright'});
   legend.onAdd = function (map) {
     const div = L.DomUtil.create('div', 'legend');
     const items = [['old', 'All good'], ['new', 'To add'], ['mod', 'To modify'], ['del', 'To remove']];
-    div.innerHTML = items.map(item => `<span class="legend-icon diff-${item[0]}"></span>&nbsp;${item[1]}`).join('<br/>');
+    div.innerHTML = items.map(item => `<span class="icn-legend icn-diff icn-diff-${item[0]}"></span>&nbsp;${item[1]}`).join('<br/>');
     return div;
   };
   legend.addTo(map);

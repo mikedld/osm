@@ -4,20 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stats — Portugal</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster-src.js" integrity="sha384-xLgzMQOvDhPE6lQoFpJJOFU2aMYsKD5eSSt9q3aR1RREx3Y+XsnqtSDZd+PhAcob" crossorigin=""></script>
   <style type="text/css">
   body { font-family: sans-serif; font-size: 10pt; }
+  #map { width: 100%; height: 50vh; }
+  #stats { padding-top: 10px; }
   #stats th, #stats td { padding: 0px 4px; }
   #stats td:nth-of-type(3),
   #stats td:nth-of-type(4),
   #stats td:nth-of-type(5),
   #stats td:nth-of-type(6) { text-align: right; }
   .stale { color: red; }
-  .diff-new { font-weight: bold; color: green; }
-  .diff-mod { font-weight: bold; color: magenta; }
-  .diff-del { font-weight: bold; color: red; }
+  .tbl-diff-new { font-weight: bold; color: green; }
+  .tbl-diff-mod { font-weight: bold; color: magenta; }
+  .tbl-diff-del { font-weight: bold; color: red; }
+  .icn-diff { padding: 1px !important; background: #ffffff; border: 3px solid; }
+  .icn-diff-old { border-color: grey; }
+  .icn-diff-new { border-color: green; }
+  .icn-diff-mod { border-color: magenta; }
+  .icn-diff-del { border-color: red; }
+  .diff-cluster-wrapper { display: flex; justify-content: center; align-items: center; }
+  .diff-cluster, .legend { padding: 3px 6px; background-color: #444444; color: #ffffff; white-space: nowrap; border-radius: 5px; }
+  .legend > * { vertical-align: middle; }
+  .icn-legend { display: inline-block; width: 4px; height: 4px; margin-bottom: 3px;}
   </style>
 </head>
 <body>
+
+<div id="map"></div>
 
 <table id="stats">
   <tr>
@@ -34,6 +51,8 @@
 document.addEventListener('DOMContentLoaded', async (event) => {
   const response = await fetch('./stats.json');
   const stats = await response.json();
+
+  const points = [];
 
   const table = document.getElementById('stats');
   Object.entries(stats).sort().forEach(([id, info]) => {
@@ -53,16 +72,76 @@ document.addEventListener('DOMContentLoaded', async (event) => {
     row.insertCell(1).appendChild(dateEl);
     row.insertCell(2).appendChild(document.createTextNode(info.total));
 
-    var col = 3;
+    let col = 3;
     ['new', 'mod', 'del'].forEach(kind => {
         const diffEl = document.createElement('span');
-        diffEl.textContent = info[kind];
-        if (info[kind] > 0) {
-          diffEl.className = `diff-${kind}`;
+        const counts = info[kind];
+        const count = Array.isArray(counts) ? counts.length : counts;
+        diffEl.textContent = count;
+        if (count > 0) {
+          diffEl.className = `tbl-diff-${kind}`;
         }
         row.insertCell(col++).appendChild(diffEl);
+
+        if (Array.isArray(counts)) {
+          points.push(...counts.map(c => [id, info.title, c[0], [c[1], c[2]], kind]));
+        }
     });
   });
+
+  ///
+
+  const map = L.map('map').fitBounds([
+    [Math.min(...points.map(p => p[3][0])), Math.min(...points.map(p => p[3][1]))],
+    [Math.max(...points.map(p => p[3][0])), Math.max(...points.map(p => p[3][1]))]
+  ]);
+
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  const group = L.markerClusterGroup({
+    iconCreateFunction: cluster => {
+      const markers = cluster.getAllChildMarkers();
+      const counts = {};
+      for (let i = 0; i < markers.length; i++) {
+        const kind = markers[i].options._diff_kind;
+        counts[kind] ||= 0;
+        ++counts[kind];
+      }
+      return L.divIcon({
+        html: '<div class="diff-cluster">' + ['new', 'mod', 'del'].filter(k => Object.keys(counts).includes(k)).map(k => `<span class="tbl-diff-${k}">${counts[k]}</span>`).join('/') + '</div>',
+        className: 'diff-cluster-wrapper',
+      });
+    }
+  });
+  const icons = {};
+  for (const [id, t, poi_id, c, k] of points) {
+    if (!icons[id]) {
+      icons[id] = {};
+    }
+    if (!icons[id][k]) {
+      icons[id][k] = L.icon({
+        iconUrl: `./images/${id}.png`,
+        iconSize: L.point(16, 16),
+        className: `icn-diff icn-diff-${k}`,
+      });
+    }
+    const marker = L.marker(c, { title: t, icon: icons[id][k], _diff_kind: k })
+      .on('click', () => window.open(`./${id}.html#id-${poi_id}`));
+    group.addLayer(marker);
+  }
+  map.addLayer(group);
+
+  const legend = L.control({position: 'bottomright'});
+  legend.onAdd = function (map) {
+    const div = L.DomUtil.create('div', 'legend');
+    const items = [['new', 'To add'], ['mod', 'To modify'], ['del', 'To remove']];
+    div.innerHTML = items.map(item => `<span class="icn-legend icn-diff icn-diff-${item[0]}"></span>&nbsp;${item[1]}`).join('<br/>');
+    return div;
+  };
+  legend.addTo(map);
 });
 </script>
 
