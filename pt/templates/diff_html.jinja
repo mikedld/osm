@@ -41,7 +41,7 @@
 <p>Store #{{ (d[ref] or "???") | e }}
 (<a href="https://www.openstreetmap.org/?mlat={{ d.lat }}&mlon={{ d.lon }}#map=19/{{ d.lat }}/{{ d.lon }}">{{ d.lat }},{{ d.lon }}</a>)
 {% if d.kind != "new" -%}
-(<a href="https://www.openstreetmap.org/node/{{ d.data["id"] }}/history/{{ d.data["version"] }}">v{{ d.data["version"] }}</a>,
+(<a href="https://www.openstreetmap.org/{{ d.data["type"] }}/{{ d.data["id"] }}/history/{{ d.data["version"] }}">v{{ d.data["version"] }}</a>,
 <a href="https://www.openstreetmap.org/changeset/{{ d.data["changeset"] }}">#{{ d.data["changeset"] }}</a>,
 <a href="https://www.openstreetmap.org/user/{{ d.data["user"] | e }}">{{ d.data["user"] | e }}</a>,
 <abbr title="{{ d.data["timestamp"] | e }}">{{ d.data["timestamp"] | fromisoformat | naturaltime }}</abbr>)
