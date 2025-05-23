@@ -42,7 +42,7 @@ STREET_FIXUPS = {
 
 def fetch_data(url):
     cache_file = Path(f"{cache_name(url)}.json")
-    if not cache_file.exists():
+    if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
         result = requests.get(f"{url}?timestamp={datetime.datetime.today().strftime('%s000')}").content.decode("utf-8")
         result = re.sub(r"^var dataJson[ ]*=[ ]*", "", result)

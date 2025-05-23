@@ -36,7 +36,7 @@ SCHEDULE_HOURS_MAPPING = {
 
 def fetch_stores_data(url):
     cache_file = Path(f"{cache_name(url)}.json")
-    if not cache_file.exists():
+    if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
         result = requests.get(url).content.decode("utf-8")
         result = re.sub(r"^.*var restaurantsJson[ ]*=[ ]*'\[(.+)\]'.*$", r"[\1]", result, flags=re.S)
@@ -51,7 +51,7 @@ def fetch_stores_data(url):
 def fetch_store_data(store):
     url = f"https://www.mcdonalds.pt{store['Url']}"
     cache_file = Path(f"{cache_name(url)}.html")
-    if not cache_file.exists():
+    if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
         result = requests.get(url).content.decode("utf-8")
         result_tree = etree.fromstring(result, etree.HTMLParser())

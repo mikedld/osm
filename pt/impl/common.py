@@ -84,7 +84,7 @@ def cache_name(key):
 def overpass_query(query):
     full_query = f"[out:json]; {query} out meta center;"
     cache_file = Path(f"{cache_name(full_query)}.json")
-    if not cache_file.exists():
+    if not ENABLE_OVERPASS_CACHE or not cache_file.exists():
         # print(f"Querying Overpass: {full_query}")
         result = requests.post("http://overpass-api.de/api/interpreter", data=full_query).json()
         if ENABLE_OVERPASS_CACHE:

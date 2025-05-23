@@ -57,7 +57,7 @@ CITIES = {
 
 def fetch_data(page_url, data_url):
     cache_file = Path(f"{cache_name(data_url)}.json")
-    if not cache_file.exists():
+    if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {data_url}")
         with sync_playwright() as p:
             browser = p.chromium.launch()

@@ -62,7 +62,7 @@ class PageParser(HTMLParser):
 
 def fetch_stores_data(url):
     cache_file = Path(f"{cache_name(url)}.html")
-    if not cache_file.exists():
+    if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
         result = requests.get(url).content.decode("utf-8")
         if ENABLE_CACHE:
@@ -78,7 +78,7 @@ def fetch_store_data(store):
     store_id = re.sub(r'.*data-store-id="([^"]+)".*', r"\1", store["infoWindowHtml"], flags=re.S)
     url = f"https://www.auchan.pt/pt/loja?StoreID={store_id}"
     cache_file = Path(f"{cache_name(url)}.html")
-    if not cache_file.exists():
+    if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
         result = requests.get(url).content.decode("utf-8")
         if ENABLE_CACHE:

@@ -20,7 +20,7 @@ DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 def fetch_data(url):
     cache_file = Path(f"{cache_name(url)}.json")
-    if not cache_file.exists():
+    if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
         result = requests.get(url).content.decode("utf-8")
         result = json.loads(result)
