@@ -65,8 +65,8 @@ if __name__ == "__main__":
             d.data["lon"] = float(nd["long"])
             old_data.append(d)
 
-        branch = html.unescape(nd["name"]).replace("PD&GO", "PD&Go").replace("  ", " ")
-        is_pdgo = branch.lower().startswith("pd&go")
+        branch = re.sub(r"pd&go\s+", "", html.unescape(nd["name"]), flags=re.I).replace("  ", " ").strip()
+        is_pdgo = html.unescape(nd["name"]).lower().startswith("pd&go")
         tags_to_reset = set()
 
         d[REF] = public_id
