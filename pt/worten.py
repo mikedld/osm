@@ -10,7 +10,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_query, titleize, distance, opening_weekdays, gregorian_easter, write_diff
-from impl.config import ENABLE_CACHE
+from impl.config import ENABLE_CACHE, PLAYWRIGHT_CONTEXT_OPTS
 
 
 REF = "ref"
@@ -61,7 +61,7 @@ def fetch_data(page_url, data_url):
         # print(f"Querying URL: {data_url}")
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            context = browser.new_context(proxy={"server": "socks://127.0.0.1:10800"})
+            context = browser.new_context(**PLAYWRIGHT_CONTEXT_OPTS)
             page = context.new_page()
             with page.expect_response(data_url) as response:
                 page.goto(page_url)
