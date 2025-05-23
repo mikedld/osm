@@ -12,6 +12,7 @@ from pathlib import Path
 import requests
 from humanize import naturaltime
 from jinja2 import Environment, FileSystemLoader
+from retrying import retry
 
 from .config import ENABLE_OVERPASS_CACHE
 
@@ -79,6 +80,7 @@ def cache_name(key):
     return f"{CACHE_DIR}/{BASE_NAME}-{str(datetime.date.today())}-{sha256(key.encode()).hexdigest()[:10]}.cache"
 
 
+@retry(stop_max_attempt_number=3, wait_fixed=10000)
 def overpass_query(query):
     full_query = f"[out:json]; {query} out meta center;"
     cache_file = Path(f"{cache_name(full_query)}.json")
