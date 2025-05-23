@@ -31,22 +31,26 @@
 
 <div id="map"></div>
 
-{% set att_count = namespace(value=0) -%}
-{% for d in diff if d.kind != "old" -%}
-  {% set att_count.value = att_count.value + 1 -%}
+{% set v = namespace(counts={"new": 0, "mod": 0, "del": 0, "old": 0}) -%}
+{% for d in diff -%}
+  {% set _ = v.counts.update({d.kind: v.counts[d.kind] + 1}) -%}
 {% endfor -%}
 
 <p>
   Total: {{ diff | length }}<br/>
-  Need attention: {{ att_count.value }}{% if att_count.value > 0 %} (see below){% endif %}<br/>
+  Need attention: {{ v.counts["new"] + v.counts["mod"] + v.counts["del"] }}<br/>
   Download: <a href="./{{ name }}.osm">{{ name }}.osm</a> (+<a href="./style.mapcss">JOSM mapcss style</a>)
 </p>
 
-{% if att_count.value > 0 -%}
 <hr/>
 
-{% for d in diff if d.kind != "old" -%}
-<p id="id-{{ d.data["id"] }}">Store #{{ (d[ref] or "???") | e }}
+{% for k in [["new", "To add"], ["mod", "To modify"], ["del", "To remove"], ["old", "All good"]] %}
+{% if v.counts[k[0]] > 0 %}
+<details id="diff-details-{{ k[0] }}"{{ ' open="open"' if k[0] != "old" else "" }}>
+<summary class="tbl-diff-{{ k[0] }}">{{ k[1] }} ({{ v.counts[k[0]] }})</summary>
+
+{% for d in diff if d.kind == k[0] -%}
+<p id="id-{{ d.data["id"] }}">{{ d.data["type"] | capitalize }} {% if d.kind != "new" %}<a href="https://www.openstreetmap.org/{{ d.data["type"] }}/{{ d.data["id"] }}">{% endif %}{{ d.data["id"] }}{% if d.kind != "new" %}</a>{% endif %}
 (<a href="https://www.openstreetmap.org/?mlat={{ d.lat }}&mlon={{ d.lon }}#map=19/{{ d.lat }}/{{ d.lon }}">{{ d.lat }},{{ d.lon }}</a>)
 {% if d.kind != "new" -%}
 (<a href="https://www.openstreetmap.org/{{ d.data["type"] }}/{{ d.data["id"] }}/history/{{ d.data["version"] }}">v{{ d.data["version"] }}</a>,
@@ -67,7 +71,9 @@
 </ul>
 {% endfor -%}
 
+</details>
 {% endif %}
+{% endfor %}
 
 <script>
 document.addEventListener('DOMContentLoaded', (event) => {
@@ -83,7 +89,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
   const points = [
     {%- for d in diff %}
-    ['#{{ d[ref] }}', [{{ d.lat }}, {{ d.lon }}], '{{ d.kind }}'],
+    [{{d.data["id"]}}, '#{{ d[ref] }}', [{{ d.lat }}, {{ d.lon }}], '{{ d.kind }}'],
     {%- endfor %}
   ];
 
@@ -103,7 +109,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     }
   });
   const icons = {};
-  for (const [t, c, k] of points) {
+  for (const [id, t, c, k] of points) {
     if (!icons[k]) {
       icons[k] = L.icon({
         iconUrl: `./images/{{ name }}.png`,
@@ -112,7 +118,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
       });
     }
     const marker = L.marker(c, { title: t, icon: icons[k], _diff_kind: k })
-      .on('click', () => window.open(`https://www.openstreetmap.org/?mlat=${c[0]}&mlon=${c[1]}#map=19/${c[0]}/${c[1]}`));
+      // .on('click', () => window.open(`https://www.openstreetmap.org/?mlat=${c[0]}&mlon=${c[1]}#map=19/${c[0]}/${c[1]}`));
+      .on('click', () => {
+        const section = document.getElementById(`diff-details-${k}`);
+        if (!section.hasAttribute('open')) {
+          section.setAttribute('open', true);
+        }
+        window.location.href=`#id-${id}`;
+      });
     group.addLayer(marker);
   }
   map.addLayer(group);
@@ -120,7 +133,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
   const legend = L.control({position: 'bottomright'});
   legend.onAdd = function (map) {
     const div = L.DomUtil.create('div', 'legend');
-    const items = [['old', 'All good'], ['new', 'To add'], ['mod', 'To modify'], ['del', 'To remove']];
+    const items = [['new', 'To add'], ['mod', 'To modify'], ['del', 'To remove'], ['old', 'All good']];
     div.innerHTML = items.map(item => `<span class="icn-legend icn-diff icn-diff-${item[0]}"></span>&nbsp;${item[1]}`).join('<br/>');
     return div;
   };
