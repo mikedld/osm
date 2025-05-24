@@ -14,7 +14,7 @@ from humanize import naturaltime
 from jinja2 import Environment, FileSystemLoader
 from retrying import retry
 
-from .config import ENABLE_OVERPASS_CACHE
+from .config import ENABLE_OVERPASS_CACHE, SCRAPERAPI_API_KEY
 
 
 BASE_DIR = Path(__main__.__file__).parent
@@ -92,6 +92,19 @@ def overpass_query(query):
     else:
         result = json.loads(cache_file.read_text())
     return result
+
+
+def scraperapi_proxies(**params):
+    if not SCRAPERAPI_API_KEY:
+        return None
+    params = ".".join([f"{k}={str(v).lower()}" for k, v in params.items()])
+    if params:
+        params = f".{params}"
+    proxy_url = f"http://scraperapi{params}:{SCRAPERAPI_API_KEY}@proxy-server.scraperapi.com:8001"
+    return {
+        "http": proxy_url,
+        "https": proxy_url,
+    }
 
 
 def titleize(name):

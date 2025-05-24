@@ -7,14 +7,31 @@ import json
 import re
 from pathlib import Path
 
+import requests
+import urllib3
 from playwright.sync_api import sync_playwright
 
-from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_query, titleize, distance, opening_weekdays, gregorian_easter, write_diff
+from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_query, scraperapi_proxies, titleize, distance, opening_weekdays, gregorian_easter, write_diff
 from impl.config import ENABLE_CACHE, PLAYWRIGHT_CONTEXT_OPTS
 
 
 REF = "ref"
 
+NEW_DATA_QUERY = [{
+    "operationName": "getStores",
+    "variables": {
+        "params": {
+            "radius": 25,
+            "count": 3000
+        }
+    },
+    "extensions": {
+        "persistedQuery": {
+            "version": 1,
+            "sha256Hash": "9a582eb20ad545895b53da00263eb581085a499b7a2426fbd2dd06674276b803"
+        }
+    }
+}]
 SCHEDULE_DAYS_MAPPING = {
     r"2ª a (6ª|sexta)": r"Mo-Fr",
     r"(de )?(2ª|segunda)( a)? sábado": r"Mo-Sa",
@@ -55,18 +72,26 @@ CITIES = {
 }
 
 
-def fetch_data(page_url, data_url):
+def fetch_data(page_url, data_url, data_params):
     cache_file = Path(f"{cache_name(data_url)}.json")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {data_url}")
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            context = browser.new_context(**PLAYWRIGHT_CONTEXT_OPTS)
-            page = context.new_page()
-            with page.expect_response(data_url) as response:
-                page.goto(page_url)
-            result = response.value.body().decode("utf-8")
-            browser.close()
+        proxies = scraperapi_proxies(session_number=123, render=True)
+        if proxies:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            r = requests.get(page_url, proxies=proxies, verify=False)
+            proxies = scraperapi_proxies(session_number=123)
+            r = requests.post(data_url, json=data_params, proxies=proxies, verify=False)
+            result = r.text
+        else:
+            with sync_playwright() as p:
+                browser = p.firefox.launch()
+                context = browser.new_context(**PLAYWRIGHT_CONTEXT_OPTS)
+                page = context.new_page()
+                with page.expect_response(data_url) as response:
+                    page.goto(page_url)
+                result = response.value.body().decode("utf-8")
+                browser.close()
         result = json.loads(result)
         if ENABLE_CACHE:
             cache_file.write_text(json.dumps(result))
@@ -80,7 +105,7 @@ if __name__ == "__main__":
 
     page_url = "https://www.worten.pt/lojas-worten"
     data_url = "https://www.worten.pt/_/api/graphql?wOperationName=getStores"
-    new_data = fetch_data(page_url, data_url)[0]["data"]["stores"]["stores"]
+    new_data = fetch_data(page_url, data_url, NEW_DATA_QUERY)[0]["data"]["stores"]["stores"]
 
     for nd in new_data:
         public_id = nd["id"]

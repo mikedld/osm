@@ -14,4 +14,6 @@ except:
 ENABLE_CACHE = _config.get("general", {}).get("enable_cache", True)
 ENABLE_OVERPASS_CACHE = _config.get("general", {}).get("enable_overpass_cache", True)
 
+SCRAPERAPI_API_KEY = _config.get("scraperapi", {}).get("api_key")
+
 PLAYWRIGHT_CONTEXT_OPTS = _config.get("playwright", {}).get("context_opts", {})
