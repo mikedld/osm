@@ -13,19 +13,19 @@ node[x-dld-kind]::modified_layer {
 }
 
 node[x-dld-kind=old]::modified_layer {
-  symbol-fill-color: #0000ff;
+  symbol-fill-color: lightskyblue;
 }
 
 node[x-dld-kind=new]::modified_layer {
-  symbol-fill-color: #00ff00;
+  symbol-fill-color: green;
 }
 
 node[x-dld-kind=mod]::modified_layer {
-  symbol-fill-color: #ff00ff;
+  symbol-fill-color: orange;
 }
 
 node[x-dld-kind=del]::modified_layer {
-  symbol-fill-color: #ff0000;
+  symbol-fill-color: red;
 }
 
 way[x-dld-kind]::modified_layer,
@@ -37,20 +37,20 @@ node[x-dld-kind] < way::modified_layer {
 
 way[x-dld-kind=old]::modified_layer,
 node[x-dld-kind=old] < way::modified_layer {
-  color: #0000ff;
+  color: lightskyblue;
 }
 
 way[x-dld-kind=new]::modified_layer,
 node[x-dld-kind=new] < way::modified_layer {
-  color: #00ff00;
+  color: green;
 }
 
 way[x-dld-kind=mod]::modified_layer,
 node[x-dld-kind=mod] < way::modified_layer {
-  color: #ff00ff;
+  color: orange;
 }
 
 way[x-dld-kind=del]::modified_layer,
 node[x-dld-kind=del] < way::modified_layer {
-  color: #ff0000;
+  color: red;
 }
