@@ -17,6 +17,7 @@
   #stats td:nth-of-type(4),
   #stats td:nth-of-type(5),
   #stats td:nth-of-type(6) { text-align: right; }
+  #stats tr.tbl-diff-totals td:nth-of-type(1) { font-weight: bold; }
   .stale { color: red; }
   .tbl-diff-new { font-weight: bold; color: green; }
   .tbl-diff-mod { font-weight: bold; color: orange; }
@@ -53,6 +54,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
   const stats = await response.json();
 
   const points = [];
+  const totals = {};
 
   const table = document.getElementById('stats');
   Object.entries(stats).sort().forEach(([id, info]) => {
@@ -68,25 +70,41 @@ document.addEventListener('DOMContentLoaded', async (event) => {
     }
 
     const row = table.insertRow();
-    row.insertCell(0).appendChild(titleEl);
-    row.insertCell(1).appendChild(dateEl);
-    row.insertCell(2).appendChild(document.createTextNode(info.total));
+    row.insertCell().appendChild(titleEl);
+    row.insertCell().appendChild(dateEl);
+    row.insertCell().appendChild(document.createTextNode(info.total));
 
-    let col = 3;
     ['new', 'mod', 'del'].forEach(kind => {
         const diffEl = document.createElement('span');
         const counts = info[kind];
         const count = Array.isArray(counts) ? counts.length : counts;
         diffEl.textContent = count;
+        totals[kind] = (totals[kind] || 0) + count;
         if (count > 0) {
           diffEl.className = `tbl-diff-${kind}`;
         }
-        row.insertCell(col++).appendChild(diffEl);
+        row.insertCell().appendChild(diffEl);
 
         if (Array.isArray(counts)) {
           points.push(...counts.map(c => [id, info.title, c[0], [c[1], c[2]], kind]));
         }
     });
+  });
+
+  const row = table.insertRow();
+  row.className = 'tbl-diff-totals';
+  row.insertCell().appendChild(document.createTextNode("Total:"));
+  row.insertCell().appendChild(document.createTextNode(""));
+  row.insertCell().appendChild(document.createTextNode(""));
+
+  ['new', 'mod', 'del'].forEach(kind => {
+    const diffEl = document.createElement('span');
+    const count = totals[kind];
+    diffEl.textContent = count;
+    if (count > 0) {
+      diffEl.className = `tbl-diff-${kind}`;
+    }
+    row.insertCell().appendChild(diffEl);
   });
 
   ///
