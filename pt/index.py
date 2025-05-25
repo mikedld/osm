@@ -13,6 +13,7 @@ SCRIPTS = (
     "mercadona.py",
     "pingodoce.py",
     "starbucks.py",
+    "wells.py",
     "worten.py",
 )
 

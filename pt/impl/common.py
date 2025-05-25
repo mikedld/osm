@@ -109,7 +109,7 @@ def scraperapi_proxies(**params):
 
 def titleize(name):
     return "".join(
-        word if word in PT_ARTICLES else word.capitalize()
+        word if word in PT_ARTICLES else (word.upper() if re.fullmatch(r"[ivxlcdm]{2,}", word) else word.capitalize())
         for word in re.split(r"\b", name.lower()))
 
 
