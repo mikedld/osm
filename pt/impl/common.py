@@ -186,12 +186,20 @@ def write_diff(title, ref, diff, html=True, osm=True):
         stats_file = BASE_DIR / "stats.json"
         if stats_file.exists():
             stats = json.loads(stats_file.read_text())
+        now = datetime.datetime.now(datetime.UTC)
+        if old_stats := dict(stats.get(BASE_NAME, {})):
+            if datetime.datetime.fromisoformat(old_stats["date"]).date() != now.date():
+                old_stats.pop("title", None)
+                old_stats.pop("previous", None)
+            else:
+                old_stats = dict(old_stats.get("previous", {}))
         stats[BASE_NAME] = {
             "title": title,
-            "date": datetime.datetime.now(datetime.UTC).strftime("%FT%TZ"),
+            "date": now.strftime("%FT%TZ"),
             "total": len(diff),
             "new": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "new"],
             "mod": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "mod"],
             "del": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "del"],
+            "previous": old_stats
         }
         stats_file.write_text(json.dumps(stats))

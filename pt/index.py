@@ -24,4 +24,4 @@ if __name__ == "__main__":
     for script in SCRIPTS:
         result = run([f"./{script}"], capture_output=True, cwd=base_dir)
         if result.returncode != 0:
-            print(f"---\nScript '{script}' failed with exit code {result.returncode}: {result.stderr}", file=stderr)
+            print(f"---\nScript '{script}' failed with exit code {result.returncode}: {result.stderr.decode()}", file=stderr)

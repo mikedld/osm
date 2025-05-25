@@ -18,6 +18,7 @@
   #stats td:nth-of-type(5),
   #stats td:nth-of-type(6) { text-align: right; }
   #stats tr.tbl-diff-totals td:nth-of-type(1) { font-weight: bold; }
+  #stats sup { font-weight: normal; color: initial; }
   .stale { color: red; }
   .tbl-diff-new { font-weight: bold; color: green; }
   .tbl-diff-mod { font-weight: bold; color: orange; }
@@ -55,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
 
   const points = [];
   const totals = {};
+  const prevTotals = {};
 
   const table = document.getElementById('stats');
   Object.entries(stats).sort().forEach(([id, info]) => {
@@ -75,19 +77,25 @@ document.addEventListener('DOMContentLoaded', async (event) => {
     row.insertCell().appendChild(document.createTextNode(info.total));
 
     ['new', 'mod', 'del'].forEach(kind => {
-        const diffEl = document.createElement('span');
-        const counts = info[kind];
-        const count = Array.isArray(counts) ? counts.length : counts;
-        diffEl.textContent = count;
-        totals[kind] = (totals[kind] || 0) + count;
-        if (count > 0) {
-          diffEl.className = `tbl-diff-${kind}`;
-        }
-        row.insertCell().appendChild(diffEl);
+      const diffEl = document.createElement('span');
+      const counts = info[kind];
 
-        if (Array.isArray(counts)) {
-          points.push(...counts.map(c => [id, info.title, c[0], [c[1], c[2]], kind]));
-        }
+      const count = counts.length;
+      diffEl.innerHTML = count;
+      if (count > 0) {
+        diffEl.className = `tbl-diff-${kind}`;
+      }
+      totals[kind] = (totals[kind] || 0) + count;
+
+      const prevCount = info.previous ? info.previous[kind].length : 0;
+      if (prevCount != count) {
+        const delta = count - prevCount;
+        diffEl.innerHTML = `<sup>${delta > 0 ? '&plus;' : '&minus;'}${Math.abs(delta)}</sup>${count}`;
+      }
+      prevTotals[kind] = (prevTotals[kind] || 0) + prevCount;
+
+      row.insertCell().appendChild(diffEl);
+      points.push(...counts.map(c => [id, info.title, c[0], [c[1], c[2]], kind]));
     });
   });
 
@@ -100,7 +108,13 @@ document.addEventListener('DOMContentLoaded', async (event) => {
   ['new', 'mod', 'del'].forEach(kind => {
     const diffEl = document.createElement('span');
     const count = totals[kind];
-    diffEl.textContent = count;
+    diffEl.innerHTML = count;
+    const prevCount = prevTotals[kind] || 0;
+    if (prevCount != count) {
+      const delta = count - prevCount;
+      diffEl.innerHTML = `<sup>${delta > 0 ? '&plus;' : '&minus;'}${Math.abs(delta)}</sup>${count}`;
+      prevTotals[kind] = (prevTotals[kind] || 0) + prevCount;
+    }
     if (count > 0) {
       diffEl.className = `tbl-diff-${kind}`;
     }
