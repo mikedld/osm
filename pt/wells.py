@@ -51,7 +51,9 @@ def fetch_data(url):
     html_parser = etree.HTMLParser()
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
-        result = requests.get(url).content.decode("utf-8")
+        r = requests.get(url)
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
         result_tree = etree.fromstring(result, html_parser)
         result = result_tree.xpath("//script[@id='locations-data']/text()")[0]
         result = json.loads(result)

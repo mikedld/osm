@@ -86,7 +86,9 @@ def overpass_query(query):
     cache_file = Path(f"{cache_name(full_query)}.json")
     if not ENABLE_OVERPASS_CACHE or not cache_file.exists():
         # print(f"Querying Overpass: {full_query}")
-        result = requests.post("http://overpass-api.de/api/interpreter", data=full_query).json()
+        r = requests.post("http://overpass-api.de/api/interpreter", data=full_query)
+        r.raise_for_status()
+        result = r.json()
         if ENABLE_OVERPASS_CACHE:
             cache_file.write_text(json.dumps(result))
     else:
@@ -94,7 +96,7 @@ def overpass_query(query):
     return result
 
 
-def scraperapi_proxies(**params):
+def get_scraperapi_proxies(**params):
     if not SCRAPERAPI_API_KEY:
         return None
     params = ".".join([f"{k}={str(v).lower()}" for k, v in params.items()])

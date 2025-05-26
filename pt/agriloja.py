@@ -60,7 +60,9 @@ def fetch_data(url):
     cache_file = Path(f"{cache_name(url)}.json")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
-        result = requests.get(url).content.decode("latin1")
+        r = requests.get(url)
+        r.raise_for_status()
+        result = r.content.decode("latin1")
         result = re.sub(r"^.*\baddresses:", "", result, flags=re.S)
         result = re.sub(r"\].*", "]", result, flags=re.S)
         result = re.sub(r"\b(id|name|coordinates|street|zip|city|short_content|phone|fax|country|country_name|email|schedule|image|zoneID):", r'"\1":', result)

@@ -26,7 +26,9 @@ def fetch_data(url):
     cache_file = Path(f"{cache_name(url)}.json")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
-        result = requests.get(url).content.decode("utf-8")
+        r = requests.get(url)
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
         result = json.loads(result)
         if ENABLE_CACHE:
             cache_file.write_text(json.dumps(result))

@@ -38,7 +38,9 @@ def fetch_stores_data(url):
     cache_file = Path(f"{cache_name(url)}.json")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
-        result = requests.get(url).content.decode("utf-8")
+        r = requests.get(url)
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
         result = re.sub(r"^.*var restaurantsJson[ ]*=[ ]*'\[(.+)\]'.*$", r"[\1]", result, flags=re.S)
         result = json.loads(result)
         if ENABLE_CACHE:
@@ -53,7 +55,9 @@ def fetch_store_data(store):
     cache_file = Path(f"{cache_name(url)}.html")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
-        result = requests.get(url).content.decode("utf-8")
+        r = requests.get(url)
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
         result_tree = etree.fromstring(result, etree.HTMLParser())
         etree.indent(result_tree)
         result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")

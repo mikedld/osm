@@ -6,12 +6,11 @@ import itertools
 import json
 import re
 from pathlib import Path
+from random import randint
 
 import requests
-import urllib3
-from playwright.sync_api import sync_playwright
 
-from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_query, scraperapi_proxies, titleize, distance, opening_weekdays, gregorian_easter, write_diff
+from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_query, get_scraperapi_proxies, titleize, distance, opening_weekdays, gregorian_easter, write_diff
 from impl.config import ENABLE_CACHE, PLAYWRIGHT_CONTEXT_OPTS
 
 
@@ -76,14 +75,20 @@ def fetch_data(page_url, data_url, data_params):
     cache_file = Path(f"{cache_name(data_url)}.json")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {data_url}")
-        proxies = scraperapi_proxies(session_number=123, render=True)
-        if proxies:
+        scraperapi_params = dict(session_number=randint(1, 100500))
+        scraperapi_proxies = get_scraperapi_proxies(**scraperapi_params)
+        if scraperapi_proxies:
+            import urllib3
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            r = requests.get(page_url, proxies=proxies, verify=False)
-            proxies = scraperapi_proxies(session_number=123)
-            r = requests.post(data_url, json=data_params, proxies=proxies, verify=False)
+
+            # r = requests.get(page_url, proxies=scraperapi_proxies, verify=False)
+            # r.raise_for_status()
+            # scraperapi_proxies = get_scraperapi_proxies(**scraperapi_params)
+            r = requests.post(data_url, json=data_params, proxies=scraperapi_proxies, verify=False)
+            r.raise_for_status()
             result = r.text
         else:
+            from playwright.sync_api import sync_playwright
             with sync_playwright() as p:
                 browser = p.firefox.launch()
                 context = browser.new_context(**PLAYWRIGHT_CONTEXT_OPTS)

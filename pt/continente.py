@@ -76,7 +76,9 @@ def fetch_stores_data(url):
     cache_file = Path(f"{cache_name(url)}.html")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
-        result = requests.get(url, headers={"user-agent": "mikedld-osm/1.0"}).content.decode("utf-8")
+        r = requests.get(url, headers={"user-agent": "mikedld-osm/1.0"})
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
         result_tree = etree.fromstring(result, etree.HTMLParser())
         etree.indent(result_tree)
         result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
@@ -104,7 +106,9 @@ def fetch_store_data(store):
     cache_file = Path(f"{cache_name(url)}.html")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
-        result = requests.get(url, headers={"user-agent": "mikedld-osm/1.0"}).content.decode("utf-8")
+        r = requests.get(url, headers={"user-agent": "mikedld-osm/1.0"})
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
         result_tree = etree.fromstring(result, etree.HTMLParser())
         etree.indent(result_tree)
         result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")

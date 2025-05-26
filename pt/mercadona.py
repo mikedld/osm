@@ -44,7 +44,9 @@ def fetch_data(url):
     cache_file = Path(f"{cache_name(url)}.json")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
-        result = requests.get(f"{url}?timestamp={datetime.datetime.today().strftime('%s000')}").content.decode("utf-8")
+        r = requests.get(f"{url}?timestamp={datetime.datetime.today().strftime('%s000')}")
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
         result = re.sub(r"^var dataJson[ ]*=[ ]*", "", result)
         result = re.sub(r";$", "", result)
         result = json.loads(result)

@@ -64,7 +64,9 @@ def fetch_stores_data(url):
     cache_file = Path(f"{cache_name(url)}.html")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
-        result = requests.get(url).content.decode("utf-8")
+        r = requests.get(url)
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
         if ENABLE_CACHE:
             cache_file.write_text(result)
     else:
@@ -80,7 +82,9 @@ def fetch_store_data(store):
     cache_file = Path(f"{cache_name(url)}.html")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
-        result = requests.get(url).content.decode("utf-8")
+        r = requests.get(url)
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
         if ENABLE_CACHE:
             cache_file.write_text(result)
     else:
