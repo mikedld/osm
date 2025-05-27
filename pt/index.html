@@ -18,7 +18,7 @@
   #stats td:nth-of-type(5),
   #stats td:nth-of-type(6) { text-align: right; }
   #stats tr.tbl-diff-totals td:nth-of-type(1) { font-weight: bold; }
-  #stats sup { font-weight: normal; color: initial; }
+  #stats small { font-size: 75%; opacity: 50%; font-weight: normal; color: initial; }
   .stale { color: red; }
   .tbl-diff-new { font-weight: bold; color: green; }
   .tbl-diff-mod { font-weight: bold; color: orange; }
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
       const prevCount = info.previous ? info.previous[kind].length : 0;
       if (prevCount != count) {
         const delta = count - prevCount;
-        diffEl.innerHTML = `<sup>${delta > 0 ? '&plus;' : '&minus;'}${Math.abs(delta)}</sup>${count}`;
+        diffEl.innerHTML = `<small>${delta > 0 ? '&plus;' : '&minus;'}${Math.abs(delta)};</small>${count}`;
       }
       prevTotals[kind] = (prevTotals[kind] || 0) + prevCount;
 
@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
     const prevCount = prevTotals[kind] || 0;
     if (prevCount != count) {
       const delta = count - prevCount;
-      diffEl.innerHTML = `<sup>${delta > 0 ? '&plus;' : '&minus;'}${Math.abs(delta)}</sup>${count}`;
+      diffEl.innerHTML = `<small>${delta > 0 ? '&plus;' : '&minus;'}${Math.abs(delta)};</small>${count}`;
       prevTotals[kind] = (prevTotals[kind] || 0) + prevCount;
     }
     if (count > 0) {
