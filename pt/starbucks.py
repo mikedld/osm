@@ -38,12 +38,12 @@ def fetch_data(url):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[amenity][name=Starbucks](area.p); );')["elements"]]
-
     continent_data_url = "https://www.starbucks.pt/api/v2/stores/?filter[coordinates][latitude]=39.681823&filter[coordinates][longitude]=-8.003540&filter[radius]=250"
     madeira_data_url = "https://www.starbucks.pt/api/v2/stores/?filter[coordinates][latitude]=32.771436&filter[coordinates][longitude]=-16.704712&filter[radius]=250"
     azores_data_url = "https://www.starbucks.pt/api/v2/stores/?filter[coordinates][latitude]=38.381039&filter[coordinates][longitude]=-28.020630&filter[radius]=250"
     new_data = [x["attributes"] for x in (fetch_data(continent_data_url)["data"] + fetch_data(madeira_data_url)["data"] + fetch_data(azores_data_url)["data"]) if x["attributes"]["address"]["countryCode"] == "PT"]
+
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[amenity][name=Starbucks](area.p); );')["elements"]]
 
     for nd in new_data:
         public_id = nd["storeNumber"]

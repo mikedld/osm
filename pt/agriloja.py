@@ -77,10 +77,10 @@ def fetch_data(url):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name=Agriloja](area.p); );')["elements"]]
-
     data_url = "https://www.agriloja.pt/pt/as-nossas-lojas_596.html"
     new_data = [x for x in fetch_data(data_url) if x["country"] == "176"]
+
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name=Agriloja](area.p); );')["elements"]]
 
     for nd in new_data:
         public_id = nd["id"]

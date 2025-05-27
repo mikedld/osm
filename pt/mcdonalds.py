@@ -128,12 +128,12 @@ def opening_hours(data, title):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[amenity][amenity!=charging_station][amenity!=bicycle_rental][amenity!=social_facility][amenity!=parking][name~"McDonald"](area.p); );')["elements"]]
-
     data_url = "https://www.mcdonalds.pt/restaurantes"
     new_data = fetch_stores_data(data_url)
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_store_data, new_data))
+
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[amenity][amenity!=charging_station][amenity!=bicycle_rental][amenity!=social_facility][amenity!=parking][name~"McDonald"](area.p); );')["elements"]]
 
     new_node_id = -10000
 

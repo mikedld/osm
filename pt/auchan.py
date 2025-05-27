@@ -95,13 +95,13 @@ def fetch_store_data(store):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][name~"Auchan"](area.p); ' +
-        f'nwr[amenity][amenity!=fuel][amenity!=charging_station][amenity!=parking][name~"Auchan"](area.p); nwr[shop][name~"Minipreço"](area.p); );')["elements"]]
-
     data_url = "https://www.auchan.pt/pt/lojas"
     new_data = fetch_stores_data(data_url)
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_store_data, (nd for nd in new_data if nd["type"] == "Auchan")))
+
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][name~"Auchan"](area.p); ' +
+        f'nwr[amenity][amenity!=fuel][amenity!=charging_station][amenity!=parking][name~"Auchan"](area.p); nwr[shop][name~"Minipreço"](area.p); );')["elements"]]
 
     new_node_id = -10000
 

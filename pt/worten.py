@@ -106,11 +106,11 @@ def fetch_data(page_url, data_url, data_params):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name~"Worten"](area.p); );')["elements"]]
-
     page_url = "https://www.worten.pt/lojas-worten"
     data_url = "https://www.worten.pt/_/api/graphql?wOperationName=getStores"
     new_data = fetch_data(page_url, data_url, NEW_DATA_QUERY)[0]["data"]["stores"]["stores"]
+
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name~"Worten"](area.p); );')["elements"]]
 
     for nd in new_data:
         public_id = nd["id"]

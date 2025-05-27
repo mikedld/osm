@@ -58,11 +58,11 @@ def fetch_data(url):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name=Mercadona](area.p); );')["elements"]]
-
     # data_url = "https://www.mercadona.com/estaticos/cargas/data.js"
     data_url = "https://storage.googleapis.com/pro-bucket-wcorp-files/json/data.js"
     new_data = [x for x in fetch_data(data_url)["tiendasFull"] if x["p"] == "PT"]
+
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name=Mercadona](area.p); );')["elements"]]
 
     custom_ohs = dict()
     custom_ohs_file = BASE_DIR / f"{BASE_NAME}-custom-ohs.json"

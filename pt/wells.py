@@ -83,10 +83,10 @@ def fetch_data(url):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name~"Wells"](area.p); );')["elements"]]
-
     data_url = "https://wells.pt/lojas-wells"
     new_data = fetch_data(data_url)
+
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name~"Wells"](area.p); );')["elements"]]
 
     for nd in new_data:
         branch = re.sub(r"^Wells\s+", "", titleize(nd["name"]))

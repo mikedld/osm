@@ -46,10 +46,10 @@ def schedule_time(v):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=alcohol][shop!=florist][shop!=kiosk][~"^(name|brand)$"~"^Ping[ou] Doce"](area.p); );')["elements"]]
-
     data_url = "https://www.pingodoce.pt/wp-content/themes/pingodoce/ajax/pd-ajax.php?action=pd_stores_get_stores"
     new_data = fetch_data(data_url)["data"]["stores"]
+
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=alcohol][shop!=florist][shop!=kiosk][~"^(name|brand)$"~"^Ping[ou] Doce"](area.p); );')["elements"]]
 
     for nd in new_data:
         public_id = nd["id"]

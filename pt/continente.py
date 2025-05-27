@@ -130,12 +130,12 @@ def fetch_store_data(store):
 
 
 if __name__ == "__main__":
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=newsagent][shop!=florist][shop!=tobacco][name~"[Cc][Oo][Nn][Tt][Ii][Nn][Ee][Nn][Tt][Ee]"](area.p); );')["elements"]]
-
     data_url = "https://feed.continente.pt/lojas"
     new_data = fetch_stores_data(data_url)
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_store_data, new_data))
+
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=newsagent][shop!=florist][shop!=tobacco][name~"[Cc][Oo][Nn][Tt][Ii][Nn][Ee][Nn][Tt][Ee]"](area.p); );')["elements"]]
 
     new_node_id = -10000
 
