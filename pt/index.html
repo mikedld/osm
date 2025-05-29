@@ -87,12 +87,22 @@ document.addEventListener('DOMContentLoaded', async (event) => {
       }
       totals[kind] = (totals[kind] || 0) + count;
 
-      const prevCount = info.previous ? info.previous[kind].length : 0;
-      if (prevCount != count) {
-        const delta = count - prevCount;
-        diffEl.innerHTML = `<small>${delta > 0 ? '&plus;' : '&minus;'}${Math.abs(delta)};</small>${count}`;
+      const newIds = new Set(counts.map(c => c[0]));
+      const oldIds = new Set(info.previous ? info.previous[kind].map(c => c[0]) : []);
+      const newDelta = [...newIds].reduce((a, x) => a + (oldIds.has(x) ? 0 : 1), 0);
+      const oldDelta = [...oldIds].reduce((a, x) => a + (newIds.has(x) ? 0 : 1), 0);
+      if (newDelta > 0 || oldDelta > 0) {
+        const delta = [];
+        if (newDelta > 0) {
+          delta.push(`&plus;${newDelta}`);
+        }
+        if (oldDelta > 0) {
+          delta.push(`&minus;${oldDelta}`);
+        }
+        diffEl.innerHTML = `<small>${delta.join(';')};</small>${count}`;
+        const pt = prevTotals[kind] || [0, 0];
+        prevTotals[kind] = [pt[0] + newDelta, pt[1] + oldDelta];
       }
-      prevTotals[kind] = (prevTotals[kind] || 0) + prevCount;
 
       row.insertCell().appendChild(diffEl);
       points.push(...counts.map(c => [id, info.title, c[0], [c[1], c[2]], kind]));
@@ -109,11 +119,16 @@ document.addEventListener('DOMContentLoaded', async (event) => {
     const diffEl = document.createElement('span');
     const count = totals[kind];
     diffEl.innerHTML = count;
-    const prevCount = prevTotals[kind] || 0;
-    if (prevCount != count) {
-      const delta = count - prevCount;
-      diffEl.innerHTML = `<small>${delta > 0 ? '&plus;' : '&minus;'}${Math.abs(delta)};</small>${count}`;
-      prevTotals[kind] = (prevTotals[kind] || 0) + prevCount;
+    const deltas = prevTotals[kind];
+    if (deltas) {
+      const delta = [];
+      if (deltas[0] > 0) {
+        delta.push(`&plus;${deltas[0]}`);
+      }
+      if (deltas[1] > 0) {
+        delta.push(`&minus;${deltas[1]}`);
+      }
+      diffEl.innerHTML = `<small>${delta.join(';')};</small>${count}`;
     }
     if (count > 0) {
       diffEl.className = `tbl-diff-${kind}`;
