@@ -14,14 +14,15 @@ from impl.config import ENABLE_CACHE
 REF = "ref"
 
 STREET_ABBREVS = [
-    [r"\bav\. ", "avenida "],
+    [r"\bal\.? ", "alameda "],
+    [r"\bav\.? ", "avenida "],
     [r"\bdr\. ", "doutor "],
     [r"\bdra\. ", "doutora "],
     [r"\beng\. ", "engenheiro "],
-    [r"\bestr\. ", "estrada "],
+    [r"\bestr\.? ", "estrada "],
     [r"\bestrada n\. ", "estrada nacional "],
-    [r"\br\. ", "rua "],
-    [r"\btv\. ", "travessa "],
+    [r"\br\.? ", "rua "],
+    [r"\btv\.? ", "travessa "],
 ]
 STREET_FIXUPS = {
     "barreiro | rua dos resistentes anti-fascistas": "rua resistentes anti-fascistas",
