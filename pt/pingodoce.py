@@ -67,13 +67,14 @@ if __name__ == "__main__":
             d.data["lon"] = float(nd["long"])
             old_data.append(d)
 
-        branch = re.sub(r"pd&go\s+", "", html.unescape(nd["name"]), flags=re.I).replace("  ", " ").strip()
+        branch = re.sub(r"^(pd&go|pingo doce express)\s+(-\s+)?", "", html.unescape(nd["name"]), flags=re.I).replace("  ", " ").strip()
         is_pdgo = html.unescape(nd["name"]).lower().startswith("pd&go")
+        is_pdex = html.unescape(nd["name"]).lower().startswith("pingo doce express")
         tags_to_reset = set()
 
         d[REF] = public_id
         d["shop"] = "convenience" if is_pdgo else "supermarket"
-        d["name"] = "Pingo Doce" + (" & Go" if is_pdgo else "")
+        d["name"] = "Pingo Doce" + (" & Go" if is_pdgo else (" Express" if is_pdex else ""))
         d["brand"] = "Pingo Doce"
         d["brand:wikidata"] = "Q1575057"
         d["brand:wikipedia"] = "pt:Pingo Doce"
