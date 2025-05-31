@@ -57,6 +57,18 @@ CITIES = {
 
 
 def fetch_data(page_url, data_url):
+    def filter_requests(route, request):
+        if request.resource_type in ("stylesheet", "image", "media", "font") and "cloudflare.com" not in request.url:
+            # print(f"Aborting request: {request.url}")
+            route.abort()
+            return
+        if re.search(r"(cookiebot|google(tagmanager)?|gstatic)\.com/", request.url):
+            # print(f"Aborting request: {request.url}")
+            route.abort()
+            return
+        # print(f"Making request: {request.url}")
+        route.continue_()
+
     cache_file = Path(f"{cache_name(data_url)}.json")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {data_url}")
@@ -64,14 +76,15 @@ def fetch_data(page_url, data_url):
             browser = p.chromium.connect_over_cdp(PLAYWRIGHT_CDP_URL) if PLAYWRIGHT_CDP_URL else p.firefox.launch()
             context = browser.new_context(**PLAYWRIGHT_CONTEXT_OPTS)
             page = context.new_page()
+            page.route("**/*", filter_requests)
+            if PLAYWRIGHT_CDP_CAPTCHA_SOLVE:
+                cdp = context.new_cdp_session(page)
+                def solve_captcha(e):
+                    print(f"Captcha detected: {e}")
+                    cdp.send(PLAYWRIGHT_CDP_CAPTCHA_SOLVE)
+                cdp.on(PLAYWRIGHT_CDP_CAPTCHA_FOUND, solve_captcha)
             with page.expect_response(data_url, timeout=60000) as response:
                 page.goto(page_url)
-                if PLAYWRIGHT_CDP_CAPTCHA_SOLVE:
-                    cdp = context.new_cdp_session(page)
-                    def solve_captcha(e):
-                        print(f"Captcha detected: {e}")
-                        cdp.send(PLAYWRIGHT_CDP_CAPTCHA_SOLVE)
-                    cdp.on(PLAYWRIGHT_CDP_CAPTCHA_FOUND, solve_captcha)
             result = response.value.body().decode("utf-8")
             browser.close()
         result = json.loads(result)
