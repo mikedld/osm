@@ -16,11 +16,14 @@
   }
   #stats { padding-top: 10px; }
   #stats th, #stats td { padding: 0px 4px; }
+  #stats tr:hover { background-color: #eee; }
+  #stats td:nth-of-type(1) { width: 100%; max-width: 0; min-width: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #stats td:nth-of-type(3),
   #stats td:nth-of-type(4),
   #stats td:nth-of-type(5),
-  #stats td:nth-of-type(6) { text-align: right; }
+  #stats td:nth-of-type(6) { text-align: right; white-space: nowrap; }
   #stats tr.tbl-diff-totals td:nth-of-type(1) { font-weight: bold; }
+  #stats img { width: 16px; vertical-align: middle; padding-right: 4px; }
   #stats small { font-size: 75%; opacity: 50%; font-weight: normal; color: initial; }
   .stale { color: red; }
   .tbl-diff-new { font-weight: bold; color: green; }
@@ -64,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
   const table = document.getElementById('stats');
   Object.entries(stats).sort().forEach(([id, info]) => {
     const titleEl = document.createElement('a');
-    titleEl.textContent = info.title;
+    titleEl.innerHTML = `<img src="./images/${id}.png"/>${info.title}`;
     titleEl.href = `./${id}.html`;
 
     const dateEl = document.createElement('abbr');
