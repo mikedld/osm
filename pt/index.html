@@ -71,9 +71,9 @@ document.addEventListener('DOMContentLoaded', async (event) => {
     titleEl.href = `./${id}.html`;
 
     const dateEl = document.createElement('abbr');
-    dateEl.textContent = info.date.replace(/:\d+:\d+/, '');
+    dateEl.textContent = info.date.replace(/T.+/, '');
     dateEl.setAttribute('title', info.date);
-    if ((new Date(info.date) - new Date()) / 86400000 >= 1) {
+    if ((new Date() - new Date(info.date)) > 4 * 3600000) {
       dateEl.className = "stale";
     }
 
