@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async (event) => {
       totals[kind] = (totals[kind] || 0) + count;
 
       const newIds = new Set(counts.map(c => c[0]));
-      const oldIds = new Set(info.previous ? info.previous[kind].map(c => c[0]) : []);
+      const oldIds = new Set((info.previous && kind in info.previous) ? info.previous[kind].map(c => c[0]) : []);
       const newDelta = [...newIds].reduce((a, x) => a + (oldIds.has(x) ? 0 : 1), 0);
       const oldDelta = [...oldIds].reduce((a, x) => a + (newIds.has(x) ? 0 : 1), 0);
       if (newDelta > 0 || oldDelta > 0) {
