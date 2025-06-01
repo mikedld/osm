@@ -23,7 +23,7 @@ BASE_NAME = Path(__main__.__file__).stem
 CACHE_DIR = BASE_DIR / "cache"
 
 DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-PT_ARTICLES = {"e", "a", "o", "de", "do", "da", "dos", "das"}
+PT_ARTICLES = {"e", "a", "à", "o", "de", "do", "da", "dos", "das"}
 
 
 class DiffDict:
