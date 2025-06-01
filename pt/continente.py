@@ -120,6 +120,7 @@ def fetch_store_data(store):
     return {
         **store,
         "id": str(uuid.uuid5(uuid.NAMESPACE_URL, "continente:" + re.sub(r"^continente-", "", store["url"].split("/")[2]))),
+        "services": [x.strip().lower() for x in result_tree.xpath("//li[@class='serviceTag']//text()") if x.strip()],
         "schedule": {
             "".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-day')]/text()")): re.sub(r":0(\d\d)", r":\1", "-".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-time')]/time/text()")))
             for el in result_tree.xpath("//table[contains(@class, 'storeDetailHeaderMap__table')]/tr")
@@ -168,7 +169,7 @@ if __name__ == "__main__":
             new_node_id -= 1
 
         d[REF] = public_id
-        d["shop"] = "convenience" if is_bd else "supermarket"
+        d["shop"] = "supermarket" if not is_bd or ("talho" in nd["services"] and "mercearia" in nd["services"]) else "convenience"
         d["name"] = name
         d["brand"] = "Continente Bom Dia" if is_bd else ("Continente Modelo" if is_mod else "Continente")
         d["brand:wikidata"] = "Q123570507" if is_bd else ("Q1892188" if is_mod else "Q2995683")
