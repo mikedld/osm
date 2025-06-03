@@ -10,6 +10,7 @@ SCRIPTS = (
     "auchan.py",
     "cgd.py",
     "continente.py",
+    "lidl.py",
     "mcdonalds.py",
     "mercadona.py",
     "pingodoce.py",
