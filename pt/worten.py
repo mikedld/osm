@@ -11,7 +11,7 @@ from random import randint
 from playwright.sync_api import sync_playwright
 
 from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_query, titleize, distance, opening_weekdays, gregorian_easter, write_diff
-from impl.config import ENABLE_CACHE, PLAYWRIGHT_CDP_URL, PLAYWRIGHT_CDP_CAPTCHA_FOUND, PLAYWRIGHT_CDP_CAPTCHA_SOLVE, PLAYWRIGHT_CONTEXT_OPTS
+from impl.config import ENABLE_CACHE, PLAYWRIGHT_CDP_URL, PLAYWRIGHT_CONTEXT_OPTS
 
 
 REF = "ref"
@@ -77,12 +77,6 @@ def fetch_data(page_url, data_url):
             context = browser.new_context(**PLAYWRIGHT_CONTEXT_OPTS)
             page = context.new_page()
             page.route("**/*", filter_requests)
-            if PLAYWRIGHT_CDP_CAPTCHA_SOLVE:
-                cdp = context.new_cdp_session(page)
-                def solve_captcha(e):
-                    print(f"Captcha detected: {e}")
-                    cdp.send(PLAYWRIGHT_CDP_CAPTCHA_SOLVE)
-                cdp.on(PLAYWRIGHT_CDP_CAPTCHA_FOUND, solve_captcha)
             with page.expect_response(data_url, timeout=60000) as response:
                 page.goto(page_url)
             result = response.value.body().decode("utf-8")
