@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+
+import datetime
+import html
+import itertools
+import json
+import re
+from multiprocessing import Pool
+from pathlib import Path
+
+import requests
+
+from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_query, titleize, distance, opening_weekdays, gregorian_easter, write_diff
+from impl.config import ENABLE_CACHE
+
+
+REF = "ref"
+
+CITIES = {
+    "2600-723": "Castanheira do Ribatejo",
+    "3830-743": "Gafanha da Nazaré",
+    "4470-274": "Moreira",
+    "4760-501": "Vila Nova de Famalicão",
+}
+STREET_ABBREVS = [
+    [r"\bav\.? ", "avenida "],
+    [r"\beng\. ", "engenheiro "],
+    [r"\bdr\. ", "doutor "],
+    [r"\bgen\. ", "general "],
+    [r"\bpte\. ", "ponte "],
+    [r"\br\. ", "rua "],
+    [r"\btv\. ", "travessa "],
+]
+
+
+def fetch_level1_data(url):
+    cache_file = Path(f"{cache_name(url)}.json")
+    if not ENABLE_CACHE or not cache_file.exists():
+        # print(f"Querying URL: {url}")
+        r = requests.get(url)
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
+        result = json.loads(result)
+        if ENABLE_CACHE:
+            cache_file.write_text(json.dumps(result))
+    else:
+        result = json.loads(cache_file.read_text())
+    return result["response"]["locations"]
+
+
+def fetch_level2_data(store):
+    url = f"https://limmia-wasky-public-api-c934cd99c58c.herokuapp.com/localsPages/listStaticLocalsPagesIdentifier?identifier={store['identifier']}"
+    cache_file = Path(f"{cache_name(url)}.json")
+    if not ENABLE_CACHE or not cache_file.exists():
+        # print(f"Querying URL: {url}")
+        r = requests.get(url)
+        r.raise_for_status()
+        result = r.content.decode("utf-8")
+        result = json.loads(result)
+        if ENABLE_CACHE:
+            cache_file.write_text(json.dumps(result))
+    else:
+        result = json.loads(cache_file.read_text())
+    return {
+        **store,
+        **result["response"]["locations"][0],
+    }
+
+
+if __name__ == "__main__":
+    data_url = "https://limmia-wasky-public-api-c934cd99c58c.herokuapp.com/localsPages/listStaticLocalsPages"
+    new_data = fetch_level1_data(data_url)
+    with Pool(4) as p:
+        new_data = list(p.imap_unordered(fetch_level2_data, new_data))
+
+    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][~"^(name|brand)$"~"Washy"](area.p); );')["elements"]]
+
+    for nd in new_data:
+        public_id = nd["identifier"]
+        tags_to_reset = set()
+
+        d = next((od for od in old_data if od[REF] == public_id), None)
+        if d is None:
+            coord = [float(nd["lat"]), float(nd["lng"])]
+            ds = sorted([[od, distance([od.lat, od.lon], coord)] for od in old_data if not od[REF] and distance([od.lat, od.lon], coord) < 250], key=lambda x: x[1])
+            if len(ds) == 1:
+                d = ds[0][0]
+        if d is None:
+            d = DiffDict()
+            d.data["type"] = "node"
+            d.data["id"] = f"-{int(public_id)}"
+            d.data["lat"] = float(nd["lat"])
+            d.data["lon"] = float(nd["lng"])
+            old_data.append(d)
+
+        d[REF] = public_id
+        d["shop"] = "laundry"
+        d["name"] = "Washy"
+        d["brand"] = "Washy"
+        d["brand:wikidata"] = "Q129416138"
+        if branch := re.sub(r"^Washy Lavandaria", "", nd["name"]).strip():
+            d["branch"] = branch
+        d["self_service"] = "yes"
+
+        schedule = [
+            {
+                "d": x["dayOfWeek"] - 1,
+                "t": f"{x['from1']}-{x['to1'][:5]}"
+            }
+            for x in nd["openingHours"]
+        ]
+        schedule = [
+            {
+                "d": sorted([x["d"] for x in g]),
+                "t": k
+            }
+            for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
+        ]
+        schedule = [
+            f"{opening_weekdays(x['d'])} {x['t']}"
+            for x in sorted(schedule, key=lambda x: x["d"][0])
+        ]
+        if schedule:
+            d["opening_hours"] = "; ".join(schedule)
+            if d["source:opening_hours"] != "survey":
+                d["source:opening_hours"] = "website"
+
+        phone = nd["phone"].replace(" ", "")
+        if phone.startswith("+351"):
+            phone = phone[4:]
+        if phone and len(phone) == 9:
+            phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+            if phone[5:6] == "9":
+                d["contact:mobile"] = phone
+                tags_to_reset.add("contact:phone")
+            else:
+                d["contact:phone"] = phone
+                tags_to_reset.add("contact:mobile")
+        d["contact:website"] = f"https://www.washy.pt/onde-estamos/#!/{requests.utils.quote(nd['city'])}/{public_id}"
+
+        tags_to_reset.update({"phone", "mobile", "website"})
+
+        if d["source:contact"] != "survey":
+            d["source:contact"] = "website"
+
+        d["addr:postcode"] = nd["zip"].strip()
+        d["addr:city"] = CITIES.get(d["addr:postcode"], nd["city"].strip())
+        if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
+            street = nd["streetAndNumber"].replace("  ", " ")
+            street = re.sub(r"^[Cc]ontinente( [Mm]odelo| [Bb]om [Dd]ia)?[^,]*,\s*", "", street)
+            street = re.sub(r",\s*[Cc]ontinente( [Mm]odelo| [Bb]om [Dd]ia)?[^,]*", "", street)
+            for r in STREET_ABBREVS:
+                street = re.sub(r[0], r[1], street.lower())
+            if m := re.fullmatch(r"(.+?),?\s+(\d+(?:-\d+)?|lote (?:[\d.]+))(?:,?\s+(loja \w+))?", street):
+                d["addr:street"] = titleize(m[1])
+                d["addr:housenumber"] = titleize(m[2])
+                if m[3]:
+                    d["addr:unit"] = titleize(m[3])
+            elif re.match(r"^sitio ", street):
+                d["addr:place"] = titleize(street)
+            elif re.match(r"^quinta ", street):
+                d["addr:suburb"] = titleize(street)
+            else:
+                m = street.split(",", 1)
+                d["addr:street"] = titleize(m[0])
+                if len(m) > 1:
+                    d["addr:place"] = titleize(m[1].strip())
+
+        for key in tags_to_reset:
+            if d[key]:
+                d[key] = ""
+
+    for d in old_data:
+        if d.kind != "old":
+            continue
+        ref = d[REF]
+        if ref and any(nd for nd in new_data if ref == nd["identifier"]):
+            continue
+        d.kind = "del"
+
+    old_data.sort(key=lambda d: d[REF])
+
+    write_diff("Washy", REF, old_data, osm=True)
