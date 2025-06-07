@@ -109,11 +109,11 @@ if __name__ == "__main__":
                 days = SCHEDULE_DAYS.get(parts[0])
                 comment = ""
                 if not days:
-                    days, comment = SCHEDULE_DAYS_EX.get(parts[0])
+                    days, comment = SCHEDULE_DAYS_EX.get(parts[0], (None, None))
                 hours = SCHEDULE_HOURS.get(parts[1])
                 more_days = ""
                 if not hours:
-                    hours, more_days = SCHEDULE_HOURS_EX.get(parts[1])
+                    hours, more_days = SCHEDULE_HOURS_EX.get(parts[1], (None, None))
                 if days and more_days:
                     days += f",{more_days}"
                 if days and hours:

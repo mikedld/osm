@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-import datetime
-import html
 import itertools
-import json
 import re
 import uuid
 from multiprocessing import Pool

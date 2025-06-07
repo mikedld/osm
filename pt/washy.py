@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import datetime
-import html
 import itertools
 import json
 import re
@@ -10,7 +8,7 @@ from pathlib import Path
 
 import requests
 
-from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_query, titleize, distance, opening_weekdays, gregorian_easter, write_diff
+from impl.common import DiffDict, cache_name, overpass_query, titleize, distance, opening_weekdays, write_diff
 from impl.config import ENABLE_CACHE
 
 

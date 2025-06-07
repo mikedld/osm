@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import html
 import json
 import re
 from pathlib import Path

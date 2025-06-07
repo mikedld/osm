@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 
-import datetime
-import html
-import itertools
-import json
 import re
-import uuid
 from multiprocessing import Pool
 from pathlib import Path
 
 import requests
 from lxml import etree
 
-from impl.common import DiffDict, cache_name, overpass_query, distance, titleize, opening_weekdays, lookup_postcode, write_diff
+from impl.common import DiffDict, cache_name, overpass_query, distance, titleize, lookup_postcode, write_diff
 from impl.config import ENABLE_CACHE
 
 

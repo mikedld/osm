@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 
-import datetime
-import html
-import itertools
 import json
 import re
 from pathlib import Path
-from random import randint
 
 from playwright.sync_api import sync_playwright
 
-from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_query, titleize, distance, opening_weekdays, gregorian_easter, write_diff
+from impl.common import DiffDict, cache_name, overpass_query, titleize, distance, write_diff
 from impl.config import ENABLE_CACHE, PLAYWRIGHT_CDP_URL, PLAYWRIGHT_CONTEXT_OPTS
 
 

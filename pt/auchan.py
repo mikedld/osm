@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 
-import datetime
-import html
 import json
 import itertools
 import re
-from html.parser import HTMLParser
 from multiprocessing import Pool
 from pathlib import Path
 
 import requests
+from lxml import etree
 
-from impl.common import DiffDict, cache_name, overpass_query, titleize, opening_weekdays, distance, write_diff
+from impl.common import DiffDict, cache_name, overpass_query, opening_weekdays, distance, write_diff
 from impl.config import ENABLE_CACHE
 
 
@@ -28,55 +26,25 @@ EVENTS_MAPPING = {
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
-class PageParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.stores = None
-        self.store = None
-        self.store_events = ""
-        self._in_store = False
-        self._in_store_events = False
-
-    def handle_starttag(self, tag, attrs):
-        locs = next((a for a in attrs if a[0] == "data-locations"), None)
-        if locs:
-            self.stores = json.loads(html.unescape(locs[1]))
-
-        if tag == "script" and ("type", "application/ld+json") in attrs:
-            self._in_store = True
-
-        if tag == "div" and next((a for a in attrs if a[0] == "class" and "store-events" in a[1]), None):
-            self._in_store_events = True
-
-    def handle_endtag(self, tag):
-        if tag == "div" and self._in_store_events:
-            self._in_store_events = False
-
-    def handle_data(self, data):
-        if self._in_store:
-            self.store = json.loads(data)
-            self._in_store = False
-        if self._in_store_events:
-            self.store_events += data
-
-
-def fetch_stores_data(url):
+def fetch_level1_data(url):
     cache_file = Path(f"{cache_name(url)}.html")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url}")
         r = requests.get(url)
         r.raise_for_status()
         result = r.content.decode("utf-8")
+        result_tree = etree.fromstring(result, etree.HTMLParser())
+        etree.indent(result_tree)
+        result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
         if ENABLE_CACHE:
             cache_file.write_text(result)
     else:
         result = cache_file.read_text()
-    parser = PageParser()
-    parser.feed(result)
-    return parser.stores
+    result_tree = etree.fromstring(result, etree.XMLParser(recover=True))
+    return json.loads(result_tree.xpath("//@data-locations")[0])
 
 
-def fetch_store_data(store):
+def fetch_level2_data(store):
     store_id = re.sub(r'.*data-store-id="([^"]+)".*', r"\1", store["infoWindowHtml"], flags=re.S)
     url = f"https://www.auchan.pt/pt/loja?StoreID={store_id}"
     cache_file = Path(f"{cache_name(url)}.html")
@@ -85,20 +53,27 @@ def fetch_store_data(store):
         r = requests.get(url)
         r.raise_for_status()
         result = r.content.decode("utf-8")
+        result_tree = etree.fromstring(result, etree.HTMLParser())
+        etree.indent(result_tree)
+        result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
         if ENABLE_CACHE:
             cache_file.write_text(result)
     else:
         result = cache_file.read_text()
-    parser = PageParser()
-    parser.feed(result)
-    return {"id": store_id, "events": [x.strip() for x in parser.store_events.split("\n") if x.strip()], **store, **parser.store}
+    result_tree = etree.fromstring(result, etree.XMLParser(recover=True))
+    return {
+        "id": store_id,
+        "events": [x.strip() for x in "".join(result_tree.xpath("//div[contains(@class, 'store-events')]//text()")).split("\n") if x.strip()],
+        **store,
+        **json.loads(result_tree.xpath("//script[@type='application/ld+json']/text()")[0]),
+    }
 
 
 if __name__ == "__main__":
     data_url = "https://www.auchan.pt/pt/lojas"
-    new_data = fetch_stores_data(data_url)
+    new_data = fetch_level1_data(data_url)
     with Pool(4) as p:
-        new_data = list(p.imap_unordered(fetch_store_data, (nd for nd in new_data if nd["type"] == "Auchan")))
+        new_data = list(p.imap_unordered(fetch_level2_data, (nd for nd in new_data if nd["type"] == "Auchan")))
 
     old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][name~"Auchan"](area.p); ' +
         f'nwr[amenity][amenity!=fuel][amenity!=charging_station][amenity!=parking][name~"Auchan"](area.p); nwr[shop][name~"Minipreço"](area.p); );')["elements"]]
