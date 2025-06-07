@@ -12,6 +12,7 @@ from pathlib import Path
 import requests
 from humanize import naturaltime
 from jinja2 import Environment, FileSystemLoader
+from lxml import etree
 from retrying import retry
 
 from .config import ENABLE_OVERPASS_CACHE
@@ -24,6 +25,10 @@ CACHE_DIR = BASE_DIR / "cache"
 
 DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 PT_ARTICLES = {"e", "a", "à", "o", "de", "do", "da", "dos", "das"}
+
+POSTCODE_CITIES = {
+    "linda a velha": "linda-a-velha",
+}
 
 
 class DiffDict:
@@ -135,6 +140,49 @@ def gregorian_easter(year):
         full_moon -= 1
     week = full_moon // 7 - 38
     return datetime.date.fromordinal(week * 7)
+
+
+def lookup_postcode(postcode):
+    with Locker("postal_codes"):
+        codes = {}
+        codes_file = BASE_DIR / "postal_codes.json"
+        if codes_file.exists():
+            codes = json.loads(codes_file.read_text())
+        if postcode not in codes:
+            cp = postcode.split("-", 1)
+            page = requests.get("https://www.codigo-postal.pt/", params={"cp4": cp[0], "cp3": cp[1] if len(cp) > 1 else ""}, headers={"user-agent": "mikedld-osm/1.0"})
+            page.raise_for_status()
+            page_tree = etree.fromstring(page.content.decode("utf-8"), etree.HTMLParser())
+            place_els = page_tree.xpath("//div[@class='places']/p[not(@id)]")
+            page_coords = [
+                x.split(",")
+                for el in place_els
+                for x in (["".join(el.xpath(".//*[contains(@class, 'gps')]/text()")).strip()] if "".join(el.xpath(".//span[@class='cp']/text()")).startswith(postcode) else [])
+                if x
+            ]
+            if page_coords:
+                coords = [
+                    sum([float(x[0]) for x in page_coords]) / len(page_coords),
+                    sum([float(x[1]) for x in page_coords]) / len(page_coords),
+                ]
+                places = [
+                    "".join(el.xpath(".//span[@class='cp']/following-sibling::text()")).strip()
+                    for el in place_els
+                    if "".join(el.xpath(".//span[@class='cp']/text()")).startswith(postcode)
+                ]
+                #places = [
+                #    "".join(el.xpath(".//span[@class='local'][1]/text()")).split(",")[0].strip()
+                #    for el in place_els
+                #    if "".join(el.xpath(".//span[@class='cp']/text()")).startswith(postcode)
+                #]
+                places = [(k, len(list(g))) for k, g in itertools.groupby(sorted(places))]
+                place = sorted(places, key=lambda x: -x[1])[0][0]
+                codes[postcode] = [coords, place]
+                codes_file.write_text(json.dumps(codes))
+        result = codes.get(postcode)
+        if result:
+            result[1] = titleize(POSTCODE_CITIES.get(result[1].lower(), result[1]))
+        return result
 
 
 def write_diff(title, ref, diff, html=True, osm=True):

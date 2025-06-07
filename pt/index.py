@@ -14,6 +14,7 @@ SCRIPTS = (
     "mcdonalds.py",
     "mercadona.py",
     "pingodoce.py",
+    "solinca.py",
     "starbucks.py",
     "washy.py",
     "wells.py",
