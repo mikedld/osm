@@ -6,14 +6,12 @@ import json
 import re
 import uuid
 from multiprocessing import Pool
-from pathlib import Path
+from urllib.parse import urljoin, urlsplit
 
-import requests
-from lxml import etree
+from impl.common import DiffDict, fetch_json_data, fetch_html_data, overpass_query, distance, opening_weekdays, write_diff
 
-from impl.common import DiffDict, cache_name, overpass_query, distance, opening_weekdays, write_diff
-from impl.config import ENABLE_CACHE
 
+DATA_URL = "https://www.mcdonalds.pt/restaurantes"
 
 REF = "ref"
 
@@ -33,41 +31,25 @@ SCHEDULE_HOURS_MAPPING = {
 }
 
 
-def fetch_stores_data(url):
-    cache_file = Path(f"{cache_name(url)}.json")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result = re.sub(r"^.*var restaurantsJson[ ]*=[ ]*'\[(.+)\]'.*$", r"[\1]", result, flags=re.S)
-        result = json.loads(result)
-        if ENABLE_CACHE:
-            cache_file.write_text(json.dumps(result))
-    else:
-        result = json.loads(cache_file.read_text())
-    return result
+def fetch_level1_data():
+    def post_process(page):
+        return re.sub(r"^.*var restaurantsJson\s*=\s*'\[(.+)\]'.*$", r"[\1]", page, flags=re.S)
+
+    result = fetch_json_data(DATA_URL, post_process=post_process)
+    return [
+        {
+            **x,
+            "Url": urljoin(DATA_URL, x["Url"]),
+        }
+        for x in result
+    ]
 
 
-def fetch_store_data(store):
-    url = f"https://www.mcdonalds.pt{store['Url']}"
-    cache_file = Path(f"{cache_name(url)}.html")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result_tree = etree.fromstring(result, etree.HTMLParser())
-        etree.indent(result_tree)
-        result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
-        if ENABLE_CACHE:
-            cache_file.write_text(result)
-    else:
-        result = cache_file.read_text()
-    result_tree = etree.fromstring(result)
+def fetch_level2_data(data):
+    result_tree = fetch_html_data(data["Url"])
     return {
-        **store,
-        "id": str(uuid.uuid5(uuid.NAMESPACE_URL, "mcdonalds:" + store["Url"].split("/")[2])),
+        **data,
+        "id": str(uuid.uuid5(uuid.NAMESPACE_URL, "mcdonalds:" + urlsplit(data["Url"]).path.split("/")[2])),
         "schedules": {
             "".join(el.xpath('h6/text()')).strip(): {
                 re.sub(r"V[ée]spera\s+(de\s+)?[Ff]eriado", r"Véspera Feriado", "".join(el2.xpath('cite/text()')).strip()): "".join(el2.xpath('span/text()')).strip()
@@ -127,12 +109,11 @@ def opening_hours(data, title):
 
 
 if __name__ == "__main__":
-    data_url = "https://www.mcdonalds.pt/restaurantes"
-    new_data = fetch_stores_data(data_url)
+    new_data = fetch_level1_data()
     with Pool(4) as p:
-        new_data = list(p.imap_unordered(fetch_store_data, new_data))
+        new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[amenity][amenity!=charging_station][amenity!=bicycle_rental][amenity!=social_facility][amenity!=parking][name~"McDonald"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity][amenity!=charging_station][amenity!=bicycle_rental][amenity!=social_facility][amenity!=parking][name~"McDonald"](area.country);')]
 
     new_node_id = -10000
 
@@ -188,7 +169,7 @@ if __name__ == "__main__":
                 d["contact:phone"] = phone
             else:
                 tags_to_reset.add("contact:phone")
-        d["contact:website"] = f"https://www.mcdonalds.pt{nd['Url']}"
+        d["contact:website"] = nd["Url"]
         d["contact:facebook"] = "McDonaldsPortugal"
         d["contact:youtube"] = "https://www.youtube.com/McDonaldsPortugal"
         d["contact:instagram"] = "mcdonaldsportugal"

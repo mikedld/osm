@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 
 import itertools
-import json
 import re
 from multiprocessing import Pool
-from pathlib import Path
 
 import requests
 
-from impl.common import DiffDict, cache_name, overpass_query, titleize, distance, opening_weekdays, write_diff
-from impl.config import ENABLE_CACHE
+from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, distance, opening_weekdays, write_diff
 
+
+LEVEL1_DATA_URL = "https://limmia-wasky-public-api-c934cd99c58c.herokuapp.com/localsPages/listStaticLocalsPages"
+LEVEL2_DATA_URL = "https://limmia-wasky-public-api-c934cd99c58c.herokuapp.com/localsPages/listStaticLocalsPagesIdentifier"
 
 REF = "ref"
 
@@ -31,47 +31,27 @@ STREET_ABBREVS = [
 ]
 
 
-def fetch_level1_data(url):
-    cache_file = Path(f"{cache_name(url)}.json")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result = json.loads(result)
-        if ENABLE_CACHE:
-            cache_file.write_text(json.dumps(result))
-    else:
-        result = json.loads(cache_file.read_text())
-    return result["response"]["locations"]
+def fetch_level1_data():
+    return fetch_json_data(LEVEL1_DATA_URL)["response"]["locations"]
 
 
-def fetch_level2_data(store):
-    url = f"https://limmia-wasky-public-api-c934cd99c58c.herokuapp.com/localsPages/listStaticLocalsPagesIdentifier?identifier={store['identifier']}"
-    cache_file = Path(f"{cache_name(url)}.json")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result = json.loads(result)
-        if ENABLE_CACHE:
-            cache_file.write_text(json.dumps(result))
-    else:
-        result = json.loads(cache_file.read_text())
+def fetch_level2_data(data):
+    params = {
+        "identifier": data['identifier'],
+    }
+    result = fetch_json_data(LEVEL2_DATA_URL, params=params)["response"]["locations"][0]
     return {
-        **store,
-        **result["response"]["locations"][0],
+        **data,
+        **result,
     }
 
 
 if __name__ == "__main__":
-    data_url = "https://limmia-wasky-public-api-c934cd99c58c.herokuapp.com/localsPages/listStaticLocalsPages"
-    new_data = fetch_level1_data(data_url)
+    new_data = fetch_level1_data()
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][~"^(name|brand)$"~"Washy"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"Washy"](area.country);')]
 
     for nd in new_data:
         public_id = nd["identifier"]

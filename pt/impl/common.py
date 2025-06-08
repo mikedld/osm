@@ -5,6 +5,7 @@ import fcntl
 import itertools
 import json
 import re
+from gzip import compress, decompress
 from hashlib import sha256
 from math import atan2, cos, pow, radians, sin, sqrt
 from pathlib import Path
@@ -15,7 +16,7 @@ from jinja2 import Environment, FileSystemLoader
 from lxml import etree
 from retrying import retry
 
-from .config import ENABLE_OVERPASS_CACHE
+from .config import ENABLE_CACHE, ENABLE_OVERPASS_CACHE
 
 
 BASE_DIR = Path(__main__.__file__).parent
@@ -82,22 +83,54 @@ class Locker:
 
 
 def cache_name(key):
-    return f"{CACHE_DIR}/{BASE_NAME}-{str(datetime.date.today())}-{sha256(key.encode()).hexdigest()[:10]}.cache"
+    return CACHE_DIR / f"{BASE_NAME}-{str(datetime.date.today())}-{sha256(key.encode()).hexdigest()[:10]}.cache"
+
+
+def fetch_json_data(url, params={}, *, encoding="utf-8", post_process=None):
+    cache_file = cache_name(url + ":" + str(params)).with_suffix(".cache.data.gz")
+    if not ENABLE_CACHE or not cache_file.exists():
+        # print(f"Querying URL: {url} {params}")
+        r = requests.get(url, params=params, headers={"user-agent": "mikedld-osm/1.0"})
+        r.raise_for_status()
+        result = r.content
+        if ENABLE_CACHE:
+            cache_file.write_bytes(compress(result))
+    else:
+        result = decompress(cache_file.read_bytes())
+    result = result.decode(encoding)
+    if post_process:
+        result = post_process(result)
+    return json.loads(result)
+
+
+def fetch_html_data(url, params={}, *, encoding="utf-8"):
+    cache_file = cache_name(url + ':' + str(params)).with_suffix(".cache.data.gz")
+    if not ENABLE_CACHE or not cache_file.exists():
+        # print(f"Querying URL: {url} {params}")
+        r = requests.get(url, params=params, headers={"user-agent": "mikedld-osm/1.0"})
+        r.raise_for_status()
+        result = r.content
+        if ENABLE_CACHE:
+            cache_file.write_bytes(compress(result))
+    else:
+        result = decompress(cache_file.read_bytes())
+    result = result.decode(encoding)
+    return etree.fromstring(result, etree.HTMLParser())
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=10000)
-def overpass_query(query):
-    full_query = f"[out:json]; {query} out meta center;"
-    cache_file = Path(f"{cache_name(full_query)}.json")
+def overpass_query(query, country="PT"):
+    full_query = f'[out:json]; area[admin_level=2]["ISO3166-1"="{country}"] -> .country; {query} out meta center;'
+    cache_file = cache_name(full_query).with_suffix(".cache.overpass.gz")
     if not ENABLE_OVERPASS_CACHE or not cache_file.exists():
         # print(f"Querying Overpass: {full_query}")
         r = requests.post("http://overpass-api.de/api/interpreter", data=full_query)
         r.raise_for_status()
-        result = r.json()
+        result = r.json()["elements"]
         if ENABLE_OVERPASS_CACHE:
-            cache_file.write_text(json.dumps(result))
+            cache_file.write_bytes(compress(json.dumps(result).encode("utf-8")))
     else:
-        result = json.loads(cache_file.read_text())
+        result = json.loads(decompress(cache_file.read_bytes()).decode("utf-8"))
     return result
 
 

@@ -3,13 +3,12 @@
 import datetime
 import json
 import re
-from pathlib import Path
 
-import requests
+from impl.common import BASE_DIR, BASE_NAME, DiffDict, fetch_json_data, overpass_query, titleize, write_diff
 
-from impl.common import BASE_DIR, BASE_NAME, DiffDict, cache_name, overpass_query, titleize, write_diff
-from impl.config import ENABLE_CACHE
 
+# DATA_URL = "https://www.mercadona.com/estaticos/cargas/data.js"
+DATA_URL = "https://storage.googleapis.com/pro-bucket-wcorp-files/json/data.js"
 
 REF = "ref"
 
@@ -41,29 +40,24 @@ STREET_FIXUPS = {
 }
 
 
-def fetch_data(url):
-    cache_file = Path(f"{cache_name(url)}.json")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(f"{url}?timestamp={datetime.datetime.today().strftime('%s000')}")
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result = re.sub(r"^var dataJson[ ]*=[ ]*", "", result)
-        result = re.sub(r";$", "", result)
-        result = json.loads(result)
-        if ENABLE_CACHE:
-            cache_file.write_text(json.dumps(result))
-    else:
-        result = json.loads(cache_file.read_text())
+def fetch_data():
+    def post_process(page):
+        page = re.sub(r"^var dataJson\s*=\s*", "", page)
+        page = re.sub(r";$", "", page)
+        return page
+
+    params = {
+        "timestamp": datetime.datetime.today().strftime('%s000')
+    }
+    result = fetch_json_data(DATA_URL, params=params, post_process=post_process)
+    result = [x for x in result["tiendasFull"] if x["p"] == "PT"]
     return result
 
 
 if __name__ == "__main__":
-    # data_url = "https://www.mercadona.com/estaticos/cargas/data.js"
-    data_url = "https://storage.googleapis.com/pro-bucket-wcorp-files/json/data.js"
-    new_data = [x for x in fetch_data(data_url)["tiendasFull"] if x["p"] == "PT"]
+    new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name=Mercadona](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name=Mercadona](area.country);')]
 
     custom_ohs = dict()
     custom_ohs_file = BASE_DIR / f"{BASE_NAME}-custom-ohs.json"

@@ -3,14 +3,12 @@
 import json
 import re
 from multiprocessing import Pool
-from pathlib import Path
 
-import requests
-from lxml import etree
+from impl.common import DiffDict, fetch_html_data, overpass_query, distance, titleize, write_diff
 
-from impl.common import DiffDict, cache_name, overpass_query, distance, titleize, write_diff
-from impl.config import ENABLE_CACHE
 
+AGENCIAS_DATA_URL = "https://www.cgd.pt/Corporativo/Rede-CGD/Pages/Agencias.aspx"
+GABINETES_DATA_URL = "https://www.cgd.pt/Corporativo/Rede-CGD/Pages/Gabinetes.aspx"
 
 REF = "ref"
 
@@ -62,42 +60,15 @@ SCHEDULE_HOURS_MAPPING = {
 
 
 def fetch_level1_data(url):
-    cache_file = Path(f"{cache_name(url)}.html")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url, headers={"user-agent": "mikedld-osm/1.0"})
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result_tree = etree.fromstring(result, etree.HTMLParser())
-        etree.indent(result_tree)
-        result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
-        if ENABLE_CACHE:
-            cache_file.write_text(result)
-    else:
-        result = cache_file.read_text()
-    result_tree = etree.fromstring(result)
-    result = [
+    result_tree = fetch_html_data(url)
+    return [
         f"{url.split('?')[0]}{href}"
         for href in result_tree.xpath("//a[contains(@class, 'agencias')]/@href")
     ]
-    return result
 
 
 def fetch_level2_data(url):
-    cache_file = Path(f"{cache_name(url)}.html")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url, headers={"user-agent": "mikedld-osm/1.0"})
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result_tree = etree.fromstring(result, etree.HTMLParser())
-        etree.indent(result_tree)
-        result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
-        if ENABLE_CACHE:
-            cache_file.write_text(result)
-    else:
-        result = cache_file.read_text()
-    result_tree = etree.fromstring(result)
+    result_tree = fetch_html_data(url)
     result = result_tree.xpath("//script[contains(text(), 'var agencias =')]/text()")[0]
     result = json.loads(re.sub(r".*var agencias =|;$", "", result, flags=re.S).replace("'", '"'))
     result = [
@@ -135,15 +106,12 @@ def schedule_time(v):
 
 
 if __name__ == "__main__":
-    agencias_data_url = "https://www.cgd.pt/Corporativo/Rede-CGD/Pages/Agencias.aspx"
-    gabinetes_data_url = "https://www.cgd.pt/Corporativo/Rede-CGD/Pages/Gabinetes.aspx"
-    new_data = fetch_level1_data(agencias_data_url) + fetch_level1_data(gabinetes_data_url)
+    new_data = fetch_level1_data(AGENCIAS_DATA_URL) + fetch_level1_data(GABINETES_DATA_URL)
     with Pool(4) as p:
         new_data = [d for ds in p.imap_unordered(fetch_level1_data, new_data) for d in ds]
-    with Pool(4) as p:
         new_data = [d for ds in p.imap_unordered(fetch_level2_data, new_data) for d in ds]
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[amenity=bank][name~"Caixa Geral"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity=bank][name~"Caixa Geral"](area.country);')]
 
     for nd in new_data:
         public_id = nd["id"]

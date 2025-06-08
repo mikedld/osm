@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 
 import datetime
-import json
 import itertools
 import re
-from pathlib import Path
 
-import requests
+from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, opening_weekdays, write_diff
 
-from impl.common import DiffDict, cache_name, overpass_query, titleize, opening_weekdays, write_diff
-from impl.config import ENABLE_CACHE
 
+DATA_URL = "https://www.starbucks.pt/api/v2/stores/"
+DATA_LOCATIONS = [
+    [39.681823, -8.003540, 250],
+    [32.771436, -16.704712, 250],
+    [38.381039, -28.020630, 250],
+]
 
 REF = "ref"
 
@@ -22,28 +24,23 @@ CITIES = {
 }
 
 
-def fetch_data(url):
-    cache_file = Path(f"{cache_name(url)}.json")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result = json.loads(result)
-        if ENABLE_CACHE:
-            cache_file.write_text(json.dumps(result))
-    else:
-        result = json.loads(cache_file.read_text())
+def fetch_data():
+    result = []
+    for dl in DATA_LOCATIONS:
+        params = {
+            "filter[coordinates][latitude]": dl[0],
+            "filter[coordinates][longitude]": dl[1],
+            "filter[radius]": dl[2],
+        }
+        result.extend(fetch_json_data(DATA_URL, params=params)["data"])
+    result = [x["attributes"] for x in result if x["attributes"]["address"]["countryCode"] == "PT"]
     return result
 
 
 if __name__ == "__main__":
-    continent_data_url = "https://www.starbucks.pt/api/v2/stores/?filter[coordinates][latitude]=39.681823&filter[coordinates][longitude]=-8.003540&filter[radius]=250"
-    madeira_data_url = "https://www.starbucks.pt/api/v2/stores/?filter[coordinates][latitude]=32.771436&filter[coordinates][longitude]=-16.704712&filter[radius]=250"
-    azores_data_url = "https://www.starbucks.pt/api/v2/stores/?filter[coordinates][latitude]=38.381039&filter[coordinates][longitude]=-28.020630&filter[radius]=250"
-    new_data = [x["attributes"] for x in (fetch_data(continent_data_url)["data"] + fetch_data(madeira_data_url)["data"] + fetch_data(azores_data_url)["data"]) if x["attributes"]["address"]["countryCode"] == "PT"]
+    new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[amenity][name=Starbucks](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity][name=Starbucks](area.country);')]
 
     for nd in new_data:
         public_id = nd["storeNumber"]

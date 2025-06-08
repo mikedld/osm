@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
 import itertools
-import json
 import re
-from pathlib import Path
 
-import requests
 from unidecode import unidecode
 
-from impl.common import DiffDict, cache_name, overpass_query, titleize, distance, opening_weekdays, write_diff
-from impl.config import CONFIG, ENABLE_CACHE
+from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, distance, opening_weekdays, write_diff
+from impl.config import CONFIG
 
+
+DATA_URL = "https://spatial.virtualearth.net/REST/v1/data/e470ca5678c5440aad7eecf431ff461a/Filialdaten-PT/Filialdaten-PT"
 
 REF = "ref"
 
@@ -131,32 +130,23 @@ STREET_ABBREVS = [
 ]
 
 
-def fetch_data(url):
-    cache_file = Path(f"{cache_name(url)}.json")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        page_size = 250
-        result = []
-        while True:
-            r = requests.get(url, params={
-                "$select": "*",
-                "$filter": "CountryRegion eq 'PT'",
-                "key": CONFIG["lidl"]["api_key"],
-                "$format": "json",
-                "$orderby": "EntityID",
-                "$skip": len(result),
-                "$top": page_size,
-            })
-            r.raise_for_status()
-            result_page = r.content.decode("utf-8")
-            result_page = json.loads(result_page)["d"]["results"]
-            result.extend(result_page)
-            if len(result_page) < page_size:
-                break
-        if ENABLE_CACHE:
-            cache_file.write_text(json.dumps(result))
-    else:
-        result = json.loads(cache_file.read_text())
+def fetch_data():
+    page_size = 250
+    result = []
+    while True:
+        params = {
+            "$select": "*",
+            "$filter": "CountryRegion eq 'PT'",
+            "key": CONFIG["lidl"]["api_key"],
+            "$format": "json",
+            "$orderby": "EntityID",
+            "$skip": len(result),
+            "$top": page_size,
+        }
+        page = fetch_json_data(DATA_URL, params=params)["d"]["results"]
+        result.extend(page)
+        if len(page) < page_size:
+            break
     for r in result:
         r["icons"] = []
         for k in [x for x in r.keys() if x.startswith("INFOICON")]:
@@ -176,10 +166,9 @@ def get_url_part(value):
 
 
 if __name__ == "__main__":
-    data_url = "https://spatial.virtualearth.net/REST/v1/data/e470ca5678c5440aad7eecf431ff461a/Filialdaten-PT/Filialdaten-PT"
-    new_data = fetch_data(data_url)
+    new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][~"^(name|brand)$"~"[Ll][Ii][Dd][Ll]"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"[Ll][Ii][Dd][Ll]"](area.country);')]
 
     for nd in new_data:
         public_id = nd["EntityID"]

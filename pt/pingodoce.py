@@ -3,34 +3,20 @@
 import datetime
 import html
 import itertools
-import json
 import re
-from pathlib import Path
 
-import requests
+from impl.common import DiffDict, fetch_json_data, overpass_query, distance, opening_weekdays, gregorian_easter, write_diff
 
-from impl.common import DiffDict, cache_name, overpass_query, distance, opening_weekdays, gregorian_easter, write_diff
-from impl.config import ENABLE_CACHE
 
+DATA_URL = "https://www.pingodoce.pt/wp-content/themes/pingodoce/ajax/pd-ajax.php?action=pd_stores_get_stores"
 
 REF = "ref"
 
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
-def fetch_data(url):
-    cache_file = Path(f"{cache_name(url)}.json")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result = json.loads(result)
-        if ENABLE_CACHE:
-            cache_file.write_text(json.dumps(result))
-    else:
-        result = json.loads(cache_file.read_text())
-    return result
+def fetch_data():
+    return fetch_json_data(DATA_URL)["data"]["stores"]
 
 
 def schedule_time(v):
@@ -46,10 +32,9 @@ def schedule_time(v):
 
 
 if __name__ == "__main__":
-    data_url = "https://www.pingodoce.pt/wp-content/themes/pingodoce/ajax/pd-ajax.php?action=pd_stores_get_stores"
-    new_data = fetch_data(data_url)["data"]["stores"]
+    new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=alcohol][shop!=florist][shop!=kiosk][~"^(name|brand)$"~"^Ping[ou] Doce"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][shop!=alcohol][shop!=florist][shop!=kiosk][~"^(name|brand)$"~"^Ping[ou] Doce"](area.country);')]
 
     for nd in new_data:
         public_id = nd["id"]

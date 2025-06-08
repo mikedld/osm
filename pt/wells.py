@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
-import json
 import re
-from pathlib import Path
 
-import requests
 from lxml import etree
 
-from impl.common import DiffDict, cache_name, overpass_query, titleize, distance, write_diff
-from impl.config import ENABLE_CACHE
+from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, distance, write_diff
 
+
+DATA_URL = "https://wells.pt/lojas-wells"
 
 REF = "ref"
 
@@ -45,24 +43,15 @@ CITIES = {
 }
 
 
-def fetch_data(url):
-    cache_file = Path(f"{cache_name(url)}.json")
-    html_parser = etree.HTMLParser()
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result_tree = etree.fromstring(result, html_parser)
-        result = result_tree.xpath("//script[@id='locations-data']/text()")[0]
-        result = json.loads(result)
-        if ENABLE_CACHE:
-            cache_file.write_text(json.dumps(result))
-    else:
-        result = json.loads(cache_file.read_text())
+def fetch_data():
+    def post_process(page):
+        page_tree = etree.fromstring(page, etree.HTMLParser())
+        return page_tree.xpath("//script[@id='locations-data']/text()")[0]
+
+    result = fetch_json_data(DATA_URL, post_process=post_process)
     result = [
         {
-            "info": etree.fromstring(x["infoWindowHtml"], html_parser),
+            "info": etree.fromstring(x["infoWindowHtml"], etree.HTMLParser()),
             **{k: v for k, v in x.items() if k not in ("infoWindowHtml",)},
         }
         for x in result
@@ -82,10 +71,9 @@ def fetch_data(url):
 
 
 if __name__ == "__main__":
-    data_url = "https://wells.pt/lojas-wells"
-    new_data = fetch_data(data_url)
+    new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name~"Wells"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"Wells"](area.country);')]
 
     for nd in new_data:
         branch = re.sub(r"^Wells\s+", "", titleize(nd["name"]))

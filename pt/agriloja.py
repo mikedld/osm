@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
-import json
 import re
-from pathlib import Path
 
-import requests
+from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, write_diff
 
-from impl.common import DiffDict, cache_name, overpass_query, titleize, write_diff
-from impl.config import ENABLE_CACHE
 
+DATA_URL = "https://www.agriloja.pt/pt/as-nossas-lojas_596.html"
 
 REF = "ref"
 
@@ -56,31 +53,24 @@ SCHEDULE_HOURS_EX = {
 }
 
 
-def fetch_data(url):
-    cache_file = Path(f"{cache_name(url)}.json")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("latin1")
-        result = re.sub(r"^.*\baddresses:", "", result, flags=re.S)
-        result = re.sub(r"\].*", "]", result, flags=re.S)
-        result = re.sub(r"\b(id|name|coordinates|street|zip|city|short_content|phone|fax|country|country_name|email|schedule|image|zoneID):", r'"\1":', result)
-        result = re.sub(r"\}\s*,\s*\]", "}]", result, flags=re.S)
-        result = result.replace("'", '"')
-        result = json.loads(result)
-        if ENABLE_CACHE:
-            cache_file.write_text(json.dumps(result))
-    else:
-        result = json.loads(cache_file.read_text())
+def fetch_data():
+    def post_process(page):
+        page = re.sub(r"^.*\baddresses:", "", page, flags=re.S)
+        page = re.sub(r"\].*", "]", page, flags=re.S)
+        page = re.sub(r"\b(id|name|coordinates|street|zip|city|short_content|phone|fax|country|country_name|email|schedule|image|zoneID):", r'"\1":', page)
+        page = re.sub(r"\}\s*,\s*\]", "}]", page, flags=re.S)
+        page = page.replace("'", '"')
+        return page
+
+    result = fetch_json_data(DATA_URL, encoding="latin1", post_process=post_process)
+    result = [x for x in result if x["country"] == "176"]
     return result
 
 
 if __name__ == "__main__":
-    data_url = "https://www.agriloja.pt/pt/as-nossas-lojas_596.html"
-    new_data = [x for x in fetch_data(data_url) if x["country"] == "176"]
+    new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][name=Agriloja](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name=Agriloja](area.country);')]
 
     for nd in new_data:
         public_id = nd["id"]

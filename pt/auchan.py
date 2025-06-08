@@ -4,14 +4,14 @@ import json
 import itertools
 import re
 from multiprocessing import Pool
-from pathlib import Path
 
-import requests
 from lxml import etree
 
-from impl.common import DiffDict, cache_name, overpass_query, opening_weekdays, distance, write_diff
-from impl.config import ENABLE_CACHE
+from impl.common import DiffDict, fetch_json_data, fetch_html_data, overpass_query, opening_weekdays, distance, write_diff
 
+
+LEVEL1_DATA_URL = "https://www.auchan.pt/pt/lojas"
+LEVEL2_DATA_URL = "https://www.auchan.pt/pt/loja"
 
 REF = "ref"
 
@@ -26,57 +26,39 @@ EVENTS_MAPPING = {
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
-def fetch_level1_data(url):
-    cache_file = Path(f"{cache_name(url)}.html")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result_tree = etree.fromstring(result, etree.HTMLParser())
-        etree.indent(result_tree)
-        result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
-        if ENABLE_CACHE:
-            cache_file.write_text(result)
-    else:
-        result = cache_file.read_text()
-    result_tree = etree.fromstring(result, etree.XMLParser(recover=True))
-    return json.loads(result_tree.xpath("//@data-locations")[0])
+def fetch_level1_data():
+    def post_process(page):
+        page_tree = etree.fromstring(page, etree.HTMLParser())
+        return page_tree.xpath("//@data-locations")[0]
+
+    result = fetch_json_data(LEVEL1_DATA_URL, post_process=post_process)
+    result = [x for x in result if x["type"] == "Auchan"]
+    return result
 
 
-def fetch_level2_data(store):
-    store_id = re.sub(r'.*data-store-id="([^"]+)".*', r"\1", store["infoWindowHtml"], flags=re.S)
-    url = f"https://www.auchan.pt/pt/loja?StoreID={store_id}"
-    cache_file = Path(f"{cache_name(url)}.html")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result_tree = etree.fromstring(result, etree.HTMLParser())
-        etree.indent(result_tree)
-        result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
-        if ENABLE_CACHE:
-            cache_file.write_text(result)
-    else:
-        result = cache_file.read_text()
-    result_tree = etree.fromstring(result, etree.XMLParser(recover=True))
+def fetch_level2_data(data):
+    store_id = re.sub(r'.*data-store-id="([^"]+)".*', r"\1", data["infoWindowHtml"], flags=re.S)
+    params = {
+        "StoreID": store_id,
+    }
+    result_tree = fetch_html_data(LEVEL2_DATA_URL, params=params)
     return {
         "id": store_id,
         "events": [x.strip() for x in "".join(result_tree.xpath("//div[contains(@class, 'store-events')]//text()")).split("\n") if x.strip()],
-        **store,
+        **data,
         **json.loads(result_tree.xpath("//script[@type='application/ld+json']/text()")[0]),
     }
 
 
 if __name__ == "__main__":
-    data_url = "https://www.auchan.pt/pt/lojas"
-    new_data = fetch_level1_data(data_url)
+    new_data = fetch_level1_data()
     with Pool(4) as p:
-        new_data = list(p.imap_unordered(fetch_level2_data, (nd for nd in new_data if nd["type"] == "Auchan")))
+        new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][name~"Auchan"](area.p); ' +
-        f'nwr[amenity][amenity!=fuel][amenity!=charging_station][amenity!=parking][name~"Auchan"](area.p); nwr[shop][name~"Minipreço"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query(
+        '( nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][name~"Auchan"](area.country); ' +
+        'nwr[amenity][amenity!=fuel][amenity!=charging_station][amenity!=parking][name~"Auchan"](area.country); '
+        'nwr[shop][name~"Minipreço"](area.country); );')]
 
     new_node_id = -10000
 

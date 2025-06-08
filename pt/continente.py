@@ -4,14 +4,12 @@ import itertools
 import re
 import uuid
 from multiprocessing import Pool
-from pathlib import Path
+from urllib.parse import urljoin, urlsplit
 
-import requests
-from lxml import etree
+from impl.common import DiffDict, fetch_html_data, overpass_query, distance, opening_weekdays, write_diff
 
-from impl.common import DiffDict, cache_name, overpass_query, distance, opening_weekdays, write_diff
-from impl.config import ENABLE_CACHE
 
+DATA_URL = "https://feed.continente.pt/lojas"
 
 REF = "ref"
 
@@ -69,21 +67,8 @@ CITIES = {
 }
 
 
-def fetch_stores_data(url):
-    cache_file = Path(f"{cache_name(url)}.html")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url, headers={"user-agent": "mikedld-osm/1.0"})
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result_tree = etree.fromstring(result, etree.HTMLParser())
-        etree.indent(result_tree)
-        result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
-        if ENABLE_CACHE:
-            cache_file.write_text(result)
-    else:
-        result = cache_file.read_text()
-    result_tree = etree.fromstring(result)
+def fetch_level1_data():
+    result_tree = fetch_html_data(DATA_URL)
     result = [
         {
             "lat": float(el.attrib["data-lat"]),
@@ -91,32 +76,18 @@ def fetch_stores_data(url):
             "name": el.attrib["data-name"],
             "city": el.attrib["data-city"],
             "addr": el.xpath(".//p[contains(@class, 'storeMapHeader__store-addres')]/text()")[0].strip(),
-            "url": el.xpath(".//a[contains(@class, 'storeMapHeader__store-link')]/@href")[0],
+            "url": urljoin(DATA_URL, el.xpath(".//a[contains(@class, 'storeMapHeader__store-link')]/@href")[0]),
         }
         for el in result_tree.xpath("//li[contains(@class, 'storeMapHeader__store')]")
     ]
     return result
 
 
-def fetch_store_data(store):
-    url = f"https://feed.continente.pt{store['url']}"
-    cache_file = Path(f"{cache_name(url)}.html")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url, headers={"user-agent": "mikedld-osm/1.0"})
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result_tree = etree.fromstring(result, etree.HTMLParser())
-        etree.indent(result_tree)
-        result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
-        if ENABLE_CACHE:
-            cache_file.write_text(result)
-    else:
-        result = cache_file.read_text()
-    result_tree = etree.fromstring(result)
+def fetch_level2_data(data):
+    result_tree = fetch_html_data(data["url"])
     return {
-        **store,
-        "id": str(uuid.uuid5(uuid.NAMESPACE_URL, "continente:" + re.sub(r"^continente-", "", store["url"].split("/")[2]))),
+        **data,
+        "id": str(uuid.uuid5(uuid.NAMESPACE_URL, "continente:" + re.sub(r"^continente-", "", urlsplit(data["url"]).path.split("/")[2]))),
         "services": [x.strip().lower() for x in result_tree.xpath("//li[@class='serviceTag']//text()") if x.strip()],
         "schedule": {
             "".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-day')]/text()")): re.sub(r":0(\d\d)", r":\1", "-".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-time')]/time/text()")))
@@ -128,12 +99,11 @@ def fetch_store_data(store):
 
 
 if __name__ == "__main__":
-    data_url = "https://feed.continente.pt/lojas"
-    new_data = fetch_stores_data(data_url)
+    new_data = fetch_level1_data()
     with Pool(4) as p:
-        new_data = list(p.imap_unordered(fetch_store_data, new_data))
+        new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[shop][shop!=newsagent][shop!=florist][shop!=tobacco][name~"[Cc][Oo][Nn][Tt][Ii][Nn][Ee][Nn][Tt][Ee]"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][shop!=newsagent][shop!=florist][shop!=tobacco][name~"[Cc][Oo][Nn][Tt][Ii][Nn][Ee][Nn][Tt][Ee]"](area.country);')]
 
     new_node_id = -10000
 
@@ -210,7 +180,7 @@ if __name__ == "__main__":
                 d["contact:phone"] = phone
             else:
                 tags_to_reset.add("contact:phone")
-        d["contact:website"] = f"https://feed.continente.pt{nd['url']}"
+        d["contact:website"] = nd["url"]
         d["contact:facebook"] = "continenteoficial"
         d["contact:youtube"] = "https://www.youtube.com/user/continentept"
         d["contact:instagram"] = "continente"

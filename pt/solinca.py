@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
 import re
+from itertools import count
 from multiprocessing import Pool
-from pathlib import Path
 
-import requests
-from lxml import etree
+from impl.common import DiffDict, fetch_html_data, overpass_query, distance, titleize, lookup_postcode, write_diff
 
-from impl.common import DiffDict, cache_name, overpass_query, distance, titleize, lookup_postcode, write_diff
-from impl.config import ENABLE_CACHE
 
+DATA_URL = "https://www.solinca.pt/solinca-ginasios/"
 
 REF = "ref"
 
@@ -20,25 +18,14 @@ DAYS = {
 }
 
 
-def fetch_level1_data(url):
-    page = 1
-    results = []
-    while True:
-        cache_file = Path(f"{cache_name(url + str(page))}.html")
-        if not ENABLE_CACHE or not cache_file.exists():
-            # print(f"Querying URL: {url}")
-            r = requests.get(url, params={"sf_paged": page})
-            r.raise_for_status()
-            result = r.content.decode("utf-8")
-            result_tree = etree.fromstring(result, etree.HTMLParser())
-            etree.indent(result_tree)
-            result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
-            if ENABLE_CACHE:
-                cache_file.write_text(result)
-        else:
-            result = cache_file.read_text()
-        result_tree = etree.fromstring(result)
-        results.extend([
+def fetch_level1_data():
+    result = []
+    for page_idx in count(start=1):
+        params = {
+            "sf_paged": page_idx,
+        }
+        result_tree = fetch_html_data(DATA_URL, params=params)
+        result.extend([
             {
                 "id": re.sub(r"^.*\bpost-(\d+)\b.*$", r"\1", el.xpath("./@class")[0]),
                 "url": el.xpath("./a[1]/@href")[0],
@@ -49,31 +36,16 @@ def fetch_level1_data(url):
         ])
         if not result_tree.xpath("//nav[@class='elementor-pagination']/a[contains(@class, 'next')]/@href"):
             break
-        page += 1
-    return results
+    return result
 
 
 def fetch_level2_data(data):
-    url = data["url"]
-    cache_file = Path(f"{cache_name(url)}.html")
-    if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url}")
-        r = requests.get(url)
-        r.raise_for_status()
-        result = r.content.decode("utf-8")
-        result_tree = etree.fromstring(result, etree.HTMLParser())
-        etree.indent(result_tree)
-        result = etree.tostring(result_tree, encoding="utf-8", pretty_print=True).decode("utf-8")
-        if ENABLE_CACHE:
-            cache_file.write_text(result)
-    else:
-        result = cache_file.read_text()
-    result_tree = etree.fromstring(result)
+    result_tree = fetch_html_data(data["url"])
     info = [x.strip() for x in result_tree.xpath(f"//section[.//*[contains(text(), 'Horário')]]//text()") if x.strip()]
     address = re.sub(r"[–—]", "-", re.sub(r"\s+", " ", " ".join(info[info.index("Morada") + 1:info.index("Ver no mapa >")])))
     location = None
     if m := re.search(r".+?\b(\d{4}(\s*-\s*\d{3})?)\b,?(\s+\D.*|$)", address):
-        postcode = m[1].replace("–", "-").replace(" ", "")
+        postcode = m[1].replace(" ", "")
         if len(postcode) == 4:
             postcode += "-000"
         location = lookup_postcode(postcode)
@@ -91,12 +63,11 @@ def fetch_level2_data(data):
 
 
 if __name__ == "__main__":
-    data_url = "https://www.solinca.pt/solinca-ginasios/"
-    new_data = fetch_level1_data(data_url)
+    new_data = fetch_level1_data()
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query(f'area[admin_level=2][name=Portugal] -> .p; ( nwr[leisure][name~"Solinca"](area.p); );')["elements"]]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[leisure][name~"Solinca"](area.country);')]
 
     for nd in new_data:
         public_id = nd["id"]
