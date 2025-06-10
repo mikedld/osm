@@ -7,6 +7,7 @@ from sys import stderr
 
 SCRIPTS = (
     "agriloja.py",
+    "aldi.py",
     "auchan.py",
     "cgd.py",
     "continente.py",
