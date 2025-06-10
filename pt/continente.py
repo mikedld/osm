@@ -118,14 +118,14 @@ if __name__ == "__main__":
         d = next((od for od in old_data if od[REF] == public_id), None)
         if d is None:
             coord = [nd["lat"], nd["lon"]]
-            ds = sorted([[od, distance([od.lat, od.lon], coord)] for od in old_data if not od[REF] and distance([od.lat, od.lon], coord) < 250], key=lambda x: x[1])
+            ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
-                d = ds[0][0]
+                d = ds[0]
             elif is_mod and len(ds) == 2:
-                if ds[0][0].data["type"] != "node" or not ds[0][0]["indoor"]:
+                if ds[0].data["type"] != "node" or not ds[0]["indoor"]:
                     ds[0], ds[1] = ds[1], ds[0]
-                if (ds[0][0].data["type"] == "node" or ds[0][0]["indoor"]) and ds[1][0]["building"]:
-                    d = ds[0][0]
+                if (ds[0].data["type"] == "node" or ds[0]["indoor"]) and ds[1]["building"]:
+                    d = ds[0]
         if d is None:
             d = DiffDict()
             d.data["type"] = "node"

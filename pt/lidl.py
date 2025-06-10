@@ -177,9 +177,9 @@ if __name__ == "__main__":
         d = next((od for od in old_data if od[REF] == public_id), None)
         if d is None:
             coord = [float(nd["Latitude"]), float(nd["Longitude"])]
-            ds = sorted([[od, distance([od.lat, od.lon], coord)] for od in old_data if not od[REF] and distance([od.lat, od.lon], coord) < 100], key=lambda x: x[1])
+            ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:
-                d = ds[0][0]
+                d = ds[0]
         if d is None:
             d = DiffDict()
             d.data["type"] = "node"
