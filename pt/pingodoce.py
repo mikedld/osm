@@ -3,9 +3,10 @@
 import datetime
 import html
 import itertools
+import json
 import re
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, distance, opening_weekdays, gregorian_easter, write_diff
+from impl.common import BASE_DIR, BASE_NAME, DiffDict, fetch_json_data, overpass_query, distance, opening_weekdays, gregorian_easter, write_diff
 
 
 DATA_URL = "https://www.pingodoce.pt/wp-content/themes/pingodoce/ajax/pd-ajax.php?action=pd_stores_get_stores"
@@ -36,6 +37,11 @@ if __name__ == "__main__":
 
     old_data = [DiffDict(e) for e in overpass_query('nwr[shop][shop!=alcohol][shop!=florist][shop!=kiosk][~"^(name|brand)$"~"^Ping[ou] Doce"](area.country);')]
 
+    custom_ohs = dict()
+    custom_ohs_file = BASE_DIR / f"{BASE_NAME}-custom-ohs.json"
+    if custom_ohs_file.exists():
+        custom_ohs = json.loads(custom_ohs_file.read_text())
+
     for nd in new_data:
         public_id = nd["id"]
         d = next((od for od in old_data if od[REF] == public_id), None)
@@ -65,6 +71,11 @@ if __name__ == "__main__":
         d["brand:wikipedia"] = "pt:Pingo Doce"
         d["branch"] = branch
 
+        if custom_oh := nd["schedules"]["exceptions"]:
+            if public_id not in custom_ohs:
+                custom_ohs[public_id] = {}
+            custom_ohs[public_id].update(**custom_oh)
+
         if nd["in_maintenance"]:
             d["opening_hours"] = "Mo-Su off \"closed for maintenance\""
             if "opening_hours" in d.old_tags:
@@ -88,9 +99,12 @@ if __name__ == "__main__":
                 f"{opening_weekdays(x['d'])} {x['t']}"
                 for x in sorted(schedule, key=lambda x: x["d"][0])
             ]
-            if exs := nd["schedules"]["exceptions"]:
+            if exs := custom_ohs.get(public_id):
+                today = datetime.date.today()
                 for k, v in exs.items():
                     dt = datetime.datetime.fromisoformat(k)
+                    if dt.year != today.year:
+                        continue
                     if dt.date() == gregorian_easter(dt.year):
                         schedule.append(f"easter {schedule_time(v)}")
                         break
@@ -131,6 +145,8 @@ if __name__ == "__main__":
         for key in tags_to_reset:
             if d[key]:
                 d[key] = ""
+
+    custom_ohs_file.write_text(json.dumps(custom_ohs))
 
     for d in old_data:
         if d.kind != "old":
