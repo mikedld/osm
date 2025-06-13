@@ -6,6 +6,7 @@ from sys import stderr
 
 
 SCRIPTS = (
+    "5asec.py",
     "agriloja.py",
     "aldi.py",
     "auchan.py",
