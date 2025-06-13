@@ -8,7 +8,7 @@ import uuid
 from multiprocessing import Pool
 from urllib.parse import urljoin, urlsplit
 
-from impl.common import DiffDict, fetch_json_data, fetch_html_data, overpass_query, distance, opening_weekdays, write_diff
+from impl.common import DiffDict, fetch_json_data, fetch_html_data, overpass_query, titleize, distance, opening_weekdays, lookup_postcode, write_diff
 
 
 DATA_URL = "https://www.mcdonalds.pt/restaurantes"
@@ -188,11 +188,31 @@ if __name__ == "__main__":
         if len(postcode) == 4:
             postcode += d["addr:postcode"][5:] if len(d["addr:postcode"]) == 8 else "000"
         if len(postcode) == 7:
-            d["addr:postcode"] = f"{postcode[0:4]}-{postcode[4:]}"
+            postcode = f"{postcode[0:4]}-{postcode[4:]}"
+            d["addr:postcode"] = postcode
         elif postcode:
+            postcode = None
             d["addr:postcode"] = "<ERR>"
-        if not d["addr:street"] and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"]) and not d["addr:place"] and not d["addr:suburb"]:
-            d["x-dld-addr"] = html.unescape(nd["address"]["streetAddress"]).strip()
+        city = titleize(nd["City"].strip())
+        if not city and postcode:
+            location = lookup_postcode(postcode)
+            if not location and "-" in postcode:
+                location = lookup_postcode(postcode.split("-", 1)[0])
+            if location:
+                city = titleize(location[1])
+        d["addr:city"] = city
+        if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"]:
+            address = html.unescape(address["streetAddress"]).strip("; ").replace("–", "-")
+            if m := re.fullmatch(r"(.+?)\b(\s*[-,]?\s*(?:[Nn]\.?[°º]\s*)?(?:[Ll][Oo]?[Tt][Ee]?\s+|Lt\.\s*)?(?<!\bEN)(?<!\bE\.N\.)(?<!\bEN )(?<!\bE\.N\. )(?<!\bNacional )(?<!\bTerminal )(?:\d+\w?(?:\s*[-,ea]\s*(?:\d+\w?|\w))*|[Ss]/[Nn]))?(?:\s*[-,]?\s*((?:[Ll][Oo][Jj][Aa]|Lj\.|Bloco)\s*[^,]+))?((?:\s*[-,]?\s*)[Kk]m\s*[\d., ]+)?(?:\s*[-,\s]\s*(Venda|Caminho|Quinta|Área|Lugar|Posto|Lanka|Calvaria|Planalto|sentido|Bairro|Zona|Vale|Urbanização|Vila|Pontes)\b.+)?", address):
+                d["addr:street"] = m[1].strip()
+                if number := (m[2] or "").strip("-,. Nn°º"):
+                    if number.lower() != "s/n":
+                        d["addr:housenumber"] = number
+                    else:
+                        d["nohousenumber"] = "yes"
+                d["addr:unit"] = (m[3] or "").strip(", ")
+                d["addr:milestone"] = (m[4] or "").lower().strip("km-, ").replace(",", ".").replace(" ", "")
+            d["x-dld-addr"] = address
 
         for key in tags_to_reset:
             if d[key]:
