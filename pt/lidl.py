@@ -105,9 +105,11 @@ BRANCH_ABBREVS = [
     [r"\bmt\.\s*", "monte "],
     [r"\bqta\. ", "quinta "],
     [r"\bqt\.ª ", "quinta "],
+    [r"\br\. ", "rua "],
     [r"\bs\. ", "são "],
     [r"\bsao ", "são "],
-    [r"\bsta\. ", "santa "],
+    [r"\bsta\.? ", "santa "],
+    [r"\bsto\.? ", "santo "],
     [r"\bv\.f\.xira\b", "vila franca de xira"],
     [r"\bv\.n\.\s*gaia\b", "vila nova de gaia"],
     [r"\bagueda\b", "águeda"],
@@ -115,6 +117,27 @@ BRANCH_ABBREVS = [
     [r"\bg\.delgado\b", "general delgado"],
     [r"\bj\.\s*", "josé "],
 ]
+BRANCHES = {
+    "vila franca de xira - póvoa santa iria": "vila franca de xira - póvoa de santa iria",
+    "ponte de sôr": "ponte de sor",
+    "lisboa - rua engenheiro paulo barros": "lisboa - rua engenheiro paulo de barros",
+    "lisboa - avenida visconde valmor": "lisboa - avenida visconde de valmor",
+    "matosinhos - monte burgos": "matosinhos - monte dos burgos",
+    "santo tirso - rua jornal de são tirso": "santo tirso - rua do jornal santo tirso",
+    "vila nova de gaia - s.marinha": "vila nova de gaia - santa marinha",
+    "matosinhos - s.hora": "matosinhos - senhora da hora",
+    "lagos - avenida república": "lagos - avenida da república",
+    "braga - avenida rua smith": "braga - avenida robert smith",
+    "porto - avenida camilo": "porto - avenida de camilo",
+    "sintra - mercado rio mouro": "sintra - mercado de rio de mouro",
+    "silves - rua cruz da palmeira": "silves - rua da cruz de palmeira",
+    "monção - en 101 - monção": "monção - en 101",
+    "porto - avenida fernão de magalhães": "porto - avenida de fernão de magalhães",
+    "braga - avenida im. conc.": "braga - avenida imaculada conceição",
+    "leiria 25abril": "leiria - 25 de abril",
+    "famalicão avenida engenheiro pinheiro braga": "famalicão - avenida engenheiro pinheiro braga",
+    "são joão madeira - oliveira junior": "são joão da madeira - oliveira júnior",
+}
 STREET_ABBREVS = [
     [r"\bav\.? ", "avenida "],
     [r"\beng\. ", "engenheiro "],
@@ -197,6 +220,7 @@ if __name__ == "__main__":
         if branch := nd["ShownStoreName"]:
             for r in BRANCH_ABBREVS:
                 branch = re.sub(r[0], r[1], branch.lower())
+            branch = BRANCHES.get(branch, branch)
             if re.sub(r"\W+", "", d["branch"].lower()) != re.sub(r"\W+", "", branch.lower()):
                 d["branch"] = titleize(branch)
 
