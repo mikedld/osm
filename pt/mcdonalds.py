@@ -29,6 +29,25 @@ SCHEDULE_HOURS_MAPPING = {
     r"(\d{2})h(\d{2}) às (\d{1})h(\d{2})": r"\1:\2-0\3:\4",
     r"(\d{1})h(\d{2}) às (\d{1})h(\d{2})": r"0\1:\2-0\3:\4",
 }
+CITIES = {
+    "2580-491": "Carregado",
+    "2660-017": "Santo António dos Cavaleiros",
+    "2770-129": "Paço de Arcos",
+    "2785-784": "Matos Cheirinhos",
+    "2820-287": "Charneca de Caparica",
+    "2830-170": "Santo André",
+    "2840-000": "Torre da Marinha",
+    "2970-841": "Venda Nova",
+    "3830-243": "Ílhavo",
+    "4405-520": "Vila Nova de Gaia",
+    "4425-500": "Ermesinde",
+    "4435-000": "Rio Tinto",
+    "4450-718": "Leça da Palmeira",
+    "4450-820": "Leça da Palmeira",
+    "4464-001": "Senhora da Hora",
+    "4730-709": "Vila Verde",
+    "9600-170": "Ribeira Grande",
+}
 
 
 def fetch_level1_data():
@@ -200,19 +219,10 @@ if __name__ == "__main__":
                 location = lookup_postcode(postcode.split("-", 1)[0])
             if location:
                 city = titleize(location[1])
+        city = CITIES.get(postcode, city)
         d["addr:city"] = city
-        if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"]:
-            address = html.unescape(address["streetAddress"]).strip("; ").replace("–", "-")
-            if m := re.fullmatch(r"(.+?)\b(\s*[-,]?\s*(?:[Nn]\.?[°º]\s*)?(?:[Ll][Oo]?[Tt][Ee]?\s+|Lt\.\s*)?(?<!\bEN)(?<!\bE\.N\.)(?<!\bEN )(?<!\bE\.N\. )(?<!\bNacional )(?<!\bTerminal )(?:\d+\w?(?:\s*[-,ea]\s*(?:\d+\w?|\w))*|[Ss]/[Nn]))?(?:\s*[-,]?\s*((?:[Ll][Oo][Jj][Aa]|Lj\.|Bloco)\s*[^,]+))?((?:\s*[-,]?\s*)[Kk]m\s*[\d., ]+)?(?:\s*[-,\s]\s*(Venda|Caminho|Quinta|Área|Lugar|Posto|Lanka|Calvaria|Planalto|sentido|Bairro|Zona|Vale|Urbanização|Vila|Pontes)\b.+)?", address):
-                d["addr:street"] = m[1].strip()
-                if number := (m[2] or "").strip("-,. Nn°º"):
-                    if number.lower() != "s/n":
-                        d["addr:housenumber"] = number
-                    else:
-                        d["nohousenumber"] = "yes"
-                d["addr:unit"] = (m[3] or "").strip(", ")
-                d["addr:milestone"] = (m[4] or "").lower().strip("km-, ").replace(",", ".").replace(" ", "")
-            d["x-dld-addr"] = address
+        if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
+            d["x-dld-addr"] = html.unescape(address["streetAddress"]).strip("; ").replace("–", "-")
 
         for key in tags_to_reset:
             if d[key]:
