@@ -3,10 +3,10 @@ import __main__
 import datetime
 import fcntl
 import itertools
-import json
 import re
 from gzip import compress, decompress
 from hashlib import sha256
+from json import dumps as json_dumps, loads as json_loads
 from math import atan2, cos, pow, radians, sin, sqrt
 from pathlib import Path
 
@@ -86,11 +86,14 @@ def cache_name(key):
     return CACHE_DIR / f"{BASE_NAME}-{str(datetime.date.today())}-{sha256(key.encode()).hexdigest()[:10]}.cache"
 
 
-def fetch_json_data(url, params={}, *, encoding="utf-8", headers=None, post_process=None):
-    cache_file = cache_name(f"{url}:{params}:{headers}").with_suffix(".cache.data.gz")
+def fetch_json_data(url, params={}, *, encoding="utf-8", headers=None, data=None, json=None, post_process=None):
+    cache_file = cache_name(f"{url}:{params}:{headers}:{data}:{json}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url} {params}")
-        r = requests.get(url, params=params, headers={"user-agent": "mikedld-osm/1.0", **(headers or {})})
+        if data is not None or json is not None:
+            r = requests.post(url, params=params, headers={"user-agent": "mikedld-osm/1.0", **(headers or {})}, data=data, json=json)
+        else:
+            r = requests.get(url, params=params, headers={"user-agent": "mikedld-osm/1.0", **(headers or {})})
         r.raise_for_status()
         result = r.content
         if ENABLE_CACHE:
@@ -100,7 +103,7 @@ def fetch_json_data(url, params={}, *, encoding="utf-8", headers=None, post_proc
     result = result.decode(encoding)
     if post_process:
         result = post_process(result)
-    return json.loads(result)
+    return json_loads(result)
 
 
 def fetch_html_data(url, params={}, *, encoding="utf-8", headers=None):
@@ -128,9 +131,9 @@ def overpass_query(query, country="PT"):
         r.raise_for_status()
         result = r.json()["elements"]
         if ENABLE_OVERPASS_CACHE:
-            cache_file.write_bytes(compress(json.dumps(result).encode("utf-8")))
+            cache_file.write_bytes(compress(json_dumps(result).encode("utf-8")))
     else:
-        result = json.loads(decompress(cache_file.read_bytes()).decode("utf-8"))
+        result = json_loads(decompress(cache_file.read_bytes()).decode("utf-8"))
     return result
 
 
@@ -180,7 +183,7 @@ def lookup_postcode(postcode):
         codes = {}
         codes_file = BASE_DIR / "postal_codes.json"
         if codes_file.exists():
-            codes = json.loads(codes_file.read_text())
+            codes = json_loads(codes_file.read_text())
         if postcode not in codes:
             cp = postcode.split("-", 1)
             page = requests.get("https://www.codigo-postal.pt/", params={"cp4": cp[0], "cp3": cp[1] if len(cp) > 1 else ""}, headers={"user-agent": "mikedld-osm/1.0"})
@@ -211,7 +214,7 @@ def lookup_postcode(postcode):
                 places = [(k, len(list(g))) for k, g in itertools.groupby(sorted(places))]
                 place = sorted(places, key=lambda x: -x[1])[0][0]
                 codes[postcode] = [coords, place]
-                codes_file.write_text(json.dumps(codes))
+                codes_file.write_text(json_dumps(codes))
         result = codes.get(postcode)
         if result:
             result[1] = titleize(POSTCODE_CITIES.get(result[1].lower(), result[1]))
@@ -255,7 +258,7 @@ def write_diff(title, ref, diff, html=True, osm=True):
         stats = {}
         stats_file = BASE_DIR / "stats.json"
         if stats_file.exists():
-            stats = json.loads(stats_file.read_text())
+            stats = json_loads(stats_file.read_text())
         now = datetime.datetime.now(datetime.UTC)
         if old_stats := dict(stats.get(BASE_NAME, {})):
             if datetime.datetime.fromisoformat(old_stats["date"]).date() != now.date():
@@ -272,4 +275,4 @@ def write_diff(title, ref, diff, html=True, osm=True):
             "del": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "del"],
             "previous": old_stats
         }
-        stats_file.write_text(json.dumps(stats))
+        stats_file.write_text(json_dumps(stats))
