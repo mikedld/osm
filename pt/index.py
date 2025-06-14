@@ -12,6 +12,7 @@ SCRIPTS = (
     "auchan.py",
     "cgd.py",
     "continente.py",
+    "decathlon.py",
     "element.py",
     "lidl.py",
     "mcdonalds.py",

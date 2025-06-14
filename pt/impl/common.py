@@ -86,11 +86,11 @@ def cache_name(key):
     return CACHE_DIR / f"{BASE_NAME}-{str(datetime.date.today())}-{sha256(key.encode()).hexdigest()[:10]}.cache"
 
 
-def fetch_json_data(url, params={}, *, encoding="utf-8", post_process=None):
-    cache_file = cache_name(url + ":" + str(params)).with_suffix(".cache.data.gz")
+def fetch_json_data(url, params={}, *, encoding="utf-8", headers=None, post_process=None):
+    cache_file = cache_name(f"{url}:{params}:{headers}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url} {params}")
-        r = requests.get(url, params=params, headers={"user-agent": "mikedld-osm/1.0"})
+        r = requests.get(url, params=params, headers={"user-agent": "mikedld-osm/1.0", **(headers or {})})
         r.raise_for_status()
         result = r.content
         if ENABLE_CACHE:
@@ -103,11 +103,11 @@ def fetch_json_data(url, params={}, *, encoding="utf-8", post_process=None):
     return json.loads(result)
 
 
-def fetch_html_data(url, params={}, *, encoding="utf-8"):
-    cache_file = cache_name(url + ':' + str(params)).with_suffix(".cache.data.gz")
+def fetch_html_data(url, params={}, *, encoding="utf-8", headers=None):
+    cache_file = cache_name(f"{url}:{params}:{headers}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url} {params}")
-        r = requests.get(url, params=params, headers={"user-agent": "mikedld-osm/1.0"})
+        r = requests.get(url, params=params, headers={"user-agent": "mikedld-osm/1.0", **(headers or {})})
         r.raise_for_status()
         result = r.content
         if ENABLE_CACHE:
