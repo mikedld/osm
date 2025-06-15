@@ -19,6 +19,7 @@ SCRIPTS = (
     "mercadona.py",
     "minisom.py",
     "pingodoce.py",
+    "recheio.py",
     "solinca.py",
     "starbucks.py",
     "washy.py",
