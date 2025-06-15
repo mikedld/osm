@@ -11,6 +11,42 @@ DATA_URL = "https://wells.pt/lojas-wells"
 
 REF = "ref"
 
+BRANCH_ABBREVS = (
+    (r"\bAlges\b", "Algés"),
+    (r"\bAntonio\b", "António"),
+    (r"\bAv\b\.?", "Avenida"),
+    (r"\bAzeitao\b", "Azeitão"),
+    (r"\bBd\b", "Bom Dia"),
+    (r"\bCnt\b", "Continente"),
+    (r"\bD'Aire\b", "Daire"),
+    (r"\bDr\b", "Doutor"),
+    (r"\bEstacao\b", "Estação"),
+    (r"\bEvora\b", "Évora"),
+    (r"\bFamalicao\b", "Famalicão"),
+    (r"\bFanzeres\b", "Fânzeres"),
+    (r"\bFig\. Foz\b", "Figueira da Foz"),
+    (r"\bFrs\b", "Franquia"),
+    (r"^(Franquia) (.+)$", r"\2 \1"),
+    (r"\bGpl\b", "Gran Plaza"),
+    (r"\bJoao\b", "João"),
+    (r"\b(MDL|Mh)\b", "Modelo"),
+    (r"\bMte\b", "Monte"),
+    (r"\bOdiaxere\b", "Odiáxere"),
+    (r"\bPdl\b", "Ponta Delgada"),
+    (r"\bPonte de Sôr\b", "Ponte de Sor"),
+    (r"\bQta?\b", "Quinta"),
+    (r"\bS\.\s?J\.", "São João"),
+    (r"\bS\.Atº\b", "Santo António"),
+    (r"\bS\. F\. Marinha\b", "São Félix da Marinha"),
+    (r"\bS\.", "São"),
+    (r"\bStª? Maria\b", "Santa Maria"),
+    (r"\bSto\b", "Santo"),
+    (r"\bUbbo\b", "UBBO"),
+    (r"\bV\.\s?F\. Xira\b", "Vila Franca de Xira"),
+    (r"\bV\. N\.", "Vila Nova"),
+    (r"\bV\.", "Vila"),
+    (r"\bVitoria\b", "Vitória"),
+)
 BRANCHES = {
 }
 SCHEDULE_DAYS_MAPPING = {
@@ -34,10 +70,34 @@ SCHEDULE_HOURS_MAPPING = {
     r"(?:das )?(\d{2})[:h](\d{2})\s*(?:às|-)\s*(\d{2})[:h](\d{2})": r"\1:\2-\3:\4",
     r"encerrad[ao]": r"off",
 }
+POSTCODES = {
+    "2853": "9500-465",
+}
 CITIES = {
+    "1494-044": "Algés",
+    "1495-241": "Algés",
+    "1658-581": "Caneças",
+    "2350-537": "Torres Novas",
+    "2685-223": "Portela",
+    "2725-397": "Mem Martins",
+    "2725-537": "Mem Martins",
+    "2825-004": "Caparica",
     "2975-333": "Quinta do Conde",
+    "3080-228": "Figueira da Foz",
+    "3720-256": "Oliveira de Azeméis",
+    "4420-490": "Valbom",
+    "4450-565": "Leça da Palmeira",
+    "4505-374": "Fiães",
     "4525-117": "Canedo",
+    "4535-211": "Mozelos",
+    "4535-401": "Santa Maria de Lamas",
+    "4820-273": "Fafe",
+    "7500-200": "Vila Nova de Santo André",
+    "8400-656": "Parchal",
+    "8900-258": "Vila Real de Santo António",
     "9050-299": "São Gonçalo",
+    "9500-465": "Ponta Delgada",
+    "9560-414": "Lagoa",
     "9600-516": "Ribeira Grande",
     "9900-038": "Horta (Angústias)",
 }
@@ -73,11 +133,13 @@ def fetch_data():
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"Wells"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"Well\'?s"](area.country);')]
 
     for nd in new_data:
-        branch = re.sub(r"^Wells\s+", "", titleize(nd["name"]))
         public_id = nd["id"]
+        branch = re.sub(r"^Wells\s+", "", titleize(nd["name"]))
+        is_opt = re.search(r"\b(óp?tica|opt)\b", branch, flags=re.I)
+        branch = re.sub(r"\b(óp?tica|opt)\b", " ", branch, flags=re.I).strip()
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
@@ -95,12 +157,16 @@ if __name__ == "__main__":
             old_data.append(d)
 
         d[REF] = public_id
-        d["shop"] = "chemist"
-        d["name"] = "Wells"
+        d["shop"] = "optician" if is_opt else "chemist"
+        d["name"] = "Wells Ótica" if is_opt else "Wells"
         d["brand"] = "Wells"
         d["brand:wikidata"] = "Q115388598"
         d["brand:wikipedia"] = "pt:Wells (lojas)"
+        for r in BRANCH_ABBREVS:
+            branch = re.sub(r[0], r[1], branch)
         d["branch"] = BRANCHES.get(branch, branch)
+
+        tags_to_reset.update({"amenity", "dispensing", "healthcare"})
 
         schedule = re.split(r"\s*;\s*", re.sub(r"(\d+[h:]\d+)\.", r"\1;", nd["storeHours"].lower().replace("horário:", "")))
         schedule = [[y.strip() for y in re.sub(r"^([^0-9:]*?)\s*(?=\d|das |encerrad)", r"\1: ", x).split(":", 1)] for x in schedule]
@@ -154,7 +220,7 @@ if __name__ == "__main__":
             tags_to_reset.add("contact:phone")
         d["contact:website"] = "https://wells.pt/"
         d["contact:facebook"] = "WellsPT"
-        d["contact:youtube"] = "https://www.youtube.com/channel/UCaX7TnIZS_c1J5OBqlTgtvQ"
+        d["contact:youtube"] = "https://www.youtube.com/@Wells_oficial"
         d["contact:instagram"] = "wells_oficial"
 
         tags_to_reset.update({"phone", "mobile", "website"})
@@ -164,11 +230,11 @@ if __name__ == "__main__":
         if d["source:opening_hours"] != "survey":
             d["source:opening_hours"] = "website"
 
-        postcode = nd["postalCode"]
+        postcode = POSTCODES.get(public_id, nd["postalCode"])
         if len(postcode) == 4:
             postcode += "-000"
         d["addr:postcode"] = postcode
-        d["addr:city"] = CITIES.get(postcode, nd["city"])
+        d["addr:city"] = CITIES.get(postcode, titleize(nd["city"].strip()))
 
         if not d["addr:street"] and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"]) and not d["addr:place"] and not d["addr:suburb"]:
             d["x-dld-addr"] = "; ".join([nd["address1"], nd["address2"]])
