@@ -67,7 +67,7 @@ if __name__ == "__main__":
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"Minisom|Amplifon"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"Mini[Ss]om|Amplifon"](area.country);')]
 
     for nd in new_data:
         public_id = nd["shopNumber"]
