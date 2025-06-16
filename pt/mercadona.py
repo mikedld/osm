@@ -85,11 +85,11 @@ if __name__ == "__main__":
         d["brand:wikidata"] = "Q377705"
         d["brand:wikipedia"] = "pt:Mercadona"
 
-        if nd['in'] == "0900#0900#0900#0900#0900#0900#0900" and nd['fi'] == "2130#2130#2130#2130#2130#2130#2130":
+        if set(nd['in'].split("#")) == {"0900"} and set(nd['fi'].split("#")) == {"2130"}:
             if d["opening_hours"] != "Mo-Su,PH 09:00-21:30":
                 d["opening_hours"] = "Mo-Su 09:00-21:30"
         else:
-            d["opening_hours"] = "???"
+            d["opening_hours"] = f"ERR: '{nd['in']}', '{nd['fi']}'"
 
         phone = f"+351 {nd['tf'][0:3]} {nd['tf'][3:6]} {nd['tf'][6:9]}"
         if phone[5:6] == "9":
