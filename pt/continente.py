@@ -93,7 +93,7 @@ def fetch_level2_data(data):
             "".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-day')]/text()")): re.sub(r":0(\d\d)", r":\1", "-".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-time')]/time/text()")))
             for el in result_tree.xpath("//table[contains(@class, 'storeDetailHeaderMap__table')]/tr")
         },
-        "phone": re.sub(r"[^+0-9]", "", result_tree.xpath("//a[contains(@class, 'storeDetailHeaderMap__button')][contains(@href, 'tel:')]/@href")[0]),
+        "phone": re.sub(r"[^+0-9]", "", "".join(result_tree.xpath("//a[contains(@class, 'storeDetailHeaderMap__button')][contains(@href, 'tel:')]/@href"))),
         "addr": [x.strip() for x in "".join(result_tree.xpath("//p[contains(@class, 'storeDetailHeaderMap__address')]/text()")).split("\n") if x.strip()],
     }
 
@@ -190,7 +190,7 @@ if __name__ == "__main__":
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"
 
-        postcode = re.sub(r".*\b(\d{4}(-\d{3})?)\s*$", r"\1", nd["addr"][0])
+        postcode = re.sub(r".*\b(\d{4}(-\d{3})?)\s*$", r"\1", (nd["addr"] or [""])[0])
         if len(postcode) == 4:
             postcode += "-000"
         if len(postcode) == 8:
