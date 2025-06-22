@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
         d[REF] = public_id
         d["shop"] = "supermarket"
-        d["name"] = "ALDI"
+        d["name"] = "Aldi"
         d["brand"] = "Aldi"
         d["brand:wikidata"] = "Q41171373"
         d["brand:wikipedia"] = "pt:Aldi"
@@ -140,4 +140,4 @@ if __name__ == "__main__":
 
     old_data.sort(key=lambda d: d[REF])
 
-    write_diff("ALDI", REF, old_data, osm=True)
+    write_diff("Aldi", REF, old_data, osm=True)
