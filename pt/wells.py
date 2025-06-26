@@ -53,7 +53,7 @@ SCHEDULE_DAYS_MAPPING = {
     r"^$|segunda a domingo-?|todos os dias?": "Mo-Su",
     r"seg\.? a sex\.?": "Mo-Fr",
     r"seg\.? a sáb\.?": "Mo-Sa",
-    r"dom(ingo|\.?) a qui(nta(-feira)?)?\.?": "Su-Th",
+    r"dom(ingo|\.?) a (qui(nta(-feira)?)?\.?|5ªf)": "Su-Th",
     r"s[aá]b\.": "Sa",
     r"dom\.?": "Su",
     r"sáb e dom\.": "Sa,Su",
@@ -62,6 +62,7 @@ SCHEDULE_DAYS_MAPPING = {
     r"dom\.? e feriados": "Su,PH",
     r"sáb\.? dom\.? e feriados": "Sa,Su,PH",
     r"sex(tas|\.),? sáb(ados|\.) e v[eé]sp(era|\.)( de)? feriados?": "Fr,Sa,PH -1 day",
+    r"véspera de feriado, sex e sáb": "Fr,Sa,PH -1 day",
 }
 SCHEDULE_HOURS_MAPPING = {
     r"(\d{2})h\s*às\s*(\d{2})h": r"\1:00-\2:00",
@@ -168,8 +169,8 @@ if __name__ == "__main__":
 
         tags_to_reset.update({"amenity", "dispensing", "healthcare"})
 
-        schedule = re.split(r"\s*;\s*", re.sub(r"(\d+[h:]\d+)\.", r"\1;", nd["storeHours"].lower().replace("horário:", "")))
-        schedule = [[y.strip() for y in re.sub(r"^([^0-9:]*?)\s*(?=\d|das |encerrad)", r"\1: ", x).split(":", 1)] for x in schedule]
+        schedule = re.split(r"\s*[;\n]\s*", re.sub(r"(\d+[h:]\d+)\.", r"\1;", nd["storeHours"].lower().replace("horário:", "")))
+        schedule = [[y.strip() for y in re.sub(r"^([^0-9:]*?)\s*(?=\d(?!ª)|das |encerrad)", r"\1: ", x).split(":", 1)] for x in schedule]
         for s in schedule:
             if len(s) != 2:
                 s[:] = ["<ERR>"]
