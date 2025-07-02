@@ -29,6 +29,7 @@ def fetch_level1_data():
     extra_title_mapping = {
         "braga": "braga centro",
         "coimbra": "coimbra solum",
+        "covilha": "covilhã",
         "lisboa - campo pequeno": "campo pequeno",
         "gaia": "gaia centro",
         "tagus park": "taguspark",
