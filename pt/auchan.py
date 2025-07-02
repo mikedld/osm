@@ -129,6 +129,8 @@ if __name__ == "__main__":
                 if len(opens) == 1:
                     opens = list(opens)[0]
                     for ea in events:
+                        if "Auchan Saúde e Bem-Estar:" in ea:
+                            continue
                         eb = "???"
                         for ema, emb in EVENTS_MAPPING.items():
                             if re.fullmatch(ema, ea) is not None:
