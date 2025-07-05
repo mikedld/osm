@@ -82,7 +82,7 @@ def fetch_level2_data(data):
 
 def schedule_time(v):
     sa = v
-    sb = "<ERR>"
+    sb = f"<ERR:{v}>"
     for sma, smb in SCHEDULE_HOURS_MAPPING.items():
         if re.fullmatch(sma, sa) is not None:
             sb = re.sub(sma, smb, sa)
@@ -115,12 +115,12 @@ def opening_hours(data, title):
     ]
     if exs := {k: v for k, v in data["schedules"].get(title, {}).items() if k not in DAYS}:
         for k, v in exs.items():
-            if k == "Véspera Feriado":
+            if re.fullmatch(r"Véspera Fe?riado", k):
                 t = schedule_time(v)
                 if len(schedule) != 1 or schedule[0] != f"Mo-Su {t}":
                     schedule.append(f"PH -1 day {t}")
             else:
-                schedule.append("<ERR>")
+                schedule.append(f"<ERR:{k}>")
     schedule = "; ".join(schedule)
     if schedule == "Mo-Su 00:00-00:00":
         schedule = "24/7"
