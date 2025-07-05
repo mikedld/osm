@@ -96,9 +96,9 @@ if __name__ == "__main__":
         d[REF] = public_id
         d["shop"] = "hearing_aids"
         d["name"] = "Minisom"
-        d["brand"] = "Amplifon"
-        d["brand:wikidata"] = "Q477222"
-        d["brand:wikipedia"] = "en:Amplifon"
+        d["brand"] = "Minisom"
+        d["brand:wikidata"] = "Q135215682"
+        d["brand:wikipedia"] = ""
         d["branch"] = branch
 
         schedule = [
