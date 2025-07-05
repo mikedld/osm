@@ -22,19 +22,19 @@ SCHEDULE_DAYS_MAPPING = {
     r"de (\d{2}) a (\d{2}) de dezembro": r"Dec \1-\2",
     r"dia (\d{2}) de dezembro": r"Dec \1",
     r"domingo": r"Su",
-    r"domingo a 5ª": r"Su-Th",
+    r"domingo a (quinta|5ª)": r"Su-Th",
     r"domingo a sexta": r"Su-Fr",
     r"domingos?, feriados": r"Su,PH",
     r"domingo, véspera de feriado": r"Su,PH -1 day",
     r"feriados": r"PH",
     r"sábado": r"Sa",
-    r"sábado, domingo": r"Sa,Su",
+    r"sábados?, domingos?": r"Sa,Su",
     r"sábado, domingo, feriados": r"Sa,Su,PH",
     r"segunda a 5ª, domingo": r"Mo-Th,Su",
 }
 SCHEDULE_HOURS_MAPPING = {
-    r"(?:das )?(\d{2})[:h](\d{2})h?\s*(?:-|[áà]s)\s*(\d{2})[:h](\d{2})h?": r"\1:\2-\3:\4",
-    r"(?:das )?(\d{1})[:h](\d{2})h?\s*(?:-|[áà]s)\s*(\d{2})[:h](\d{2})h?": r"0\1:\2-\3:\4",
+    r"(?:das )?(\d{2})[:h.](\d{2})h?\s*(?:-|[áà]s)\s*(\d{2})[:h.](\d{2})h?": r"\1:\2-\3:\4",
+    r"(?:das )?(\d{1})[:h.](\d{2})h?\s*(?:-|[áà]s)\s*(\d{2})[:h.](\d{2})h?": r"0\1:\2-\3:\4",
     r"(?:das )?(\d{2})h\s*(?:-|[áà]s)\s*(\d{2})h": r"\1:00-\2:00",
     r"(?:das )?(\d{1})h\s*(?:-|[áà]s)\s*(\d{2})h": r"0\1:00-\2:00",
     r"encerrados": r"off",
@@ -123,15 +123,15 @@ if __name__ == "__main__":
 
         schedule = [x.replace("  ", " ").replace("–", "-").strip().lower() for x in re.split(r"[/|()\n]", nd["openingHours"]) if x.strip()]
         schedule = [re.sub(r"([-,])? das ", ": das ", x).replace(" e ", ", ") for x in schedule]
-        schedule = [re.sub(r"(?<!:)(?:-? )(encerrados|\d+h-\d+h)", r": \1", x) for x in schedule]
+        schedule = [re.sub(r"(?<!:)(?:-? )(encerrados|\d+h-\d+h|\d+\.\d+\s*-\s*\d+\.\d+)", r": \1", x) for x in schedule]
         schedule = [[y.strip() for y in x.split(":", 1)] for x in schedule]
         for s in schedule:
             if len(s) != 2:
-                s[:] = ["<ERR>"]
+                s[:] = [f"<ERR:{s}>"]
                 continue
 
             sa = s[0]
-            sb = f"<ERR>"
+            sb = f"<ERR:{s}>"
             for sma, smb in SCHEDULE_DAYS_MAPPING.items():
                 if re.fullmatch(sma, sa) is not None:
                     sb = re.sub(sma, smb, sa)
@@ -139,7 +139,7 @@ if __name__ == "__main__":
             s[0] = sb
 
             sa = s[1]
-            sb = "<ERR>"
+            sb = f"<ERR:{s}>"
             for sma, smb in SCHEDULE_HOURS_MAPPING.items():
                 if re.fullmatch(sma, sa) is not None:
                     sb = re.sub(sma, smb, sa).replace("23:59", "00:00")
