@@ -105,11 +105,18 @@ if __name__ == "__main__":
             tags_to_reset.add("operator")
 
         if schedule := nd["openingHoursSpecification"]:
+            events = nd["events"]
+            launch_break = ""
+            for ea in events:
+                if m := re.fullmatch(r"Encerra diariamente das (\d{2})h(\d{2}) às (\d{2})h(\d{2})", ea):
+                    launch_break = f"{m[1]}:{m[2]},{m[3]}:{m[4]}-"
+                    events.remove(ea)
+                    break
             opens = set(x["opens"] for x in schedule)
             schedule = [
                 {
                     "d": DAYS.index(x["dayOfWeek"]),
-                    "t": f"{x['opens']}-{x['closes']}",
+                    "t": f"{x['opens']}-{launch_break}{x['closes']}",
                 }
                 for x in schedule
             ]
@@ -124,21 +131,21 @@ if __name__ == "__main__":
                 f"{opening_weekdays(x['d'])} {x['t']}"
                 for x in sorted(schedule, key=lambda x: x["d"][0])
             ]
-            if events := nd["events"]:
+            if events:
                 events.sort(key=lambda x: -ord(x[0]))
                 if len(opens) == 1:
                     opens = list(opens)[0]
                     for ea in events:
                         if "Auchan Saúde e Bem-Estar:" in ea:
                             continue
-                        eb = "???"
+                        eb = f"<ERR:{ea}>"
                         for ema, emb in EVENTS_MAPPING.items():
                             if re.fullmatch(ema, ea) is not None:
                                 eb = re.sub(ema, emb, ea)
                                 break
                         schedule.append(eb.replace("{opens-}", f"{opens}-"))
                 else:
-                    schedule.append("???")
+                    schedule.append(f"<ERR:{opens}>")
             schedule = "; ".join(schedule)
             if d["opening_hours"].replace(" ", "") != schedule.replace(" ", ""):
                 d["opening_hours"] = schedule
