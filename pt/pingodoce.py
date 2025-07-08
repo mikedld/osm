@@ -76,7 +76,7 @@ if __name__ == "__main__":
                 custom_ohs[public_id] = {}
             custom_ohs[public_id].update(**custom_oh)
 
-        if nd["in_maintenance"]:
+        if nd["in_maintenance"] and nd["in_maintenance"] != "0":
             d["opening_hours"] = "Mo-Su off \"closed for maintenance\""
             if "opening_hours" in d.old_tags:
                 d["source:opening_hours"] = "website"
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         else:
             d["contact:phone"] = phone
             tags_to_reset.add("contact:mobile")
-        d["contact:website"] = nd["permalink"]
+        d["contact:website"] = nd["permalink"] if "://" in nd["permalink"] else f"https://www.pingodoce.pt/lojas/{nd['permalink']}/"
         d["contact:facebook"] = "pingodoce"
         d["contact:youtube"] = "pingodocept"
         d["contact:instagram"] = "pingodoce"
