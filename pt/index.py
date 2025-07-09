@@ -20,6 +20,7 @@ SCRIPTS = (
     "mercadona.py",
     "minisom.py",
     "pingodoce.py",
+    "radiopopular.py",
     "recheio.py",
     "solinca.py",
     "starbucks.py",
