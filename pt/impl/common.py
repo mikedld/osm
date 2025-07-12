@@ -45,6 +45,15 @@ class DiffDict:
     def diff(self):
         return [[self.lat, self.lon], {key: [old_value, self[key]] for key, old_value in self.old_tags.items()}]
 
+    def revert(self, key):
+        if key in self.old_tags:
+            self[key] = self.old_tags[key]
+            self.old_tags.pop(key)
+            if not self[key]:
+                self.data["tags"].pop(key)
+            if not self.old_tags and self.kind == "mod":
+                self.kind = "old"
+
     @property
     def lat(self):
         return self.data.get("center", {}).get("lat", self.data.get("lat"))
