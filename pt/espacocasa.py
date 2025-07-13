@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
         phone = nd["phone"].replace(" ", "")
         if len(phone) == 13 and phone.startswith("+351"):
-            phone = phone[3:]
+            phone = phone[4:]
         if phone and len(phone) == 9:
             phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
             if phone[5:6] == "9":
