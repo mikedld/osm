@@ -18,6 +18,7 @@ SCRIPTS = (
     "decathlon.py",
     "element.py",
     "espacocasa.py",
+    "kidtokid.py",
     "lidl.py",
     "mcdonalds.py",
     "mercadona.py",
