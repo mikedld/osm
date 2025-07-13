@@ -16,7 +16,7 @@ from jinja2 import Environment, FileSystemLoader
 from lxml import etree
 from retrying import retry
 
-from .config import ENABLE_CACHE, ENABLE_OVERPASS_CACHE
+from .config import ENABLE_CACHE, ENABLE_OVERPASS_CACHE, PROXIES
 
 
 BASE_DIR = Path(__main__.__file__).parent
@@ -99,10 +99,14 @@ def fetch_json_data(url, params={}, *, encoding="utf-8", headers=None, data=None
     cache_file = cache_name(f"{url}:{params}:{headers}:{data}:{json}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url} {params}")
+        common_args = dict(
+            params=params,
+            headers={"user-agent": "mikedld-osm/1.0", **(headers or {})},
+            proxies=PROXIES)
         if data is not None or json is not None:
-            r = requests.post(url, params=params, headers={"user-agent": "mikedld-osm/1.0", **(headers or {})}, data=data, json=json)
+            r = requests.post(url, **common_args, data=data, json=json)
         else:
-            r = requests.get(url, params=params, headers={"user-agent": "mikedld-osm/1.0", **(headers or {})})
+            r = requests.get(url, **common_args)
         r.raise_for_status()
         result = r.content
         if ENABLE_CACHE:

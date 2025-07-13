@@ -27,7 +27,7 @@ SCRIPTS = (
     "recheio.py",
     "solinca.py",
     "starbucks.py",
-    # "staples.py", # recaptcha :(
+    "staples.py",
     "washy.py",
     "wells.py",
     "worten.py",
