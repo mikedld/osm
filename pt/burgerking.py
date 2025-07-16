@@ -6,7 +6,8 @@ import re
 from impl.common import DiffDict, fetch_json_data, overpass_query, distance, titleize, opening_weekdays, write_diff
 
 
-DATA_URL = "https://www.burgerking.pt/api/whitelabel"
+# DATA_URL = "https://www.burgerking.pt/api/whitelabel"
+DATA_URL = "https://euw3-prod-bk.rbictg.com/graphql"
 DATA_QUERY = """
     query GetRestaurants($input: RestaurantsInput) {
       restaurants(input: $input) {
