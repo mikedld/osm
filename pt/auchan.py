@@ -15,6 +15,9 @@ LEVEL2_DATA_URL = "https://www.auchan.pt/pt/loja"
 
 REF = "ref"
 
+BRANCHES = {
+    "Sta Maria Lamas": "Santa Maria de Lamas",
+}
 EVENTS_MAPPING = {
     r"Horário feriados: (\d{2}:\d{2}) - (\d{2}:\d{2})": r"PH \1-\2",
     r"Horário feriados: (\d{1}:\d{2}) - (\d{2}:\d{2})": r"PH 0\1-\2",
@@ -92,7 +95,7 @@ if __name__ == "__main__":
         else:
             d["shop"] = "convenience" if is_my else "supermarket"
         d["name"] = name.replace("My Auchan", "MyAuchan")
-        d["branch"] = branch
+        d["branch"] = BRANCHES.get(branch, branch)
         d["brand"] = "MyAuchan" if is_my or is_my_saude else "Auchan"
         d["brand:wikidata"] = "Q115800307" if is_my or is_my_saude else "Q758603"
         d["brand:wikipedia"] = "pt:Auchan"
