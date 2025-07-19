@@ -179,23 +179,17 @@ if __name__ == "__main__":
 
         phone = re.sub(r"\s+", "", nd["contactPoint"]["telephone"])
         if len(phone) == 13:
-            phone = f"+351 {phone[4:7]} {phone[7:10]} {phone[10:13]}"
-            if phone[5:6] == "9":
-                d["contact:mobile"] = phone
-            else:
-                tags_to_reset.add("contact:mobile")
-            if phone[5:6] != "9":
-                d["contact:phone"] = phone
-            else:
-                tags_to_reset.add("contact:phone")
-        d["contact:website"] = nd["Url"]
+            d["contact:phone"] = f"+351 {phone[4:7]} {phone[7:10]} {phone[10:13]}"
+        else:
+            tags_to_reset.add("contact:phone")
+        d["website"] = nd["Url"]
         d["contact:facebook"] = "McDonaldsPortugal"
         d["contact:youtube"] = "https://www.youtube.com/McDonaldsPortugal"
         d["contact:instagram"] = "mcdonaldsportugal"
         d["contact:linkedin"] = "https://www.linkedin.com/company/mcdonald's-corporation/"
         d["contact:tiktok"] = "mcdonalds.pt"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

@@ -116,19 +116,11 @@ if __name__ == "__main__":
                 else:
                     contacts[-1][1].append(c)
         contacts = dict(contacts)
-        mobiles = []
         phones = []
         for phone in contacts["tel"]:
             if len(phone) == 9:
                 phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-                if phone[5:6] == "9":
-                    mobiles.append(phone)
-                else:
-                    phones.append(phone)
-        if mobiles:
-            d["contact:mobile"] = ";".join(mobiles)
-        else:
-            tags_to_reset.add("contact:mobile")
+                phones.append(phone)
         if phones:
             d["contact:phone"] = ";".join(phones)
         else:
@@ -141,14 +133,14 @@ if __name__ == "__main__":
             d["contact:fax"] = ";".join(faxes)
         else:
             tags_to_reset.add("contact:fax")
-        d["contact:website"] = nd["url"]
+        d["website"] = nd["url"]
         d["contact:facebook"] = "Solinca"
         d["contact:youtube"] = "https://www.youtube.com/@SolincaFitnessChannel"
         d["contact:instagram"] = "solincahf"
         d["contact:linkedin"] = "https://www.linkedin.com/company/solinca-health-&-fitness"
         d["contact:email"] = ";".join(contacts["email"])
 
-        tags_to_reset.update({"phone", "mobile", "fax", "website"})
+        tags_to_reset.update({"phone", "mobile", "fax", "email", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

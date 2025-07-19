@@ -127,7 +127,6 @@ if __name__ == "__main__":
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"
 
-        mobiles = []
         phones = []
         contacts = [re.sub(r"\D+", "", x) for x in (nd["phoneNumber1"], nd["phoneNumber2"]) if x]
         if not contacts:
@@ -136,25 +135,17 @@ if __name__ == "__main__":
             if phone == "80010210":
                 phone = "800100210"
             if len(phone) == 9:
-                phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-                if phone[5:6] == "9":
-                    mobiles.append(phone)
-                else:
-                    phones.append(phone)
-        if mobiles:
-            d["contact:mobile"] = ";".join(mobiles)
-        else:
-            tags_to_reset.add("contact:mobile")
+                phones.append(f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}")
         if phones:
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
-        d["contact:website"] = f"https://www.minisom.pt/centros-minisom/aparelhos-auditivos-{get_url_part(nd['city'])}/minisom-{get_url_part(branch)}-{nd['type'].lower()}{public_id}"
+        d["website"] = f"https://www.minisom.pt/centros-minisom/aparelhos-auditivos-{get_url_part(nd['city'])}/minisom-{get_url_part(branch)}-{nd['type'].lower()}{public_id}"
         d["contact:facebook"] = "Minisom"
         d["contact:youtube"] = "https://www.youtube.com/@Minisom_Portugal"
         d["contact:instagram"] = "minisom_amplifon"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

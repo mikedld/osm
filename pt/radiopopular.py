@@ -122,7 +122,7 @@ if __name__ == "__main__":
             d["source:opening_hours"] = "website"
 
         d["contact:phone"] = "+351 220 403 040"
-        d["contact:website"] = f"https://www.radiopopular.pt/loja/{get_url_part(nd['name'])}/"
+        d["website"] = f"https://www.radiopopular.pt/loja/{get_url_part(nd['name'])}/"
         d["contact:facebook"] = "RadioPopular.PT"
         d["contact:twitter"] = "radiopopularPT"
         d["contact:youtube"] = "https://www.youtube.com/@RadioPopular"
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         d["contact:instagram"] = "radiopopular"
         d["contact:tiktok"] = "radiopopular"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

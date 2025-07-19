@@ -115,20 +115,16 @@ if __name__ == "__main__":
         if phone.startswith("+351"):
             phone = phone[4:]
         if phone.replace("0", "") and len(phone) == 9:
-            phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-            if phone[5:6] == "9":
-                d["contact:mobile"] = phone
-                tags_to_reset.add("contact:phone")
-            else:
-                d["contact:phone"] = phone
-                tags_to_reset.add("contact:mobile")
-        d["contact:website"] = f"https://www.decathlon.pt/store-view/loja-de-desporto-{get_url_part(nd['name'])}-{public_id}"
+            d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+        else:
+            tags_to_reset.add("contact:phone")
+        d["website"] = f"https://www.decathlon.pt/store-view/loja-de-desporto-{get_url_part(nd['name'])}-{public_id}"
         d["contact:facebook"] = "decathlonportugal"
         d["contact:youtube"] = "https://www.youtube.com/@decathlon_portugal"
         d["contact:instagram"] = "decathlonportugal"
         d["contact:linkedin"] = "https://www.linkedin.com/company/decathlonportugal/"
 
-        tags_to_reset.update({"phone", "mobile", "fax", "website"})
+        tags_to_reset.update({"phone", "mobile", "fax", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

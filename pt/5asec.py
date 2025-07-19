@@ -103,29 +103,20 @@ if __name__ == "__main__":
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"
 
-        mobiles = []
         phones = []
         for phone in nd["phone"].replace(" ", "").split("/"):
             if len(phone) == 9:
-                phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-                if phone[5:6] == "9":
-                    mobiles.append(phone)
-                else:
-                    phones.append(phone)
-        if mobiles:
-            d["contact:mobile"] = ";".join(mobiles)
-        else:
-            tags_to_reset.add("contact:mobile")
+                phones.append(f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}")
         if phones:
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
-        d["contact:website"] = nd["link"]
+        d["website"] = nd["link"]
         d["contact:facebook"] = "5asecportugal"
         d["contact:youtube"] = "https://www.youtube.com/@5asecpt"
         d["contact:instagram"] = "5asecportugal"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

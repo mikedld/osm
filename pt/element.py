@@ -131,13 +131,13 @@ if __name__ == "__main__":
         if d["source:opening_hours"] != "survey":
             d["source:opening_hours"] = "website"
 
-        d["contact:website"] = nd["url"]
+        d["website"] = nd["url"]
         d["contact:facebook"] = "elementgyms.pt"
         d["contact:instagram"] = "elementgyms.pt"
         d["contact:linkedin"] = "https://www.linkedin.com/company/ginasioselement"
         d["contact:tiktok"] = "element-gym"
 
-        tags_to_reset.update({"phone", "mobile", "fax", "website"})
+        tags_to_reset.update({"phone", "mobile", "fax", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

@@ -171,21 +171,15 @@ if __name__ == "__main__":
         if not phone.startswith("+351"):
             phone = f"+351{phone}"
         if len(phone) == 13:
-            phone = f"+351 {phone[4:7]} {phone[7:10]} {phone[10:13]}"
-            if phone[5:6] == "9":
-                d["contact:mobile"] = phone
-            else:
-                tags_to_reset.add("contact:mobile")
-            if phone[5:6] != "9":
-                d["contact:phone"] = phone
-            else:
-                tags_to_reset.add("contact:phone")
-        d["contact:website"] = nd["url"]
+            d["contact:phone"] = f"+351 {phone[4:7]} {phone[7:10]} {phone[10:13]}"
+        else:
+            tags_to_reset.add("contact:phone")
+        d["website"] = nd["url"]
         d["contact:facebook"] = "continenteoficial"
         d["contact:youtube"] = "https://www.youtube.com/user/continentept"
         d["contact:instagram"] = "continente"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

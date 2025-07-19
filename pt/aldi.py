@@ -95,14 +95,14 @@ if __name__ == "__main__":
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"
 
-        d["contact:website"] = f"https://www.aldi.pt/tools/lojas-e-horarios-de-funcionamento.html/l/{get_url_part(nd['city'])}/{get_url_part(nd['streetAndNumber'])}/{nd['id']}"
+        d["website"] = f"https://www.aldi.pt/tools/lojas-e-horarios-de-funcionamento.html/l/{get_url_part(nd['city'])}/{get_url_part(nd['streetAndNumber'])}/{nd['id']}"
         d["contact:email"] = "portugal@aldi.pt"
         d["contact:facebook"] = "AldiSupermercados.pt"
         d["contact:youtube"] = "https://www.youtube.com/@aldi.portugal"
         d["contact:instagram"] = "aldi.portugal"
         d["contact:linkedin"] = "https://linkedin.com/company/aldi-portugal"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "email", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

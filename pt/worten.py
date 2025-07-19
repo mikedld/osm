@@ -151,29 +151,27 @@ if __name__ == "__main__":
         if schedule.replace(" ", "") != d["opening_hours"].replace(" ", ""):
             d["opening_hours"] = schedule
 
-        phone = nd["phoneNumber"]
-        if phone:
-            phone = re.sub(r"\s+", "", phone).split("(")[0].split(",")[0].split("/")
-            for i in range(1, len(phone)):
-                if len(phone[i]) < 9 and len(phone[i - 1]) == 9:
-                    phone[i] = f"{phone[i - 1][:9 - len(phone[i])]}{phone[i]}"
-            phone = [f"+351 {x[0:3]} {x[3:6]} {x[6:9]}" for x in phone if len(x) == 9]
-            if tf := [x for x in phone if x[5:6] == "9"]:
-                d["contact:mobile"] = ";".join(tf)
-            else:
-                tags_to_reset.add("contact:mobile")
-            if tf := [x for x in phone if x[5:6] != "9"]:
-                d["contact:phone"] = ";".join(tf)
-            else:
-                tags_to_reset.add("contact:phone")
-        d["contact:website"] = f"https://www.worten.pt{nd['url']}"
+        phones = re.sub(r"\s+", "", nd["phoneNumber"]).split("(")[0].split(",")[0].split("/") if nd["phoneNumber"] else []
+        for i in range(1, len(phones)):
+            if len(phones[i]) < 9 and len(phones[i - 1]) == 9:
+                phones[i] = f"{phones[i - 1][:9 - len(phones[i])]}{phones[i]}"
+        phones = [
+            f"+351 {x[0:3]} {x[3:6]} {x[6:9]}"
+            for x in phones
+            if len(x) == 9
+        ]
+        if phones:
+            d["contact:phone"] = ";".join(phones)
+        else:
+            tags_to_reset.add("contact:phone")
+        d["website"] = f"https://www.worten.pt{nd['url']}"
         d["contact:facebook"] = "wortenpt"
         d["contact:twitter"] = "WortenPT"
         d["contact:youtube"] = "https://www.youtube.com/c/worten"
         d["contact:instagram"] = "wortenpt"
         d["contact:linkedin"] = "https://www.linkedin.com/company/worten/"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

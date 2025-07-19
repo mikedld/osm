@@ -53,12 +53,12 @@ if __name__ == "__main__":
         d["branch"] = titleize(nd["title"])
 
         d["contact:phone"] = "+351 282 422 274"
-        d["contact:website"] = "https://www.burgerranch.com/"
+        d["website"] = "https://www.burgerranch.com/"
         d["contact:facebook"] = "BurgerRanch"
         d["contact:instagram"] = "burgerranch"
         d["contact:linkedin"] = "https://www.linkedin.com/company/burger-ranch/"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

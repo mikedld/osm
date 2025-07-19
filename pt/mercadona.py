@@ -94,14 +94,8 @@ if __name__ == "__main__":
         else:
             d["opening_hours"] = f"ERR: '{nd['in']}', '{nd['fi']}'"
 
-        phone = f"+351 {nd['tf'][0:3]} {nd['tf'][3:6]} {nd['tf'][6:9]}"
-        if phone[5:6] == "9":
-            d["contact:mobile"] = phone
-            tags_to_reset.add("contact:phone")
-        else:
-            d["contact:phone"] = phone
-            tags_to_reset.add("contact:mobile")
-        d["contact:website"] = "https://www.mercadona.pt/"
+        d["contact:phone"] = f"+351 {nd['tf'][0:3]} {nd['tf'][3:6]} {nd['tf'][6:9]}"
+        d["website"] = "https://www.mercadona.pt/"
         d["contact:facebook"] = "MercadonaPortugal"
         d["contact:twitter"] = "Mercadona_pt"
         d["contact:youtube"] = "mercadonaportugal"
@@ -109,7 +103,7 @@ if __name__ == "__main__":
         d["contact:linkedin"] = "https://www.linkedin.com/company/mercadonaportugal"
         d["contact:email"] = "apoiocliente@mercadona.com"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "email", "contact:mobile", "contact:website"})
 
         if d["source:addr"] != "survey":
             d["source:addr"] = "website"

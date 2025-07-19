@@ -170,13 +170,13 @@ if __name__ == "__main__":
         else:
             tags_to_reset.add("contact:phone")
         d["contact:email"] = nd["RCH_ManagerEmail__c"]
-        d["contact:website"] = f"https://www.recheio.pt/portal/pt-PT/store-locator/detail?id={nd['Id']}"
+        d["website"] = f"https://www.recheio.pt/portal/pt-PT/store-locator/detail?id={nd['Id']}"
         d["contact:facebook"] = "Recheio.pt"
         d["contact:youtube"] = "https://www.youtube.com/@recheiopt"
         d["contact:instagram"] = "https://www.linkedin.com/company/recheiosa/"
         d["contact:linkedin"] = "recheiopt"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "email", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

@@ -100,27 +100,21 @@ if __name__ == "__main__":
 
         phone = nd["PhoneNumber"].replace(" ", "")
         if len(phone) == 9:
-            phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-            if phone[5:6] == "9":
-                d["contact:mobile"] = phone
-            else:
-                tags_to_reset.add("contact:mobile")
-            if phone[5:6] != "9":
-                d["contact:phone"] = phone
-            else:
-                tags_to_reset.add("contact:phone")
+            d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+        else:
+            tags_to_reset.add("contact:phone")
         if email := nd["Email"]:
             d["contact:email"] = email
         else:
-            tags_to_reset.update({"email", "contact:email"})
-        d["contact:website"] = f"https://www.audika.pt{nd['ItemUrl']}"
+            tags_to_reset.update({"contact:email"})
+        d["website"] = f"https://www.audika.pt{nd['ItemUrl']}"
         d["contact:facebook"] = "audika.pt"
         d["contact:youtube"] = "https://www.youtube.com/@audika_pt"
         d["contact:instagram"] = "audika_pt"
         d["contact:linkedin"] = "https://www.linkedin.com/company/audika-pt/"
         d["contact:tiktok"] = ""
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "email", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

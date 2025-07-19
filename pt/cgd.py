@@ -205,23 +205,17 @@ if __name__ == "__main__":
             phone = phone.split(":", 1)[1].replace(" ", "")
             if not phone.startswith("+351"):
                 phone = f"+351{phone}"
-            if len(phone) == 13:
-                phone = f"+351 {phone[4:7]} {phone[7:10]} {phone[10:13]}"
-                if phone[5:6] == "9":
-                    d["contact:mobile"] = phone
-                else:
-                    tags_to_reset.add("contact:mobile")
-                if phone[5:6] != "9":
-                    d["contact:phone"] = phone
-                else:
-                    tags_to_reset.add("contact:phone")
-        d["contact:website"] = nd["url"]
+        if phone and len(phone) == 13:
+            d["contact:phone"] = f"+351 {phone[4:7]} {phone[7:10]} {phone[10:13]}"
+        else:
+            tags_to_reset.add("contact:phone")
+        d["website"] = nd["url"]
         d["contact:facebook"] = "caixageraldedepositos"
         d["contact:youtube"] = "http://www.youtube.com/user/mediacgd"
         d["contact:instagram"] = "caixageraldedepositos"
         d["contact:linkedin"] = "https://www.linkedin.com/company/caixageraldedepositos/"
 
-        tags_to_reset.update({"phone", "mobile", "fax", "website"})
+        tags_to_reset.update({"phone", "mobile", "fax", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

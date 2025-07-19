@@ -107,16 +107,12 @@ if __name__ == "__main__":
         if phone.startswith("+351"):
             phone = phone[4:]
         if phone and len(phone) == 9:
-            phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-            if phone[5:6] == "9":
-                d["contact:mobile"] = phone
-                tags_to_reset.add("contact:phone")
-            else:
-                d["contact:phone"] = phone
-                tags_to_reset.add("contact:mobile")
-        d["contact:website"] = f"https://www.washy.pt/onde-estamos/#!/{requests.utils.quote(nd['city'])}/{public_id}"
+            d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+        else:
+            tags_to_reset.add("contact:phone")
+        d["website"] = f"https://www.washy.pt/onde-estamos/#!/{requests.utils.quote(nd['city'])}/{public_id}"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

@@ -157,20 +157,17 @@ if __name__ == "__main__":
 
         phone = nd["telephone"][:16]
         if phone:
-            if phone[5:6] == "9":
-                d["contact:mobile"] = phone
-                tags_to_reset.add("contact:phone")
-            else:
-                d["contact:phone"] = phone
-                tags_to_reset.add("contact:mobile")
-        d["contact:website"] = f"https://www.auchan.pt/pt/loja?StoreID={public_id}"
+            d["contact:phone"] = phone
+        else:
+            tags_to_reset.add("contact:phone")
+        d["website"] = f"https://www.auchan.pt/pt/loja?StoreID={public_id}"
         d["contact:facebook"] = "AuchanPortugal"
         d["contact:youtube"] = "https://www.youtube.com/channel/UC6FSI7tYO9ISV11U2PHBBYQ"
         d["contact:instagram"] = "auchan_pt"
         d["contact:tiktok"] = "auchan_pt"
         d["contact:email"] = "apoiocliente@auchan.pt"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "email", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

@@ -261,14 +261,14 @@ if __name__ == "__main__":
                 d["source:opening_hours"] = "website"
 
         d["contact:phone"] = "+351 210 207 000"
-        d["contact:website"] = f"https://www.lidl.pt/s/pt-PT/pesquisa-de-loja/{get_url_part(nd['Locality'])}/{get_url_part(nd['AddressLine'])}/"
+        d["website"] = f"https://www.lidl.pt/s/pt-PT/pesquisa-de-loja/{get_url_part(nd['Locality'])}/{get_url_part(nd['AddressLine'])}/"
         d["contact:facebook"] = "lidlportugal"
         d["contact:youtube"] = "https://www.youtube.com/user/LidlPortugal"
         d["contact:instagram"] = "lidlportugal"
         d["contact:linkedin"] = "https://www.linkedin.com/company/lidl-portugal"
         d["contact:tiktok"] = "lidl.portugal"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

@@ -101,22 +101,20 @@ if __name__ == "__main__":
         if len(phone) == 13 and phone.startswith("+351"):
             phone = phone[4:]
         if phone and len(phone) == 9:
-            phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-            if phone[5:6] == "9":
-                d["contact:mobile"] = phone
-                tags_to_reset.add("contact:phone")
-            else:
-                d["contact:phone"] = phone
-                tags_to_reset.add("contact:mobile")
+            d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+        else:
+            tags_to_reset.add("contact:phone")
         if email := nd["email"]:
             d["contact:email"] = email
-        d["contact:website"] = nd["permalink"] or "https://www.kidtokid.pt/"
+        else:
+            tags_to_reset.add("contact:email")
+        d["website"] = nd["permalink"] or "https://www.kidtokid.pt/"
         d["contact:facebook"] = "k2k.portugal"
         d["contact:youtube"] = "https://www.youtube.com/@kidtokidportugal1262"
         d["contact:instagram"] = "kidtokidportugal"
         d["contact:pinterest"] = "kidtokid"
 
-        tags_to_reset.update({"phone", "mobile", "email", "website"})
+        tags_to_reset.update({"phone", "mobile", "email", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

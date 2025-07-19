@@ -113,21 +113,15 @@ if __name__ == "__main__":
                 d["source:opening_hours"] = "website"
 
         phone = re.sub(r"[^0-9]+", "", nd["contact"])
-        phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-        if phone[5:6] == "9":
-            d["contact:mobile"] = phone
-            tags_to_reset.add("contact:phone")
-        else:
-            d["contact:phone"] = phone
-            tags_to_reset.add("contact:mobile")
-        d["contact:website"] = nd["permalink"] if "://" in nd["permalink"] else f"https://www.pingodoce.pt/lojas/{nd['permalink']}/"
+        d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+        d["website"] = nd["permalink"] if "://" in nd["permalink"] else f"https://www.pingodoce.pt/lojas/{nd['permalink']}/"
         d["contact:facebook"] = "pingodoce"
         d["contact:youtube"] = "pingodocept"
         d["contact:instagram"] = "pingodoce"
         d["contact:linkedin"] = "https://www.linkedin.com/company/pingo-doce"
         d["contact:tiktok"] = "pingodoce"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         # if d["source:addr"] != "survey":
         #     d["source:addr"] = "website"

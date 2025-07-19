@@ -200,31 +200,23 @@ if __name__ == "__main__":
         schedule = "; ".join([" ".join(x) for x in schedule])
         d["opening_hours"] = schedule
 
-        mobiles = []
         phones = []
         for comment, phone in nd["phones"]:
             if len(phone) == 9:
                 phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
                 if comment:
                     phone += f' "{comment}"'
-                if phone[5:6] == "9":
-                    mobiles.append(phone)
-                else:
-                    phones.append(phone)
-        if mobiles:
-            d["contact:mobile"] = ";".join(mobiles)
-        else:
-            tags_to_reset.add("contact:mobile")
+                phones.append(phone)
         if phones:
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
-        d["contact:website"] = "https://wells.pt/"
+        d["website"] = "https://wells.pt/"
         d["contact:facebook"] = "WellsPT"
         d["contact:youtube"] = "https://www.youtube.com/@Wells_oficial"
         d["contact:instagram"] = "wells_oficial"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

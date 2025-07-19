@@ -116,24 +116,17 @@ if __name__ == "__main__":
 
         phone = nd["phone"]
         if phone:
-            phone = f"+351 {phone[7:18]}"
-            if phone[5:6] == "9":
-                d["contact:mobile"] = phone
-                tags_to_reset.add("contact:phone")
-            else:
-                d["contact:phone"] = phone
-                tags_to_reset.add("contact:mobile")
+            d["contact:phone"] = f"+351 {phone[7:18]}"
         else:
-            tags_to_reset.add("contact:mobile")
             tags_to_reset.add("contact:phone")
-        d["contact:website"] = "https://www.agriloja.pt/"
+        d["website"] = "https://www.agriloja.pt/"
         d["contact:facebook"] = "Agriloja"
         d["contact:youtube"] = "grupoagriloja"
         d["contact:instagram"] = "agriloja"
         d["contact:linkedin"] = "https://www.linkedin.com/company/_agriloja"
         d["contact:email"] = nd["email"]
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "email", "contact:mobile", "contact:website"})
 
         if d["source:addr"] != "survey":
             d["source:addr"] = "website"

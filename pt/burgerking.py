@@ -319,23 +319,16 @@ if __name__ == "__main__":
         elif len(phone) == 12 and phone.startswith("351"):
             phone = phone[3:]
         if len(phone) == 9 and phone not in ("000000000", "220000000", "960000000", "999999999"):
-            phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-            if phone[5:6] == "9":
-                d["contact:mobile"] = phone
-                tags_to_reset.add("contact:phone")
-            else:
-                d["contact:phone"] = phone
-                tags_to_reset.add("contact:mobile")
+            d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
         else:
-            tags_to_reset.add("contact:mobile")
             tags_to_reset.add("contact:phone")
-        d["contact:website"] = f"https://www.burgerking.pt/pt/store-locator/store/{nd['id']}"
+        d["website"] = f"https://www.burgerking.pt/pt/store-locator/store/{nd['id']}"
         d["contact:facebook"] = "burgerkingportugal"
         d["contact:youtube"] = "https://www.youtube.com/@burgerkingportugal3411"
         d["contact:instagram"] = "burgerkingportugal"
         d["contact:tiktok"] = "burgerkingportugal"
 
-        tags_to_reset.update({"phone", "mobile", "website"})
+        tags_to_reset.update({"phone", "mobile", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"

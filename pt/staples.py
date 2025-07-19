@@ -130,20 +130,14 @@ if __name__ == "__main__":
         ]
         d["opening_hours"] = "; ".join(schedule)
 
-        phone = f"+351 {nd['phone'][0:3]} {nd['phone'][3:6]} {nd['phone'][6:9]}"
-        if phone[5:6] == "9":
-            d["contact:mobile"] = phone
-            tags_to_reset.add("contact:phone")
-        else:
-            d["contact:phone"] = phone
-            tags_to_reset.add("contact:mobile")
-        d["contact:website"] = "https://www.staples.pt/"
+        d["contact:phone"] = f"+351 {nd['phone'][0:3]} {nd['phone'][3:6]} {nd['phone'][6:9]}"
+        d["website"] = "https://www.staples.pt/"
         d["contact:facebook"] = "staplesportugal"
         d["contact:youtube"] = "https://www.youtube.com/@Staples757"
         d["contact:instagram"] = "staples.portugal"
         d["contact:linkedin"] = "https://www.linkedin.com/company/staplesportugal/"
 
-        tags_to_reset.update({"phone", "mobile", "fax", "website"})
+        tags_to_reset.update({"phone", "mobile", "fax", "contact:mobile", "contact:website"})
 
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"
