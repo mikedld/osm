@@ -29,6 +29,7 @@ SCRIPTS = (
     "solinca.py",
     "starbucks.py",
     "staples.py",
+    "turiscar.py",
     "washy.py",
     "wells.py",
     "worten.py",
