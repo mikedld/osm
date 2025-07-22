@@ -96,8 +96,8 @@ if __name__ == "__main__":
             d["shop"] = "convenience" if is_my else "supermarket"
         d["name"] = name.replace("My Auchan", "MyAuchan")
         d["branch"] = BRANCHES.get(branch, branch)
-        d["brand"] = "MyAuchan" if is_my or is_my_saude else "Auchan"
-        d["brand:wikidata"] = "Q115800307" if is_my or is_my_saude else "Q758603"
+        d["brand"] = "MyAuchan" if is_my or is_my_saude else ("Auchan Supermercado" if is_super else "Auchan")
+        d["brand:wikidata"] = "Q115800307" if is_my or is_my_saude else ("Q105857776" if is_super else "Q758603")
         d["brand:wikipedia"] = "pt:Auchan"
 
         if old_name := d.old_tags.get("name"):
