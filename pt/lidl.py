@@ -233,10 +233,13 @@ if __name__ == "__main__":
             for x in nd["OpeningTimes"]
         ]
         days = list(DAYS)
-        days_offset = 0
-        while days != [x[0] for x in schedule]:
-            days = days[1:] + [days[0]]
-            days_offset += 1
+        if sorted([x[0] for x in schedule]) == sorted(days):
+            days_offset = 0
+            while days != [x[0] for x in schedule]:
+                days = days[1:] + [days[0]]
+                days_offset += 1
+        else:
+            schedule = []
         schedule = [
             {
                 "d": (x[0] + days_offset) % 7,
