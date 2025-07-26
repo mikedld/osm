@@ -289,3 +289,119 @@ def write_diff(title, ref, diff, html=True, osm=True):
             "previous": old_stats
         }
         stats_file.write_text(json_dumps(stats))
+
+LANDLINE_REGIONAL_CODES = {
+    "Abrantes": 	"241",
+    "Angra do Heroísmo": 	"295",
+    "Arganil": 	"235",
+    "Aveiro": 	"234",
+    "Barreiro": 	"207",
+    "Beja": 	"284",
+    "Braga": 	"253",
+    "Bragança": 	"273",
+    "Caldas da Rainha": 	"262",
+    "Castelo Branco": 	"272",
+    "Castro Verde": 	"286",
+    "Chaves": 	"276",
+    "Coimbra": 	"239",
+    "Covilhã": 	"275",
+    "Estremoz": 	"268",
+    "Évora": 	"266",
+    "Faro": 	"289",
+    "Figueira da Foz": 	"233",
+    "Funchal": 	"291",
+    "Gouveia": 	"238",
+    "Guarda": 	"271",
+    "Horta": 	"292",
+    "Idanha-a-Nova": 	"277",
+    "Leiria": 	"244",
+    "Lisboa": 	"21",
+    "Marco de Canaveses": 	"255",
+    "Mealhada": 	"231",
+    "Mirandela": 	"278",
+    "Moura": 	"285",
+    "Odemira": 	"283",
+    "Penafiel": 	"255",
+    "Peso da Régua": 	"254",
+    "Pombal": 	"236",
+    "Ponta Delgada": 	"296",
+    "Ponte de Sôr": 	"242",
+    "Portalegre": 	"245",
+    "Portimão": 	"282",
+    "Porto": 	"22",
+    "Proença-a-Nova": 	"274",
+    "Santarém": 	"243",
+    "Santiago do Cacém": 	"269",
+    "São João da Madeira": 	"256",
+    "Seia": 	"238",
+    "Setúbal": 	"265",
+    "Tavira": 	"281",
+    "Torre de Moncorvo": 	"279",
+    "Torres Novas": 	"249",
+    "Torres Vedras": 	"261",
+    "Valença": 	"251",
+    "Viana do Castelo": 	"258",
+    "Vila Franca de Xira": 	"263",
+    "Vila Nova de Famalicão": 	"252",
+    "Vila Real": 	"259",
+    "Viseu": 	"232",
+}
+
+def format_phonenumber(phone):
+    phone = re.sub(r"[^\d]", "", phone)
+    
+    if len(phone) == 9:
+        phone = "351" + phone
+    elif len(phone) != 12:
+        return phone
+    
+    if phone.startswith("3519"): # Mobile numbers, formatted as +351 9xx xxx xxx
+        return f"+{phone[:3]} {phone[3:6]} {phone[6:9]} {phone[9:]}"
+    elif phone.startswith("3512"): # Landline numbers
+        region_code = phone[3:6]
+        if region_code in LANDLINE_REGIONAL_CODES.values():
+            return f"+{phone[:3]} {phone[3:6]} {phone[6:9]} {phone[9:]}"
+        region_code = phone[3:5]
+        if region_code in LANDLINE_REGIONAL_CODES.values():
+            return f"+{phone[:3]} {phone[3:5]} {phone[5:8]} {phone[8:]}"
+        return phone
+    else:
+        return phone
+
+"""
+Convert a list of numbers to a list of ranges.
+Example:
+to_ranges([1, 2, 3, 5, 6, 8, 9]) 
+returns [[1, 3], [5, 6], [8, 9]]
+"""
+def to_ranges(nums):
+    if not nums:
+        return []
+
+    nums.sort()
+    ranges = []
+    start = end = nums[0]
+
+    for num in nums[1:]:
+        if num == end + 1:
+            end = num
+        else:
+            ranges.append([start, end])
+            start = end = num
+    ranges.append([start, end])
+
+    return ranges
+
+def merge_weekdays(days):
+    days_index = [DAYS.index(day) for day in days]
+    days_index.sort()
+    
+    days_ranges = to_ranges(days_index)
+
+    # check if we can merge the last and first ranges, since there may be a range from Sunday to Monday
+    if days_ranges and len(days_ranges) > 1 and days_ranges[0][0] == 0 and days_ranges[-1][1] == 6:
+        days_ranges[0][0] = days_ranges[-1][0]
+        days_ranges.pop()
+    
+    days = [f"{DAYS[start]}-{DAYS[end]}" if start != end else DAYS[start] for start, end in days_ranges]
+    return days
