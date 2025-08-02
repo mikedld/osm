@@ -22,6 +22,7 @@ SCHEDULE_TIMES = {
     "09h00 às 18h00": "09:00-18:00",
     "20h30 - 22h30": "20:30-22:30",
     "6h30 - 9h30": "06:30-09:30",
+    "6h30 às 22h30": "06:30-22:30",
 }
 
 
@@ -92,10 +93,12 @@ if __name__ == "__main__":
     old_data = [DiffDict(e) for e in overpass_query(f'nwr[leisure][name~"Element( |$)"](area.country);')]
 
     for nd in new_data:
-        public_id = nd["id"]
+        public_id = nd["id"].lstrip("0")
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = [float(nd["extra"]["latitude"]), float(nd["extra"]["longitude"])]
+        if coord[1] > 0:
+            coord[1] = -coord[1]
         if d is None:
-            coord = [float(nd["extra"]["latitude"]), float(nd["extra"]["longitude"])]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
@@ -103,8 +106,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id}"
-            d.data["lat"] = float(nd["extra"]["latitude"])
-            d.data["lon"] = float(nd["extra"]["longitude"])
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
 
         tags_to_reset = set()
