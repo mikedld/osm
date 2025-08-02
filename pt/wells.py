@@ -56,7 +56,7 @@ SCHEDULE_DAYS_MAPPING = {
     r"dom(ingo|\.?) a (qui(nta(-feira)?)?\.?|5ªf)": "Su-Th",
     r"s[aá]b\.": "Sa",
     r"dom\.?": "Su",
-    r"sáb e dom\.": "Sa,Su",
+    r"sáb\.? [ea] dom\.": "Sa,Su",
     r"sex\. e sáb\.": "Fr,Sa",
     r"feriados": "PH",
     r"dom\.? e feriados": "Su,PH",
@@ -67,9 +67,9 @@ SCHEDULE_DAYS_MAPPING = {
 SCHEDULE_HOURS_MAPPING = {
     r"(\d{2})h\s*às\s*(\d{2})h": r"\1:00-\2:00",
     r"(\d{2})h\s*às\s*(\d{2})h(\d{2})": r"\1:00-\2:\3",
-    r"(\d{1})[:h](\d{2})h?\s*(?:às|-)\s*(\d{2})[:h](\d{2})": r"0\1:\2-\3:\4",
-    r"(?:das )?(\d{2})[:h](\d{2})\s*(?:às|-)\s*(\d{2})[:h](\d{2})": r"\1:\2-\3:\4",
-    r"encerrad[ao]": r"off",
+    r"(\d{1})[:h](\d{2})h?\s*(?:às|-)\s*(\d{2})[:h](\d{2})h?": r"0\1:\2-\3:\4",
+    r"(?:das )?(\d{2})[:h](\d{2})h?\s*(?:às|-)\s*(\d{2})[:h](\d{2})h?": r"\1:\2-\3:\4",
+    r"encerrad[ao]|:h às :h": r"off",
 }
 POSTCODES = {
     "2853": "9500-465",
@@ -169,15 +169,15 @@ if __name__ == "__main__":
 
         tags_to_reset.update({"amenity", "dispensing", "healthcare"})
 
-        schedule = re.split(r"\s*[;\n]\s*", re.sub(r"(\d+[h:]\d+)\.", r"\1;", nd["storeHours"].lower().replace("horário:", "")))
-        schedule = [[y.strip() for y in re.sub(r"^([^0-9:]*?)\s*(?=\d(?!ª)|das |encerrad)", r"\1: ", x).split(":", 1)] for x in schedule]
+        schedule = re.split(r"\s*<p>\s*", re.sub(r"(\d+[h:]\d+)\.", r"\1;", re.sub(r"horário:|^<p>|</p>", "", nd["storeHours"].lower())), flags=re.S)
+        schedule = [[y.strip() for y in re.sub(r"^([^0-9:]*?)\s*(?=\d(?!ª)|das |encerrad|:h)", r"\1: ", x).split(":", 1)] for x in schedule]
         for s in schedule:
             if len(s) != 2:
-                s[:] = ["<ERR>"]
+                s[:] = [f"<ERR:{s}>"]
                 continue
 
             sa = s[0]
-            sb = f"<ERR>"
+            sb = f"<ERR:{sa}>"
             for sma, smb in SCHEDULE_DAYS_MAPPING.items():
                 if re.fullmatch(sma, sa) is not None:
                     sb = re.sub(sma, smb, sa)
@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
             ss = []
             for sa in re.split(r"\s*(?:\be\b|/|,)\s*", s[1]):
-                sb = "<ERR>"
+                sb = f"<ERR:{sa}>"
                 for sma, smb in SCHEDULE_HOURS_MAPPING.items():
                     if re.fullmatch(sma, sa) is not None:
                         sb = re.sub(sma, smb, sa)
