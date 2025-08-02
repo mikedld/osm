@@ -20,15 +20,23 @@ def fetch_data():
     return fetch_json_data(DATA_URL)["data"]["stores"]
 
 
+def fixup_time(v):
+    if v and len(v) == 5 and v[2] != ":":
+        v = f"{v[:2]}:{v[3:]}"
+    return v
+
+
 def schedule_time(v):
-    opens_at = v.get("morningOpen", v.get("open"))
-    closes_at = v.get("morningClose", v.get("close"))
+    if v.get("closed"):
+        return "off"
+    opens_at = fixup_time(v.get("morningOpen", v.get("open")))
+    closes_at = fixup_time(v.get("morningClose", v.get("close")))
     if opens_at == "closed":
         return "off"
     if opens_at == "00:00" and closes_at == "23:59":
         return "24/7"
-    opens_at_2 = v.get("afternoonOpen")
-    closes_at_2 = v.get("afternoonClose")
+    opens_at_2 = fixup_time(v.get("afternoonOpen"))
+    closes_at_2 = fixup_time(v.get("afternoonClose"))
     return f"{opens_at}-{closes_at}" + (f",{opens_at_2}-{closes_at_2}" if opens_at_2 else "")
 
 
