@@ -94,9 +94,9 @@ if __name__ == "__main__":
             d["amenity"] = "pharmacy"
         else:
             d["shop"] = "convenience" if is_my else "supermarket"
-        d["name"] = name.replace("My Auchan", "MyAuchan")
+        d["name"] = name
         d["branch"] = BRANCHES.get(branch, branch)
-        d["brand"] = "MyAuchan" if is_my or is_my_saude else ("Auchan Supermercado" if is_super else "Auchan")
+        d["brand"] = "My Auchan" if is_my or is_my_saude else ("Auchan Supermercado" if is_super else "Auchan")
         d["brand:wikidata"] = "Q115800307" if is_my or is_my_saude else ("Q105857776" if is_super else "Q758603")
         d["brand:wikipedia"] = "pt:Auchan"
 
