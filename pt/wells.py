@@ -4,7 +4,7 @@ import re
 
 from lxml import etree
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, distance, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://wells.pt/lojas-wells"
@@ -47,8 +47,7 @@ BRANCH_ABBREVS = (
     (r"\bV\.", "Vila"),
     (r"\bVitoria\b", "Vitória"),
 )
-BRANCHES = {
-}
+BRANCHES = {}
 SCHEDULE_DAYS_MAPPING = {
     r"^$|segunda a domingo-?|todos os dias?": "Mo-Su",
     r"seg\.? a sex\.?": "Mo-Fr",
@@ -121,11 +120,14 @@ def fetch_data():
         {
             "id": x["info"][0][0].attrib["data-store-id"],
             "phones": [
-                re.sub(r"^\s*([';]\s*)?(([^0-9:]+)\s*:?)?\s*(\d+)/?$", r"\3:\4", y.lower()).replace("geral", "").replace("saude", "saúde").split(":")
+                re.sub(r"^\s*([';]\s*)?(([^0-9:]+)\s*:?)?\s*(\d+)/?$", r"\3:\4", y.lower())
+                .replace("geral", "")
+                .replace("saude", "saúde")
+                .split(":")
                 for y in x["info"].xpath("//a[contains(@class, 'w-store-locator-phone')]/text()")
             ],
             "services": [y.strip() for y in x["info"].xpath(".//p[contains(@class, 'w-store-service')]/text()")],
-            **{k: v for k, v in x.items() if k not in ("info",)}
+            **{k: v for k, v in x.items() if k not in ("info",)},
         }
         for x in result
     ]
@@ -139,8 +141,8 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = nd["id"]
         branch = re.sub(r"^Wells\s+", "", titleize(nd["name"]))
-        is_opt = re.search(r"\b(óp?tica|opt)\b", branch, flags=re.I)
-        branch = re.sub(r"\b(óp?tica|opt)\b", " ", branch, flags=re.I).strip()
+        is_opt = re.search(r"\b(óp?tica|opt)\b", branch, flags=re.IGNORECASE)
+        branch = re.sub(r"\b(óp?tica|opt)\b", " ", branch, flags=re.IGNORECASE).strip()
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
@@ -169,8 +171,15 @@ if __name__ == "__main__":
 
         tags_to_reset.update({"amenity", "dispensing", "healthcare"})
 
-        schedule = re.split(r"\s*<p>\s*", re.sub(r"(\d+[h:]\d+)\.", r"\1;", re.sub(r"horário:|^<p>|</p>", "", nd["storeHours"].lower())), flags=re.S)
-        schedule = [[y.strip() for y in re.sub(r"^([^0-9:]*?)\s*(?=\d(?!ª)|das |encerrad|:h)", r"\1: ", x).split(":", 1)] for x in schedule]
+        schedule = re.split(
+            r"\s*<p>\s*",
+            re.sub(r"(\d+[h:]\d+)\.", r"\1;", re.sub(r"horário:|^<p>|</p>", "", nd["storeHours"].lower())),
+            flags=re.DOTALL,
+        )
+        schedule = [
+            [y.strip() for y in re.sub(r"^([^0-9:]*?)\s*(?=\d(?!ª)|das |encerrad|:h)", r"\1: ", x).split(":", 1)]
+            for x in schedule
+        ]
         for s in schedule:
             if len(s) != 2:
                 s[:] = [f"<ERR:{s}>"]
@@ -229,7 +238,12 @@ if __name__ == "__main__":
         d["addr:postcode"] = postcode
         d["addr:city"] = CITIES.get(postcode, titleize(nd["city"].strip()))
 
-        if not d["addr:street"] and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"]) and not d["addr:place"] and not d["addr:suburb"]:
+        if (
+            not d["addr:street"]
+            and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"])
+            and not d["addr:place"]
+            and not d["addr:suburb"]
+        ):
             d["x-dld-addr"] = "; ".join([nd["address1"], nd["address2"]])
 
         for key in tags_to_reset:

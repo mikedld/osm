@@ -5,7 +5,7 @@ import re
 from itertools import count
 from multiprocessing import Pool
 
-from impl.common import DiffDict, fetch_html_data, overpass_query, distance, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_html_data, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://elementgyms.pt/ginasio/"
@@ -50,15 +50,17 @@ def fetch_level1_data():
         result_tree = fetch_html_data(DATA_URL, params=params)
         if not extras:
             extras = result_tree.xpath("//script[@id='solinca-element-js-extra']/text()")[0]
-            extras = re.sub(r"^.*var\s+gymsData\s*=\s*\{(.+)\};\s*$", r"{\1}", extras, flags=re.S)
+            extras = re.sub(r"^.*var\s+gymsData\s*=\s*\{(.+)\};\s*$", r"{\1}", extras, flags=re.DOTALL)
             extras = json.loads(extras)["gyms"]
-        result.extend([
-            {
-                "url": el.xpath(".//a[@class='elementor-post__read-more']/@href")[0],
-                "title": el.xpath(".//div[@class='title-ginasio']/text()")[0].strip(),
-            }
-            for el in result_tree.xpath("//div[@class='container-ginasio-home']")
-        ])
+        result.extend(
+            [
+                {
+                    "url": el.xpath(".//a[@class='elementor-post__read-more']/@href")[0],
+                    "title": el.xpath(".//div[@class='title-ginasio']/text()")[0].strip(),
+                }
+                for el in result_tree.xpath("//div[@class='container-ginasio-home']")
+            ]
+        )
         if not result_tree.xpath("//nav[@class='elementor-pagination']/a[contains(@class, 'next')]/@href"):
             break
     result = [
@@ -78,8 +80,12 @@ def fetch_level2_data(data):
         "id": data["extra"]["step_url"].split("=")[1],
         "schedule": [
             x.strip().replace("–", "-")
-            for x in (result_tree.xpath("//div[contains(./p/text(), 'Horário:')]/div//text()") or
-                result_tree.xpath("//div[contains(./span/i/@class, 'icomoon-the7-font-the7-clock-03')]/following-sibling::div//text()"))
+            for x in (
+                result_tree.xpath("//div[contains(./p/text(), 'Horário:')]/div//text()")
+                or result_tree.xpath(
+                    "//div[contains(./span/i/@class, 'icomoon-the7-font-the7-clock-03')]/following-sibling::div//text()"
+                )
+            )
             if x.strip()
         ],
     }
@@ -90,7 +96,7 @@ if __name__ == "__main__":
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query(f'nwr[leisure][name~"Element( |$)"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[leisure][name~"Element( |$)"](area.country);')]
 
     for nd in new_data:
         public_id = nd["id"].lstrip("0")
@@ -117,18 +123,9 @@ if __name__ == "__main__":
         d["branch"] = titleize(nd["title"])
 
         schedule = nd["schedule"]
-        schedule = [
-            re.split(r"\s*-\s*", x, maxsplit=1)
-            for x in schedule
-        ]
-        schedule = [
-            [SCHEDULE_DAYS[x[0]], [SCHEDULE_TIMES[y] for y in re.split(r"\s*;\s*", x[1])]]
-            for x in schedule
-        ]
-        schedule = [
-            f"{days} {','.join(times)}"
-            for days, times in schedule
-        ]
+        schedule = [re.split(r"\s*-\s*", x, maxsplit=1) for x in schedule]
+        schedule = [[SCHEDULE_DAYS[x[0]], [SCHEDULE_TIMES[y] for y in re.split(r"\s*;\s*", x[1])]] for x in schedule]
+        schedule = [f"{days} {','.join(times)}" for days, times in schedule]
         d["opening_hours"] = "; ".join(schedule)
         if d["source:opening_hours"] != "survey":
             d["source:opening_hours"] = "website"
@@ -145,7 +142,7 @@ if __name__ == "__main__":
             d["source:contact"] = "website"
 
         address = nd["extra"]["address"]
-        if m := re.fullmatch(r"(.+?)\s*,\s*(\d{4}-\d{3})\s*,\s*(.+)", address, flags=re.S):
+        if m := re.fullmatch(r"(.+?)\s*,\s*(\d{4}-\d{3})\s*,\s*(.+)", address, flags=re.DOTALL):
             d["addr:postcode"] = m[2]
             d["addr:city"] = titleize(m[3])
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"]:

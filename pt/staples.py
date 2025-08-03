@@ -5,7 +5,7 @@ import re
 
 from lxml import etree
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, distance, opening_weekdays, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, write_diff
 
 
 DATA_URL = "https://www.staples.pt/pt/pt/store-locator"
@@ -39,7 +39,7 @@ CITIES = {
 
 def fetch_data():
     def post_process(page):
-        page = re.sub(r".*PointLocatorMap_js_items_points\s*=\s*\[(.*?)\];.*", r"[\1]", page, flags=re.S)
+        page = re.sub(r".*PointLocatorMap_js_items_points\s*=\s*\[(.*?)\];.*", r"[\1]", page, flags=re.DOTALL)
         return page
 
     return fetch_json_data(DATA_URL, post_process=post_process)
@@ -90,15 +90,12 @@ if __name__ == "__main__":
         d["branch"] = nd["name"]
 
         schedule_parts = nd["hours"].split("<br>")
-        schedule = [
-            x.xpath("./span/text()")
-            for x in etree.fromstring(schedule_parts[-1], etree.HTMLParser()).xpath("//div")
-        ]
-        holidays_hours = schedule_time(next((x for x in schedule if x[0] == "Feriados"))[1])
+        schedule = [x.xpath("./span/text()") for x in etree.fromstring(schedule_parts[-1], etree.HTMLParser()).xpath("//div")]
+        holidays_hours = schedule_time(next(x for x in schedule if x[0] == "Feriados")[1])
         schedule = [
             {
                 "d": DAYS.index(x[0]),
-                "t": schedule_time(x[1])
+                "t": schedule_time(x[1]),
             }
             for x in schedule
             if x[0] != "Feriados"
@@ -106,28 +103,19 @@ if __name__ == "__main__":
         schedule = [
             {
                 "d": sorted([x["d"] for x in g]),
-                "t": k
+                "t": k,
             }
             for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
         ]
-        schedule = [
-            (opening_weekdays(x['d']), x['t'])
-            for x in sorted(schedule, key=lambda x: x["d"][0])
-        ]
-        schedule = [
-            (f"{x[0]},PH" if x[1] == holidays_hours else x[0], x[1])
-            for x in schedule
-        ]
+        schedule = [(opening_weekdays(x["d"]), x["t"]) for x in sorted(schedule, key=lambda x: x["d"][0])]
+        schedule = [(f"{x[0]},PH" if x[1] == holidays_hours else x[0], x[1]) for x in schedule]
         if off_days := next((x for x in schedule_parts[:-1] if "está encerrada" in x), None):
             off_days = [
                 OFF_DAYS_MAPPING.get(x, f"<ERR:{x}>")
                 for x in etree.fromstring(off_days, etree.HTMLParser()).xpath("//strong/text()")
             ]
             schedule.append((",".join(off_days), "off"))
-        schedule = [
-            " ".join(x)
-            for x in schedule
-        ]
+        schedule = [" ".join(x) for x in schedule]
         d["opening_hours"] = "; ".join(schedule)
 
         d["contact:phone"] = f"+351 {nd['phone'][0:3]} {nd['phone'][3:6]} {nd['phone'][6:9]}"

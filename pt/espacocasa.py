@@ -6,7 +6,7 @@ import re
 
 from lxml import etree
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, opening_weekdays, distance, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://espacocasa.com/wp-admin/admin-ajax.php"
@@ -37,10 +37,7 @@ def fetch_data():
     result = [
         {
             **x,
-            "hours": [
-                el.xpath(".//td//text()")
-                for el in etree.fromstring(x["hours"], etree.HTMLParser()).xpath("//tr")
-            ]
+            "hours": [el.xpath(".//td//text()") for el in etree.fromstring(x["hours"], etree.HTMLParser()).xpath("//tr")],
         }
         for x in result
     ]
@@ -54,7 +51,7 @@ if __name__ == "__main__":
 
     for nd in new_data:
         public_id = nd["id"]
-        branch = html.unescape(re.sub(r"^(MyShop )?Espaço Casa ", "", nd["store"], flags=re.I)).replace("–", "-")
+        branch = html.unescape(re.sub(r"^(MyShop )?Espaço Casa ", "", nd["store"], flags=re.IGNORECASE)).replace("–", "-")
         is_myshop = nd["store"].lower().startswith("myshop")
         tags_to_reset = set()
 
@@ -75,9 +72,9 @@ if __name__ == "__main__":
         d[REF] = public_id
         d["shop"] = "houseware"
         d["name"] = "MyShop Espaço Casa" if is_myshop else "Espaço Casa"
-        # d["brand"] = ""
-        # d["brand:wikidata"] = ""
-        # d["brand:wikipedia"] = ""
+        # d["brand"] = ""  # noqa: ERA001
+        # d["brand:wikidata"] = ""  # noqa: ERA001
+        # d["brand:wikipedia"] = ""  # noqa: ERA001
         d["branch"] = branch
 
         schedule = [
@@ -90,14 +87,11 @@ if __name__ == "__main__":
         schedule = [
             {
                 "d": sorted([x["d"] for x in g]),
-                "t": k
+                "t": k,
             }
             for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
         ]
-        schedule = [
-            f"{opening_weekdays(x['d'])} {x['t']}"
-            for x in sorted(schedule, key=lambda x: x["d"][0])
-        ]
+        schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
         d["opening_hours"] = "; ".join(schedule)
         if d["source:opening_hours"] != "survey":
             d["source:opening_hours"] = "website"

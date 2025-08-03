@@ -41,6 +41,6 @@ if __name__ == "__main__":
     base_dir = Path(__file__).parent
 
     for script in SCRIPTS:
-        result = run([f"./{script}"], capture_output=True, cwd=base_dir)
+        result = run([f"./{script}"], check=False, capture_output=True, cwd=base_dir, timeout=600)  # noqa: S603
         if result.returncode != 0:
             print(f"---\nScript '{script}' failed with exit code {result.returncode}: {result.stderr.decode()}", file=stderr)

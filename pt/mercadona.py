@@ -4,10 +4,9 @@ import datetime
 import json
 import re
 
-from impl.common import BASE_DIR, BASE_NAME, DiffDict, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import BASE_DIR, BASE_NAME, LISBON_TZ, DiffDict, fetch_json_data, overpass_query, titleize, write_diff
 
 
-# DATA_URL = "https://www.mercadona.com/estaticos/cargas/data.js"
 DATA_URL = "https://storage.googleapis.com/pro-bucket-wcorp-files/json/data.js"
 
 REF = "ref"
@@ -47,7 +46,7 @@ def fetch_data():
         return page
 
     params = {
-        "timestamp": datetime.datetime.today().strftime('%s000')
+        "timestamp": datetime.datetime.now(datetime.UTC).astimezone(LISBON_TZ).strftime("%s000"),
     }
     result = fetch_json_data(DATA_URL, params=params, post_process=post_process)
     result = [x for x in result["tiendasFull"] if x["p"] == "PT"]
@@ -57,9 +56,9 @@ def fetch_data():
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name=Mercadona](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query("nwr[shop][name=Mercadona](area.country);")]
 
-    custom_ohs = dict()
+    custom_ohs = {}
     custom_ohs_file = BASE_DIR / f"{BASE_NAME}-custom-ohs.json"
     if custom_ohs_file.exists():
         custom_ohs = json.loads(custom_ohs_file.read_text())
@@ -85,8 +84,8 @@ if __name__ == "__main__":
         d["brand:wikidata"] = "Q377705"
         d["brand:wikipedia"] = "pt:Mercadona"
 
-        opens = list(set(nd['in'].split("#")))
-        closes = list(set(nd['fi'].split("#")))
+        opens = list(set(nd["in"].split("#")))
+        closes = list(set(nd["fi"].split("#")))
         if len(opens) == 1 and len(closes) == 1:
             t = f"{opens[0][:2]}:{opens[0][2:]}-{closes[0][:2]}:{closes[0][2:]}"
             if d["opening_hours"] != f"Mo-Su,PH {t}":

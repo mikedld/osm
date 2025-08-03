@@ -5,7 +5,7 @@ import json
 import re
 from multiprocessing import Pool
 
-from impl.common import DiffDict, fetch_json_data, fetch_html_data, overpass_query, distance, write_diff
+from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, overpass_query, write_diff
 
 
 LEVEL1_DATA_URL = "https://www.spar.pt/loja/resumo"
@@ -19,7 +19,6 @@ SCHEDULE_DAYS = {
     "Sábado:": "Sa",
     "Domingo:": "Su",
     "Feriados:": "PH",
-
     "Mo-Fr,Sa": "Mo-Sa",
     "Mo-Fr,Sa,Su": "Mo-Su",
     "Mo-Fr,Sa,Su,PH": "Mo-Su,PH",
@@ -48,7 +47,7 @@ CITIES = {
 
 def fetch_level1_data():
     def post_process(page):
-        return re.sub(r"^.*var\s+lojasData\s*=\s*JSON.parse\('([^']*)'\);.*$", r'"\1"', page, flags=re.S)
+        return re.sub(r"^.*var\s+lojasData\s*=\s*JSON.parse\('([^']*)'\);.*$", r'"\1"', page, flags=re.DOTALL)
 
     return json.loads(fetch_json_data(LEVEL1_DATA_URL, post_process=post_process))
 
@@ -60,15 +59,16 @@ def fetch_level2_data(data):
     info = [x.strip() for x in details_el.xpath(".//text()") if x.strip()]
     info.pop(0)
     info = [
-        next(g).lower() if k else list(g)
-        for k, g in itertools.groupby(info, lambda x: x in ("Morada", "Horário", "Contactos"))
+        next(g).lower() if k else list(g) for k, g in itertools.groupby(info, lambda x: x in ("Morada", "Horário", "Contactos"))
     ]
     info = dict(itertools.batched(info, 2))
     return {
         **data,
         "url": url,
         "schedule": list(itertools.batched(info["horário"], 2)),
-        "phone": list(itertools.takewhile(lambda x: x != "Email:", itertools.dropwhile(lambda x: x != "Telefone:", info["contactos"])))[1:],
+        "phone": list(
+            itertools.takewhile(lambda x: x != "Email:", itertools.dropwhile(lambda x: x != "Telefone:", info["contactos"]))
+        )[1:],
         "email": list(itertools.dropwhile(lambda x: x != "Email:", info["contactos"]))[1:],
     }
 
@@ -78,11 +78,13 @@ if __name__ == "__main__":
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query(r'nwr[shop][shop!=newsagent][name~"\\b[Ss][Pp][Aa][Rr]\\b"](area.country);')]
+    old_data = [
+        DiffDict(e) for e in overpass_query(r'nwr[shop][shop!=newsagent][name~"\\b[Ss][Pp][Aa][Rr]\\b"](area.country);')
+    ]
 
     for nd in new_data:
         public_id = str(nd["id"])
-        branch = re.sub(r"^SPAR\s+", "", nd["nome"], flags=re.I)
+        branch = re.sub(r"^SPAR\s+", "", nd["nome"], flags=re.IGNORECASE)
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
@@ -116,22 +118,15 @@ if __name__ == "__main__":
             schedule = [
                 [
                     f"{SCHEDULE_DAYS[x[0]]}",
-                    re.sub(r"^encerrad[ao]$", "off", re.sub(r"\b(\d:)", r"0\1", x[1].replace(" ", "").lower())).replace("|", ","),
+                    re.sub(r"^encerrad[ao]$", "off", re.sub(r"\b(\d:)", r"0\1", x[1].replace(" ", "").lower())).replace(
+                        "|", ","
+                    ),
                 ]
                 for x in schedule
             ]
-            schedule = [
-                (','.join(x[0] for x in g), k)
-                for k, g in itertools.groupby(schedule, lambda x: x[1])
-            ]
-            schedule = [
-                (SCHEDULE_DAYS.get(x[0], x[0]), x[1])
-                for x in schedule
-            ]
-            schedule = [
-                " ".join(x)
-                for x in schedule
-            ]
+            schedule = [(",".join(x[0] for x in g), k) for k, g in itertools.groupby(schedule, lambda x: x[1])]
+            schedule = [(SCHEDULE_DAYS.get(x[0], x[0]), x[1]) for x in schedule]
+            schedule = [" ".join(x) for x in schedule]
             d["opening_hours"] = "; ".join(schedule)
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"

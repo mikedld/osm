@@ -1,20 +1,22 @@
-import __main__
-
 import datetime
 import fcntl
 import itertools
 import re
 from gzip import compress, decompress
 from hashlib import sha256
-from json import dumps as json_dumps, loads as json_loads
-from math import atan2, cos, pow, radians, sin, sqrt
+from json import dumps as json_dumps
+from json import loads as json_loads
+from math import atan2, cos, radians, sin, sqrt
 from pathlib import Path
 
+import pytz
 import requests
 from humanize import naturaltime
 from jinja2 import Environment, FileSystemLoader
 from lxml import etree
 from retrying import retry
+
+import __main__
 
 from .config import ENABLE_CACHE, ENABLE_OVERPASS_CACHE, PROXIES
 
@@ -23,6 +25,8 @@ BASE_DIR = Path(__main__.__file__).parent
 BASE_NAME = Path(__main__.__file__).stem
 
 CACHE_DIR = BASE_DIR / "cache"
+
+LISBON_TZ = pytz.timezone("Europe/Lisbon")
 
 DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 PT_ARTICLES = {"e", "a", "à", "o", "de", "do", "da", "dos", "das"}
@@ -68,14 +72,14 @@ class DiffDict:
     def __setitem__(self, key, value):
         if self[key] == value:
             return
-        if not key in self.old_tags:
+        if key not in self.old_tags:
             self.old_tags[key] = self[key]
         self.data["tags"][key] = value
         if self.kind == "old":
             self.kind = "mod"
 
     def __repr__(self):
-        return repr(dict(data=self.data, kind=self.kind))
+        return repr({"data": self.data, "kind": self.kind})
 
 
 class Locker:
@@ -83,7 +87,7 @@ class Locker:
         self._name = name
 
     def __enter__(self):
-        self.fp = open(f"{BASE_DIR}/{self._name}.lock", "wb")
+        self.fp = (BASE_DIR / f"{self._name}.lock").open("wb")
         fcntl.flock(self.fp.fileno(), fcntl.LOCK_EX)
 
     def __exit__(self, _type, value, tb):
@@ -92,21 +96,23 @@ class Locker:
 
 
 def cache_name(key):
-    return CACHE_DIR / f"{BASE_NAME}-{str(datetime.date.today())}-{sha256(key.encode()).hexdigest()[:10]}.cache"
+    today = datetime.datetime.now(datetime.UTC).astimezone(LISBON_TZ).date()
+    return CACHE_DIR / f"{BASE_NAME}-{today}-{sha256(key.encode()).hexdigest()[:10]}.cache"
 
 
-def fetch_json_data(url, params={}, *, encoding="utf-8", headers=None, data=None, json=None, post_process=None):
+def fetch_json_data(url, params=None, *, encoding="utf-8", headers=None, data=None, json=None, post_process=None):
     cache_file = cache_name(f"{url}:{params}:{headers}:{data}:{json}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url} {params}")
-        common_args = dict(
-            params=params,
-            headers={"user-agent": "mikedld-osm/1.0", **(headers or {})},
-            proxies=PROXIES)
+        # print(f"Querying URL: {url} {params}")  # noqa: ERA001
+        common_args = {
+            "params": params or {},
+            "headers": {"user-agent": "mikedld-osm/1.0", **(headers or {})},
+            "proxies": PROXIES,
+        }
         if data is not None or json is not None:
-            r = requests.post(url, **common_args, data=data, json=json)
+            r = requests.post(url, **common_args, data=data, json=json, timeout=120)
         else:
-            r = requests.get(url, **common_args)
+            r = requests.get(url, **common_args, timeout=120)
         r.raise_for_status()
         result = r.content
         if ENABLE_CACHE:
@@ -119,11 +125,11 @@ def fetch_json_data(url, params={}, *, encoding="utf-8", headers=None, data=None
     return json_loads(result)
 
 
-def fetch_html_data(url, params={}, *, encoding="utf-8", headers=None):
+def fetch_html_data(url, params=None, *, encoding="utf-8", headers=None):
     cache_file = cache_name(f"{url}:{params}:{headers}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {url} {params}")
-        r = requests.get(url, params=params, headers={"user-agent": "mikedld-osm/1.0", **(headers or {})})
+        # print(f"Querying URL: {url} {params}")  # noqa: ERA001
+        r = requests.get(url, params=params or {}, headers={"user-agent": "mikedld-osm/1.0", **(headers or {})}, timeout=120)
         r.raise_for_status()
         result = r.content
         if ENABLE_CACHE:
@@ -139,8 +145,8 @@ def overpass_query(query, country="PT"):
     full_query = f'[out:json]; area[admin_level=2]["ISO3166-1"="{country}"] -> .country; {query} out meta center;'
     cache_file = cache_name(full_query).with_suffix(".cache.overpass.gz")
     if not ENABLE_OVERPASS_CACHE or not cache_file.exists():
-        # print(f"Querying Overpass: {full_query}")
-        r = requests.post("http://overpass-api.de/api/interpreter", data=full_query)
+        # print(f"Querying Overpass: {full_query}")  # noqa: ERA001
+        r = requests.post("http://overpass-api.de/api/interpreter", data=full_query, timeout=300)
         r.raise_for_status()
         result = r.json()["elements"]
         if ENABLE_OVERPASS_CACHE:
@@ -153,7 +159,8 @@ def overpass_query(query, country="PT"):
 def titleize(name):
     return "".join(
         word if word in PT_ARTICLES else (word.upper() if re.fullmatch(r"[ivxlcdm]{2,}", word) else word.capitalize())
-        for word in re.split(r"\b", name.lower()))
+        for word in re.split(r"\b", name.lower())
+    )
 
 
 def distance(a, b):
@@ -166,14 +173,11 @@ def distance(a, b):
 
 
 def opening_weekdays(days):
-    ranges =[]
-    for k, g in itertools.groupby(enumerate(days), lambda x: x[0] - x[1]):
+    ranges = []
+    for _k, g in itertools.groupby(enumerate(days), lambda x: x[0] - x[1]):
         g = list(g)
-        ranges.append((g[0][1],g[-1][1]))
-    ranges = [
-        DAYS[a] if a == b else (f"{DAYS[a]},{DAYS[b]}" if a == b - 1 else f"{DAYS[a]}-{DAYS[b]}")
-        for a, b in ranges
-    ]
+        ranges.append((g[0][1], g[-1][1]))
+    ranges = [DAYS[a] if a == b else (f"{DAYS[a]},{DAYS[b]}" if a == b - 1 else f"{DAYS[a]}-{DAYS[b]}") for a, b in ranges]
     return ",".join(ranges)
 
 
@@ -199,14 +203,23 @@ def lookup_postcode(postcode):
             codes = json_loads(codes_file.read_text())
         if postcode not in codes:
             cp = postcode.split("-", 1)
-            page = requests.get("https://www.codigo-postal.pt/", params={"cp4": cp[0], "cp3": cp[1] if len(cp) > 1 else ""}, headers={"user-agent": "mikedld-osm/1.0"})
+            page = requests.get(
+                "https://www.codigo-postal.pt/",
+                params={"cp4": cp[0], "cp3": cp[1] if len(cp) > 1 else ""},
+                headers={"user-agent": "mikedld-osm/1.0"},
+                timeout=120,
+            )
             page.raise_for_status()
             page_tree = etree.fromstring(page.content.decode("utf-8"), etree.HTMLParser())
             place_els = page_tree.xpath("//div[@class='places']/p[not(@id)]")
             page_coords = [
                 x.split(",")
                 for el in place_els
-                for x in (["".join(el.xpath(".//*[contains(@class, 'gps')]/text()")).strip()] if "".join(el.xpath(".//span[@class='cp']/text()")).startswith(postcode) else [])
+                for x in (
+                    ["".join(el.xpath(".//*[contains(@class, 'gps')]/text()")).strip()]
+                    if "".join(el.xpath(".//span[@class='cp']/text()")).startswith(postcode)
+                    else []
+                )
                 if x
             ]
             if page_coords:
@@ -219,11 +232,6 @@ def lookup_postcode(postcode):
                     for el in place_els
                     if "".join(el.xpath(".//span[@class='cp']/text()")).startswith(postcode)
                 ]
-                #places = [
-                #    "".join(el.xpath(".//span[@class='local'][1]/text()")).split(",")[0].strip()
-                #    for el in place_els
-                #    if "".join(el.xpath(".//span[@class='cp']/text()")).startswith(postcode)
-                #]
                 places = [(k, len(list(g))) for k, g in itertools.groupby(sorted(places))]
                 place = sorted(places, key=lambda x: -x[1])[0][0]
                 codes[postcode] = [coords, place]
@@ -234,13 +242,8 @@ def lookup_postcode(postcode):
         return result
 
 
-def write_diff(title, ref, diff, html=True, osm=True):
-    #for d in diff:
-    #    if d.kind == "old":
-    #        continue
-    #    print(d.diff())
-
-    env = Environment(loader = FileSystemLoader(BASE_DIR / "templates"))
+def write_diff(title, ref, diff, *, html=True, osm=True):
+    env = Environment(loader=FileSystemLoader(BASE_DIR / "templates"), autoescape=True)
     env.filters["fromisoformat"] = datetime.datetime.fromisoformat
     env.filters["naturaltime"] = naturaltime
     env.filters["lat"] = lambda x: x.lat
@@ -258,13 +261,13 @@ def write_diff(title, ref, diff, html=True, osm=True):
     if html:
         template = env.get_template("diff_html.jinja")
         output = template.render(context)
-        with open(f"{BASE_DIR}/{BASE_NAME}.html", "w+") as f:
+        with (BASE_DIR / f"{BASE_NAME}.html").open("w+") as f:
             print(output, file=f)
 
     if osm:
         template_osm = env.get_template("diff_osm.jinja")
         output_osm = template_osm.render(context)
-        with open(f"{BASE_DIR}/{BASE_NAME}.osm", "w+") as f:
+        with (BASE_DIR / f"{BASE_NAME}.osm").open("w+") as f:
             print(output_osm, file=f)
 
     with Locker("stats"):
@@ -286,6 +289,6 @@ def write_diff(title, ref, diff, html=True, osm=True):
             "new": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "new"],
             "mod": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "mod"],
             "del": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "del"],
-            "previous": old_stats
+            "previous": old_stats,
         }
         stats_file.write_text(json_dumps(stats))

@@ -58,16 +58,16 @@
 {% if d.kind != "new" -%}
 (<a href="https://www.openstreetmap.org/{{ d.data["type"] }}/{{ d.data["id"] }}/history/{{ d.data["version"] }}">v{{ d.data["version"] }}</a>,
 <a href="https://www.openstreetmap.org/changeset/{{ d.data["changeset"] }}">#{{ d.data["changeset"] }}</a>,
-<a href="https://www.openstreetmap.org/user/{{ d.data["user"] | e }}">{{ d.data["user"] | e }}</a>,
-<abbr title="{{ d.data["timestamp"] | e }}">{{ d.data["timestamp"] | fromisoformat | naturaltime }}</abbr>)
+<a href="https://www.openstreetmap.org/user/{{ d.data["user"] }}">{{ d.data["user"] }}</a>,
+<abbr title="{{ d.data["timestamp"] }}">{{ d.data["timestamp"] | fromisoformat | naturaltime }}</abbr>)
 {%- endif %}
 (to {% if d.kind == "new" %}add{% elif d.kind == "del" %}remove{% elif d.kind == "mod" %}modify{% else %}?{% endif %}):<p>
 <ul>
 {% for key, value in d.data["tags"] | dictsort -%}
-<li><b>{{ key | e }}</b> = {% if key in d.old_tags -%}
-"<span class="oldv">{{ d.old_tags[key] | e }}</span>" &rarr; "<span class="newv">{{ value | e }}</span>"
+<li><b>{{ key }}</b> = {% if key in d.old_tags -%}
+"<span class="oldv">{{ d.old_tags[key] }}</span>" &rarr; "<span class="newv">{{ value }}</span>"
 {%- else -%}
-"{{ value | e }}"
+"{{ value }}"
 {%- endif -%}
 </li>
 {% endfor -%}

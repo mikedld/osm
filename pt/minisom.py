@@ -7,7 +7,7 @@ from multiprocessing import Pool
 
 from unidecode import unidecode
 
-from impl.common import BASE_NAME, DiffDict, fetch_json_data, overpass_query, distance, opening_weekdays, write_diff
+from impl.common import BASE_NAME, LISBON_TZ, DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, write_diff
 from impl.config import CONFIG
 
 
@@ -38,7 +38,7 @@ def fetch_level2_data(data):
     headers = {
         "x-api-key": XCONFIG["api_key"],
     }
-    today = datetime.date.today()
+    today = datetime.datetime.now(datetime.UTC).astimezone(LISBON_TZ).date()
     payload = {
         "countryCode": data["country"],
         "type": data["type"],
@@ -56,7 +56,7 @@ def fetch_level2_data(data):
 
 def get_url_part(value):
     e = unidecode(value)
-    e = re.sub(r'\W', " ", e)
+    e = re.sub(r"\W", " ", e)
     e = e.strip()
     e = re.sub(r"\s+", "-", e)
     return e.lower()
@@ -104,24 +104,18 @@ if __name__ == "__main__":
         schedule = [
             {
                 "d": k - 1,
-                "t": ",".join([
-                    f"{x['startTime']}-{x['endTime']}" if x["openingStatus"] != 0 else "off"
-                    for x in g
-                ]),
+                "t": ",".join([f"{x['startTime']}-{x['endTime']}" if x["openingStatus"] != 0 else "off" for x in g]),
             }
             for k, g in itertools.groupby(nd["openingTimes"], key=lambda x: x["dayOfWeek"])
         ]
         schedule = [
             {
                 "d": sorted([x["d"] for x in g]),
-                "t": k if k == "off" or nd["type"] != "P" else '"por marcação"'
+                "t": k if k == "off" or nd["type"] != "P" else '"por marcação"',
             }
             for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
         ]
-        schedule = [
-            f"{opening_weekdays(x['d'])} {x['t']}"
-            for x in sorted(schedule, key=lambda x: x["d"][0])
-        ]
+        schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
         if schedule:
             d["opening_hours"] = "; ".join(schedule)
             if d["source:opening_hours"] != "survey":
@@ -140,7 +134,9 @@ if __name__ == "__main__":
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
-        d["website"] = f"https://www.minisom.pt/centros-minisom/aparelhos-auditivos-{get_url_part(nd['city'])}/minisom-{get_url_part(branch)}-{nd['type'].lower()}{public_id}"
+        d["website"] = (
+            f"https://www.minisom.pt/centros-minisom/aparelhos-auditivos-{get_url_part(nd['city'])}/minisom-{get_url_part(branch)}-{nd['type'].lower()}{public_id}"
+        )
         d["contact:facebook"] = "Minisom"
         d["contact:youtube"] = "https://www.youtube.com/@Minisom_Portugal"
         d["contact:instagram"] = "minisom_amplifon"

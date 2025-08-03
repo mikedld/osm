@@ -6,7 +6,7 @@ from multiprocessing import Pool
 
 import requests
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, distance, opening_weekdays, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
 
 
 LEVEL1_DATA_URL = "https://limmia-wasky-public-api-c934cd99c58c.herokuapp.com/localsPages/listStaticLocalsPages"
@@ -37,7 +37,7 @@ def fetch_level1_data():
 
 def fetch_level2_data(data):
     params = {
-        "identifier": data['identifier'],
+        "identifier": data["identifier"],
     }
     result = fetch_json_data(LEVEL2_DATA_URL, params=params)["response"]["locations"][0]
     return {
@@ -83,29 +83,25 @@ if __name__ == "__main__":
         schedule = [
             {
                 "d": x["dayOfWeek"] - 1,
-                "t": f"{x['from1']}-{x['to1'][:5]}"
+                "t": f"{x['from1']}-{x['to1'][:5]}",
             }
             for x in nd["openingHours"]
         ]
         schedule = [
             {
                 "d": sorted([x["d"] for x in g]),
-                "t": k
+                "t": k,
             }
             for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
         ]
-        schedule = [
-            f"{opening_weekdays(x['d'])} {x['t']}"
-            for x in sorted(schedule, key=lambda x: x["d"][0])
-        ]
+        schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
         if schedule:
             d["opening_hours"] = "; ".join(schedule)
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"
 
         phone = nd["phone"].replace(" ", "")
-        if phone.startswith("+351"):
-            phone = phone[4:]
+        phone = phone.removeprefix("+351")
         if phone and len(phone) == 9:
             d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
         else:

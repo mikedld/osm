@@ -3,10 +3,10 @@
 import itertools
 import re
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, distance, titleize, opening_weekdays, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
 
 
-# DATA_URL = "https://www.burgerking.pt/api/whitelabel"
+# DATA_URL = "https://www.burgerking.pt/api/whitelabel"  # noqa: ERA001
 DATA_URL = "https://euw3-prod-bk.rbictg.com/graphql"
 DATA_QUERY = """
     query GetRestaurants($input: RestaurantsInput) {
@@ -205,7 +205,7 @@ def fetch_data():
     }
     payload = {
         "operationName": "GetRestaurants",
-        "query": re.sub(r"^\s+", "", DATA_QUERY, flags=re.M).strip(),
+        "query": re.sub(r"^\s+", "", DATA_QUERY, flags=re.MULTILINE).strip(),
         "variables": {
             "input": {
                 "coordinates": {
@@ -218,7 +218,7 @@ def fetch_data():
                 "parallelFlag": False,
                 "status": None,
             },
-        }
+        },
     }
     result = fetch_json_data(DATA_URL, headers=headers, json=payload)
     result = result["data"]["restaurants"]["nodes"]
@@ -243,33 +243,37 @@ def schedule_time(v):
             continue
         if inner := v[f"{day}AdditionalTimeSlot"]:
             inner = [trim_time(inner["open"]), trim_time(inner["close"])]
-            schedule.append({
-                "d": idx,
-                "t": f"{outer[0]}-{inner[0]},{inner[1]}-{outer[1]}",
-            })
+            schedule.append(
+                {
+                    "d": idx,
+                    "t": f"{outer[0]}-{inner[0]},{inner[1]}-{outer[1]}",
+                }
+            )
         else:
-            schedule.append({
-                "d": idx,
-                "t": f"{outer[0]}-{outer[1]}",
-            })
+            schedule.append(
+                {
+                    "d": idx,
+                    "t": f"{outer[0]}-{outer[1]}",
+                }
+            )
     schedule = [
         {
             "d": sorted([x["d"] for x in g]),
-            "t": k
+            "t": k,
         }
         for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
     ]
-    schedule = [
-        f"{opening_weekdays(x['d'])} {x['t']}"
-        for x in sorted(schedule, key=lambda x: x["d"][0])
-    ]
+    schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
     return "; ".join(schedule)
 
 
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity][amenity!=charging_station][~"^(name|brand)$"~"Burgu?er[ ]?King"](area.country);')]
+    old_data = [
+        DiffDict(e)
+        for e in overpass_query('nwr[amenity][amenity!=charging_station][~"^(name|brand)$"~"Burgu?er[ ]?King"](area.country);')
+    ]
 
     for nd in new_data:
         public_id = nd["storeId"]
@@ -297,19 +301,19 @@ if __name__ == "__main__":
         d["brand:wikidata"] = "Q177054"
         d["brand:wikipedia"] = "pt:Burger King"
 
-        # d["delivery"] = "yes" if nd["hasDelivery"] else "no"
-        # d["drive_through"] = "yes" if nd["hasDriveThru"] else "no"
-        # d["outdoor_seating"] = "yes" if nd["hasCurbside"] else "no"
-        # d["takeaway"] = "yes" if nd["hasTakeOut"] else "no"
+        # d["delivery"] = "yes" if nd["hasDelivery"] else "no"  # noqa: ERA001
+        # d["drive_through"] = "yes" if nd["hasDriveThru"] else "no"  # noqa: ERA001
+        # d["outdoor_seating"] = "yes" if nd["hasCurbside"] else "no"  # noqa: ERA001
+        # d["takeaway"] = "yes" if nd["hasTakeOut"] else "no"  # noqa: ERA001
 
         if schedule := schedule_time(nd["diningRoomHours"]):
             d["opening_hours"] = schedule
         # if schedule := schedule_time(nd["deliveryHours"]):
-        #     d["opening_hours:delivery"] = schedule
+        #     d["opening_hours:delivery"] = schedule  # noqa: ERA001
         if schedule := schedule_time(nd["driveThruHours"]):
             d["opening_hours:drive_through"] = schedule
         # if schedule := schedule_time(nd["curbsideHours"]):
-        #     d["opening_hours:outdoor_seating"] = schedule
+        #     d["opening_hours:outdoor_seating"] = schedule  # noqa: ERA001
         if d["source:opening_hours"] != "survey":
             d["source:opening_hours"] = "website"
 
@@ -336,14 +340,13 @@ if __name__ == "__main__":
         address = nd["physicalAddress"]
         city = titleize(address["city"])
         postcode = address["postalCode"].replace(" ", "")
-        if len(postcode) == 7 and not "-" in postcode:
+        if len(postcode) == 7 and "-" not in postcode:
             postcode = f"{postcode[:4]}-{postcode[4:]}"
         if postcode in ("0", "111", "9999", "PT"):
             postcode = ""
-        if not postcode:
-            if m := re.fullmatch(r"(.+?)\s+(\d{4}-\d{3})", city):
-                city = m[1]
-                postcode = m[2]
+        if not postcode and (m := re.fullmatch(r"(.+?)\s+(\d{4}-\d{3})", city)):
+            city = m[1]
+            postcode = m[2]
         if len(postcode) == 4:
             if len(d["addr:postcode"]) == 8 and postcode == d["addr:postcode"][:4]:
                 postcode = d["addr:postcode"]
@@ -355,7 +358,7 @@ if __name__ == "__main__":
             d["addr:postcode"] = postcode
         d["addr:city"] = CITIES.get(postcode, city)
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
-          d["x-dld-addr"] = "; ".join([x.strip() for x in (address["address1"], address["address2"]) if x.strip()])
+            d["x-dld-addr"] = "; ".join([x.strip() for x in (address["address1"], address["address2"]) if x.strip()])
 
         for key in tags_to_reset:
             if d[key]:

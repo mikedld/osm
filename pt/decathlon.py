@@ -5,7 +5,7 @@ import re
 
 from unidecode import unidecode
 
-from impl.common import BASE_NAME, DiffDict, fetch_json_data, overpass_query, titleize, distance, opening_weekdays, write_diff
+from impl.common import BASE_NAME, DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
 from impl.config import CONFIG
 
 
@@ -29,7 +29,7 @@ def fetch_data():
         "query": 'country:="PT"',
     }
     headers = {
-        "referer": "https://www.decathlon.pt/"
+        "referer": "https://www.decathlon.pt/",
     }
     result = fetch_json_data(DATA_URL, params=params, headers=headers)
     result = [
@@ -44,7 +44,7 @@ def fetch_data():
 
 def get_url_part(value):
     e = unidecode(value)
-    e = re.sub(r'\W', " ", e)
+    e = re.sub(r"\W", " ", e)
     e = e.strip()
     e = re.sub(r"\s+", "-", e)
     return e.lower()
@@ -89,21 +89,18 @@ if __name__ == "__main__":
             schedule = [
                 {
                     "d": int(k) - 1,
-                    "t": ",".join([f"{x["start"]}-{x["end"]}" for x in v]) if v else "off",
+                    "t": ",".join([f"{x['start']}-{x['end']}" for x in v]) if v else "off",
                 }
                 for k, v in schedule.items()
             ]
             schedule = [
                 {
                     "d": sorted([x["d"] for x in g]),
-                    "t": k
+                    "t": k,
                 }
                 for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
             ]
-            schedule = [
-                f"{opening_weekdays(x['d'])} {x['t']}"
-                for x in sorted(schedule, key=lambda x: x["d"][0])
-            ]
+            schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
         else:
             schedule = ["Mo-Su off"]
         if schedule:
@@ -112,8 +109,7 @@ if __name__ == "__main__":
                 d["source:opening_hours"] = "website"
 
         phone = nd["contact"].get("phone", "")
-        if phone.startswith("+351"):
-            phone = phone[4:]
+        phone = phone.removeprefix("+351")
         if phone.replace("0", "") and len(phone) == 9:
             d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
         else:
