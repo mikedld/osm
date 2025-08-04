@@ -13,6 +13,7 @@ SCRIPTS = (
     "audika.py",
     "burgerking.py",
     "burgerranch.py",
+    "celeiro.py",
     "cgd.py",
     "continente.py",
     "decathlon.py",
