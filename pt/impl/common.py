@@ -275,16 +275,17 @@ def write_diff(title, ref, diff, *, html=True, osm=True):
         stats_file = BASE_DIR / "stats.json"
         if stats_file.exists():
             stats = json_loads(stats_file.read_text())
-        now = datetime.datetime.now(datetime.UTC)
+        now = datetime.datetime.now(datetime.UTC).astimezone(LISBON_TZ)
         if old_stats := dict(stats.get(BASE_NAME, {})):
-            if datetime.datetime.fromisoformat(old_stats["date"]).date() != now.date():
+            old_date = datetime.datetime.fromisoformat(old_stats["date"]).astimezone(LISBON_TZ).date()
+            if old_date != now.date():
                 old_stats.pop("title", None)
                 old_stats.pop("previous", None)
             else:
                 old_stats = dict(old_stats.get("previous", {}))
         stats[BASE_NAME] = {
             "title": title,
-            "date": now.strftime("%FT%TZ"),
+            "date": now.isoformat(),
             "total": len(diff),
             "new": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "new"],
             "mod": [[d.data["id"], d.lat, d.lon] for d in diff if d.kind == "mod"],
