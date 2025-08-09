@@ -29,6 +29,7 @@ SCRIPTS = (
     "pingodoce.py",
     "radiopopular.py",
     "recheio.py",
+    "santander.py",
     "solinca.py",
     "spar.py",
     "staples.py",
