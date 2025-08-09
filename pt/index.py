@@ -20,6 +20,7 @@ SCRIPTS = (
     "decathlon.py",
     "element.py",
     "espacocasa.py",
+    "jysk.py",
     "kidtokid.py",
     "lidl.py",
     "mcdonalds.py",
