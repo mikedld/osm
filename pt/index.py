@@ -37,6 +37,7 @@ SCRIPTS = (
     "turiscar.py",
     "washy.py",
     "wells.py",
+    "widex.py",
     "worten.py",
 )
 
