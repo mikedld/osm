@@ -35,6 +35,7 @@ BRANCH_ABBREVS = (
     (r"\bPdl\b", "Ponta Delgada"),
     (r"\bPonte de Sôr\b", "Ponte de Sor"),
     (r"\bQta?\b", "Quinta"),
+    (r"\bS João\b", "São João"),
     (r"\bS\.\s?J\.", "São João"),
     (r"\bS\.Atº\b", "Santo António"),
     (r"\bS\. F\. Marinha\b", "São Félix da Marinha"),
@@ -47,7 +48,16 @@ BRANCH_ABBREVS = (
     (r"\bV\.", "Vila"),
     (r"\bVitoria\b", "Vitória"),
 )
-BRANCHES = {}
+BRANCHES = {
+    "Aqua Portimao": "Aqua Portimão",
+    "Caldas Rainha Continente Bom Dia": "Caldas da Rainha Continente Bom Dia",
+    "Caldas Rainha Continente Modelo": "Caldas da Rainha Continente Modelo",
+    "Castelo Branco Parque Barrocal": "Castelo Branco Parque do Barrocal",
+    "Pacos Ferreira Ferrara Plaza": "Paços de Ferreira Ferrara Plaza",
+    "Portimao Cabeço do Mocho": "Portimão Cabeço do Mocho",
+    "Portimao Continente Shopping": "Portimão Continente Shopping",
+    "São João da Madeira 8 Avenida": "São João da Madeira 8ª Avenida",
+}
 SCHEDULE_DAYS_MAPPING = {
     r"^$|segunda a domingo-?|todos os dias?": "Mo-Su",
     r"seg\.? a sex\.?": "Mo-Fr",
@@ -56,12 +66,14 @@ SCHEDULE_DAYS_MAPPING = {
     r"s[aá]b\.": "Sa",
     r"dom\.?": "Su",
     r"sáb\.? [ea] dom\.": "Sa,Su",
+    r"sex\.": "Fr",
     r"sex\. e sáb\.": "Fr,Sa",
     r"feriados": "PH",
     r"dom\.? e feriados": "Su,PH",
     r"sáb\.? dom\.? e feriados": "Sa,Su,PH",
     r"sex(tas|\.),? sáb(ados|\.) e v[eé]sp(era|\.)( de)? feriados?": "Fr,Sa,PH -1 day",
     r"véspera de feriado, sex e sáb": "Fr,Sa,PH -1 day",
+    r"vésperas de feriados": "PH -1 day",
 }
 SCHEDULE_HOURS_MAPPING = {
     r"(\d{2})h\s*às\s*(\d{2})h": r"\1:00-\2:00",
@@ -83,19 +95,25 @@ CITIES = {
     "2725-537": "Mem Martins",
     "2825-004": "Caparica",
     "2975-333": "Quinta do Conde",
+    "2590-041": "Sobral de Monte Agraço",
     "3080-228": "Figueira da Foz",
     "3720-256": "Oliveira de Azeméis",
+    "4200-008": "São Mamede de Infesta",
     "4420-490": "Valbom",
     "4450-565": "Leça da Palmeira",
+    "4460-384": "São Mamede de Infesta",
     "4505-374": "Fiães",
     "4525-117": "Canedo",
     "4535-211": "Mozelos",
     "4535-401": "Santa Maria de Lamas",
+    "4764-501": "Vila Nova de Famalicão",
     "4820-273": "Fafe",
+    "4920-260": "Vila Nova de Cerveira",
     "7500-200": "Vila Nova de Santo André",
     "8400-656": "Parchal",
     "8900-258": "Vila Real de Santo António",
     "9050-299": "São Gonçalo",
+    "9500-376": "Ponta Delgada",
     "9500-465": "Ponta Delgada",
     "9560-414": "Lagoa",
     "9600-516": "Ribeira Grande",
@@ -206,6 +224,8 @@ if __name__ == "__main__":
             schedule = [["Mo-Su,PH", schedule[0][1]], *schedule[2:]]
         if len(schedule) >= 2 and schedule[0][0] == "Mo-Sa" and schedule[1][0] == "PH" and schedule[0][1] == schedule[1][1]:
             schedule = [["Mo-Sa,PH", schedule[0][1]], *schedule[2:]]
+        if len(schedule) == 2 and schedule[0][0] == "Mo-Su" and schedule[1][0] == "Su,PH":
+            schedule[0][0] = "Mo-Sa"
         schedule = "; ".join([" ".join(x) for x in schedule])
         d["opening_hours"] = schedule
 
@@ -233,6 +253,8 @@ if __name__ == "__main__":
             d["source:opening_hours"] = "website"
 
         postcode = POSTCODES.get(public_id, nd["postalCode"])
+        if postcode.endswith("-000") and postcode[:4] == d["addr:postcode"][:4]:
+            postcode = d["addr:postcode"]
         if len(postcode) == 4:
             postcode += "-000"
         d["addr:postcode"] = postcode
