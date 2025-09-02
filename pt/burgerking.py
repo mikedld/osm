@@ -277,6 +277,8 @@ if __name__ == "__main__":
 
     for nd in new_data:
         public_id = nd["storeId"]
+        branch = re.sub(r"(?<=\S)-\s", " - ", nd["customerFacingAddress"]["locale"] or "").split(" - ")[0]
+        branch = re.sub(r"Burger King ", "", branch).strip()
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
@@ -300,6 +302,7 @@ if __name__ == "__main__":
         d["brand"] = "Burger King"
         d["brand:wikidata"] = "Q177054"
         d["brand:wikipedia"] = "pt:Burger King"
+        d["branch"] = branch or d["branch"]
 
         # d["delivery"] = "yes" if nd["hasDelivery"] else "no"  # noqa: ERA001
         # d["drive_through"] = "yes" if nd["hasDriveThru"] else "no"  # noqa: ERA001
