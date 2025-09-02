@@ -33,6 +33,7 @@ def fetch_level1_data():
         "covilha": "covilhã",
         "lisboa - campo pequeno": "campo pequeno",
         "gaia": "gaia centro",
+        "s. mamede": "s.mamede",
         "tagus park": "taguspark",
     }
 
