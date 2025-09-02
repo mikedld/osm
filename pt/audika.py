@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
         schedule = [
             {
-                "d": DAYS.index(x["DayName"].lower()),
+                "d": DAYS.index(x["DayName"].strip().lower()),
                 "t": schedule_time(x["DayHours"]),
             }
             for x in nd["BusinessHours"]
