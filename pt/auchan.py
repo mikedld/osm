@@ -100,8 +100,10 @@ if __name__ == "__main__":
         d[REF] = public_id
         if is_my_saude:
             d["amenity"] = "pharmacy"
+            tags_to_reset.add("shop")
         else:
-            d["shop"] = "convenience" if is_my else "supermarket"
+            d["shop"] = d["shop"] or ("convenience" if is_my else "supermarket")
+            tags_to_reset.add("amenity")
         d["name"] = name
         d["branch"] = BRANCHES.get(branch, branch)
         d["brand"] = "My Auchan" if is_my or is_my_saude else ("Auchan Supermercado" if is_super else "Auchan")
