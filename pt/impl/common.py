@@ -100,7 +100,9 @@ def cache_name(key):
     return CACHE_DIR / f"{BASE_NAME}-{today}-{sha256(key.encode()).hexdigest()[:10]}.cache"
 
 
-def fetch_json_data(url, params=None, *, encoding="utf-8", headers=None, data=None, json=None, post_process=None):
+def fetch_json_data(
+    url, params=None, *, encoding="utf-8", headers=None, data=None, json=None, post_process=None, verify_cert=True
+):
     cache_file = cache_name(f"{url}:{params}:{headers}:{data}:{json}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url} {params}")  # noqa: ERA001
@@ -108,6 +110,7 @@ def fetch_json_data(url, params=None, *, encoding="utf-8", headers=None, data=No
             "params": params or {},
             "headers": {"user-agent": "mikedld-osm/1.0", **(headers or {})},
             "proxies": PROXIES,
+            "verify": verify_cert,
         }
         if data is not None or json is not None:
             r = requests.post(url, **common_args, data=data, json=json, timeout=120)

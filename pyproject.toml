@@ -28,7 +28,7 @@ line-length = 128
 select = ["ALL"]
 ignore = ["ANN", "COM812", "D", "PLR2004", "PLW2901", "RET504", "RUF001", "T201"]
 
-pylint.max-args = 7
+pylint.max-args = 8
 
 [tool.ruff.lint.per-file-ignores]
 "pt/5asec.py" = ["N999"]
