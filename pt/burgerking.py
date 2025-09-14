@@ -221,7 +221,7 @@ def fetch_data():
         },
     }
     result = fetch_json_data(DATA_URL, headers=headers, json=payload)
-    result = result["data"]["restaurants"]["nodes"]
+    result = [x for x in result["data"]["restaurants"]["nodes"] if x["status"].lower() not in ("closed", "projected")]
     return result
 
 
