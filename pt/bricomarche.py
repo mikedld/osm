@@ -10,8 +10,6 @@ DATA_URL = "https://www.bricomarche.pt/apoio-ao-cliente/horarios-de-loja/"
 
 REF = "ref"
 
-BRANCHES = {}
-DAYS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 SCHEDULE_DAYS_MAPPING = {
     r"seg( a |-)sex(ta?)?": "Mo-Fr",
     r"seg(unda)?( [-a] |-)s[aá]b(ado)?": "Mo-Sa",
