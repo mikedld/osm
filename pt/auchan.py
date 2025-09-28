@@ -134,6 +134,9 @@ if __name__ == "__main__":
                 }
                 for x in schedule
             ]
+            for i in range(len(DAYS)):
+                if not any(x for x in schedule if x["d"] == i):
+                    schedule.append({"d": i, "t": "off"})
             schedule = [
                 {
                     "d": sorted([x["d"] for x in g]),
