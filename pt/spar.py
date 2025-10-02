@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import itertools
 import json
 import re
+from itertools import batched, dropwhile, groupby, islice, takewhile
 from multiprocessing import Pool
 
 from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, overpass_query, write_diff
@@ -14,6 +14,11 @@ LEVEL2_DATA_URL = "https://www.spar.pt/loja/detalhe/{id}/"
 
 REF = "ref"
 
+CONTACT_GROUPS = {
+    "Telefone:",
+    "Email:",
+    "Aderente ao Folheto",
+}
 SCHEDULE_DAYS = {
     "Seg. a Sex:": "Mo-Fr",
     "Sábado:": "Sa",
@@ -52,24 +57,26 @@ def fetch_level1_data():
     return json.loads(fetch_json_data(LEVEL1_DATA_URL, post_process=post_process))
 
 
+def extract_contact_info(v, group):
+    return list(takewhile(lambda x: x not in CONTACT_GROUPS, islice(dropwhile(lambda x: x != group, v), 1, None)))
+
+
 def fetch_level2_data(data):
     url = LEVEL2_DATA_URL.format(id=data["id"])
     result_tree = fetch_html_data(url)
     details_el = result_tree.xpath("//*[@class='loja-detalhe']")[0]
     info = [x.strip() for x in details_el.xpath(".//text()") if x.strip()]
     info.pop(0)
-    info = [
-        next(g).lower() if k else list(g) for k, g in itertools.groupby(info, lambda x: x in ("Morada", "Horário", "Contactos"))
-    ]
-    info = dict(itertools.batched(info, 2))
+    info = [next(g).lower() if k else list(g) for k, g in groupby(info, lambda x: x in ("Morada", "Horário", "Contactos"))]
+    info = dict(batched(info, 2))
+    info["horário"] = info.get("horário") or []
+    info["contactos"] = info.get("contactos") or []
     return {
         **data,
         "url": url,
-        "schedule": list(itertools.batched(info["horário"], 2)),
-        "phone": list(
-            itertools.takewhile(lambda x: x != "Email:", itertools.dropwhile(lambda x: x != "Telefone:", info["contactos"]))
-        )[1:],
-        "email": list(itertools.dropwhile(lambda x: x != "Email:", info["contactos"]))[1:],
+        "schedule": list(batched(info["horário"], 2)),
+        "phone": extract_contact_info(info["contactos"], "Telefone:"),
+        "email": extract_contact_info(info["contactos"], "Email:"),
     }
 
 
@@ -124,7 +131,7 @@ if __name__ == "__main__":
                 ]
                 for x in schedule
             ]
-            schedule = [(",".join(x[0] for x in g), k) for k, g in itertools.groupby(schedule, lambda x: x[1])]
+            schedule = [(",".join(x[0] for x in g), k) for k, g in groupby(schedule, lambda x: x[1])]
             schedule = [(SCHEDULE_DAYS.get(x[0], x[0]), x[1]) for x in schedule]
             schedule = [" ".join(x) for x in schedule]
             d["opening_hours"] = "; ".join(schedule)
