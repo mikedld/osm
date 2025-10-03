@@ -5,10 +5,11 @@ import json
 from impl.common import (
     DAYS,
     DiffDict,
+    country_polygon,
+    cover_polygon,
     distance,
     fetch_json_data,
     format_phonenumber,
-    frange,
     merge_weekdays,
     overpass_query,
     titleize,
@@ -17,6 +18,7 @@ from impl.common import (
 
 
 DATA_URL = "https://back-branchlocator.santander.com/branch-locator/find/pt"
+MAX_RADIUS = 100_000
 
 REF = "ref"
 
@@ -114,37 +116,29 @@ ALL_SERVICES = [
 def fetch_data():
     pois = {}
 
-    # This can be optimized by fetching in parallel, but for simplicity we will fetch sequentially.
+    def fetch_impl(coords):
+        nonlocal pois
 
-    # Continental Portugal
-    for lat in frange(37.0, 42.0, 0.5):
-        for lon in frange(-9.0, -6.0, 0.5):
-            print(f"Fetching data for coordinates: {lat}, {lon}")
-            data = fetch_json_data(DATA_URL, params={"config": json.dumps({"coords": [round(lat, 2), round(lon, 2)]})})
+        coords = [coords[1], coords[0]]
+        print(f"Fetching data for coordinates: {coords}")
 
-            for poi in data:
-                pois[poi["poicode"]] = poi
+        params = {
+            "config": json.dumps({"coords": coords}),
+            "filterType": "BRANCH",
+        }
+        data = fetch_json_data(DATA_URL, params=params)
 
-    # Madeira
-    for lat in frange(32.5, 33.5, 0.5):
-        for lon in frange(-17.5, -16.0, 0.5):
-            print(f"Fetching data for coordinates: {lat}, {lon}")
-            data = fetch_json_data(DATA_URL, params={"config": json.dumps({"coords": [round(lat, 2), round(lon, 2)]})})
+        max_dist = 0
+        for poi in data:
+            pois[poi["poicode"]] = poi
+            max_dist = max(max_dist, distance(coords, [poi["location"]["coordinates"][1], poi["location"]["coordinates"][0]]))
 
-            for poi in data:
-                pois[poi["poicode"]] = poi
+        return max_dist if data else MAX_RADIUS
 
-    # Açores
-    for lat in frange(36.5, 40.0, 0.5):
-        for lon in frange(-31.5, -25.0, 0.5):
-            print(f"Fetching data for coordinates: {lat}, {lon}")
-            data = fetch_json_data(DATA_URL, params={"config": json.dumps({"coords": [round(lat, 2), round(lon, 2)]})})
-
-            for poi in data:
-                pois[poi["poicode"]] = poi
+    cover_polygon(country_polygon(), MAX_RADIUS, fetch_impl)
 
     results = list(pois.values())
-    results = [r for r in results if r["entityCode"] == "Santander_Totta" and r["objectType"]["code"] == "BRANCH"]
+    results = [r for r in results if r["entityCode"] == "Santander_Totta"]
 
     return results
 
