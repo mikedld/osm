@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 
 import json
-import itertools
-import re
-from multiprocessing import Pool
 
-from lxml import etree
+from impl.common import (
+    DAYS,
+    DiffDict,
+    distance,
+    fetch_json_data,
+    format_phonenumber,
+    frange,
+    merge_weekdays,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
-from impl.common import \
-    DiffDict, \
-    fetch_json_data, \
-    fetch_html_data, \
-    overpass_query, \
-    titleize, \
-    opening_weekdays, \
-    distance, \
-    write_diff, \
-    DAYS, \
-    format_phonenumber, \
-    merge_weekdays
 
 DATA_URL = "https://back-branchlocator.santander.com/branch-locator/find/pt"
 
@@ -42,17 +38,14 @@ CITY_FIXES = {
     "Gandra Prd": "Gandra",
     "Oliveira Hospital": "Oliveira do Hospital",
     "São Brás Alportel": "São Brás de Alportel",
-    "Canelas Vng": "Canelas",
     "Calheta (Madeira)": "Calheta",
     "Stª Cruz Graciosa": "Santa Cruz da Graciosa",
     "Ponta Delgada - a. Quental": "Ponta Delgada - A. Quental",
 }
-
 POSTCODE_CITY_FIXES = {
     **CITY_FIXES,
     "Estreito Câmara de Lobos": "Estreito de Câmara de Lobos",
 }
-
 WEEKDAY2STR = {
     "MONDAY": "Mo",
     "TUESDAY": "Tu",
@@ -60,10 +53,9 @@ WEEKDAY2STR = {
     "THURSDAY": "Th",
     "FRIDAY": "Fr",
     "SATURDAY": "Sa",
-    "SUNDAY": "Su"
+    "SUNDAY": "Su",
 }
-
-MONTH_NAMES =  {
+MONTH_NAMES = {
     "01": "Jan",
     "02": "Feb",
     "03": "Mar",
@@ -79,11 +71,13 @@ MONTH_NAMES =  {
     "13": "Dec",
 }
 
+
 def fix_city(city):
     city = titleize(city)
     if city in CITY_FIXES:
         return CITY_FIXES[city]
     return city
+
 
 def fix_postcode_city(city):
     city = titleize(city)
@@ -91,25 +85,21 @@ def fix_postcode_city(city):
         return POSTCODE_CITY_FIXES[city]
     return city
 
-def fixWorkingHours(workingHours):
-    for i in range(len(workingHours)):
-        if "-" in workingHours[i]:
-            start, finish = workingHours[i].split("-")
+
+def fix_working_hours(working_hours):
+    for i in range(len(working_hours)):
+        if "-" in working_hours[i]:
+            start, finish = working_hours[i].split("-")
             # as numbers
-            startH, startM = map(int, start.split(":")) 
-            finishH, finishM = map(int, finish.split(":"))
-            start = f"{startH:02d}:{startM:02d}"
-            finish = f"{finishH:02d}:{finishM:02d}"
-            workingHours[i] = f"{start}-{finish}"
+            start_h, start_m = map(int, start.split(":"))
+            finish_h, finish_m = map(int, finish.split(":"))
+            start = f"{start_h:02d}:{start_m:02d}"
+            finish = f"{finish_h:02d}:{finish_m:02d}"
+            working_hours[i] = f"{start}-{finish}"
         else:
             continue
-    return workingHours
+    return working_hours
 
-def frange(x, y, jump):
-    epsilon = jump * 0.1
-    while x < y + epsilon:
-        yield x
-        x += jump
 
 ALL_SERVICES = [
     "atm",
@@ -120,81 +110,61 @@ ALL_SERVICES = [
     "internet_access",
 ]
 
+
 def fetch_data():
     pois = {}
 
     # This can be optimized by fetching in parallel, but for simplicity we will fetch sequentially.
-    
+
     # Continental Portugal
     for lat in frange(37.0, 42.0, 0.5):
         for lon in frange(-9.0, -6.0, 0.5):
             print(f"Fetching data for coordinates: {lat}, {lon}")
-            data = fetch_json_data(DATA_URL, params={
-                "config": json.dumps({
-                    "coords": [
-                        round(lat, 2),
-                        round(lon, 2)
-                    ]
-                })
-            })
-            
+            data = fetch_json_data(DATA_URL, params={"config": json.dumps({"coords": [round(lat, 2), round(lon, 2)]})})
+
             for poi in data:
-                pois[poi['poicode']] = poi
+                pois[poi["poicode"]] = poi
 
     # Madeira
     for lat in frange(32.5, 33.5, 0.5):
         for lon in frange(-17.5, -16.0, 0.5):
             print(f"Fetching data for coordinates: {lat}, {lon}")
-            data = fetch_json_data(DATA_URL, params={
-                "config": json.dumps({
-                    "coords": [
-                        round(lat, 2),
-                        round(lon, 2)
-                    ]
-                })
-            })
-            
+            data = fetch_json_data(DATA_URL, params={"config": json.dumps({"coords": [round(lat, 2), round(lon, 2)]})})
+
             for poi in data:
-                pois[poi['poicode']] = poi
+                pois[poi["poicode"]] = poi
 
     # Açores
     for lat in frange(36.5, 40.0, 0.5):
         for lon in frange(-31.5, -25.0, 0.5):
             print(f"Fetching data for coordinates: {lat}, {lon}")
-            data = fetch_json_data(DATA_URL, params={
-                "config": json.dumps({
-                    "coords": [
-                        round(lat, 2),
-                        round(lon, 2)
-                    ]
-                })
-            })
+            data = fetch_json_data(DATA_URL, params={"config": json.dumps({"coords": [round(lat, 2), round(lon, 2)]})})
 
             for poi in data:
-                pois[poi['poicode']] = poi
+                pois[poi["poicode"]] = poi
 
     results = list(pois.values())
-    results = [
-        r for r in results
-        if r["entityCode"] == "Santander_Totta"
-        and r["objectType"]["code"] == "BRANCH"
-    ]
+    results = [r for r in results if r["entityCode"] == "Santander_Totta" and r["objectType"]["code"] == "BRANCH"]
 
     return results
 
+
 if __name__ == "__main__":
     new_data = fetch_data()
-    
-    old_data = [DiffDict(e) for e in overpass_query(
-"""
+
+    old_data = [
+        DiffDict(e)
+        for e in overpass_query(
+            """
 (
     nwr[amenity=bank][name~"Santander"](area.country);
 );
 """
-    )]
+        )
+    ]
 
     new_node_id = -10000
-    
+
     for nd in new_data:
         public_id = nd["poicode"]
         d = next((od for od in old_data if public_id in od[REF].split(";")), None)
@@ -213,7 +183,7 @@ if __name__ == "__main__":
             new_node_id -= 1
 
         d["amenity"] = "bank"
-    
+
         if nd["subType"]["code"] == "WORKCAFE":
             d["name"] = "Santander (Work Café)"
             d["office"] = "coworking"
@@ -228,7 +198,6 @@ if __name__ == "__main__":
             d["office"] = ""
             d["branch:type"] = ""
 
-    
         d["operator"] = "Banco Santander (Portugal)"
         d["operator:wikidata"] = "Q4854116"
         d["operator:wikipedia"] = "pt:Banco Santander Portugal"
@@ -238,14 +207,14 @@ if __name__ == "__main__":
         ref_name = fix_city(nd["name"])
         if ref_name not in d["ref_name"].split(";"):
             d["ref_name"] = ref_name
-        if  nd["status"]["code"] not in ("In_Service", "IN_SERVICE"):
+        if nd["status"]["code"] not in ("In_Service", "IN_SERVICE"):
             d["x-dld-status"] = nd["status"]["code"]
         d["addr:postcode"] = nd["location"]["zipcode"]
         d["addr:city"] = fix_postcode_city(nd["location"]["city"])
-        
+
         if nd["location"]["urlPhoto"] is not None:
             d["image"] = nd["location"]["urlPhoto"]
-        
+
         if d["contact:phone"]:
             formatted_phone = ";".join([format_phonenumber(phonenumber) for phonenumber in d["contact:phone"].split(";")])
             if formatted_phone != d["contact:phone"]:
@@ -273,36 +242,36 @@ if __name__ == "__main__":
             d["contact:linkedin"] = nd["socialData"].get("linkedinLink", "")
             d["contact:instagram"] = nd["socialData"].get("instagramLink", "")
             d["contact:tiktok"] = nd["socialData"].get("tiktokLink", "")
-            
+
         # Schedule
         opening_hours = ""
         schedule = nd["schedule"]
-        workingDays = {}
-        
+        working_days = {}
+
         for workday in schedule["workingDay"]:
             wd = WEEKDAY2STR[workday]
             if schedule["workingDay"][workday] == []:
                 continue
-            workingHours = ",".join(fixWorkingHours(schedule["workingDay"][workday]))
-            if workingHours == "Encerrado":
+            working_hours = ",".join(fix_working_hours(schedule["workingDay"][workday]))
+            if working_hours == "Encerrado":
                 continue
-            if workingHours not in workingDays:
-                workingDays[workingHours] = []
-            workingDays[workingHours].append(wd)
-        for workingHours, days in workingDays.items():
+            if working_hours not in working_days:
+                working_days[working_hours] = []
+            working_days[working_hours].append(wd)
+        for working_hours, days in working_days.items():
             days.sort(key=lambda s: DAYS.index(s))
             if opening_hours != "":
                 opening_hours += "; "
             days = merge_weekdays(days)
-            opening_hours += ",".join(days) + " " + workingHours
+            opening_hours += ",".join(days) + " " + working_hours
         days_off = []
         for day in schedule["specialDay"]:
             if day["time"] == [None]:
                 month, day = day["date"].split("-")
-                monthName = MONTH_NAMES[month]
-                days_off.append(f"{monthName} {day}")
+                month_name = MONTH_NAMES[month]
+                days_off.append(f"{month_name} {day}")
             else:
-                opening_hours = f"<ERR:{json.dump(schedule)}>"
+                opening_hours = f"<ERR:{schedule}>"
                 days_off = []
                 break
         if days_off != []:
@@ -311,7 +280,7 @@ if __name__ == "__main__":
 
         if "urlDetailPage" in nd:
             d["website"] = nd["urlDetailPage"]
-            
+
         if public_id not in d[REF].split(";"):
             d["ref"] = public_id
 
@@ -319,52 +288,44 @@ if __name__ == "__main__":
 
         # Services
         if "comercialProducts" in nd:
-            
-            commercialProducts = {product["default"].upper() for product in nd["comercialProducts"]}
-            if 'MULTIBANCO' in commercialProducts:
+            commercial_products = {product["default"].upper() for product in nd["comercialProducts"]}
+            if "MULTIBANCO" in commercial_products:
                 services["atm"] = "yes"
-                commercialProducts.remove('MULTIBANCO')
-            if 'LEVANTAMENTOS' in commercialProducts:
+                commercial_products.remove("MULTIBANCO")
+            if "LEVANTAMENTOS" in commercial_products:
                 services["cash_out"] = "yes"
-                commercialProducts.remove('LEVANTAMENTOS')
-            if 'CONSULTAS' in commercialProducts:
-                commercialProducts.remove('CONSULTAS')
-            if 'TRANSFERÊNCIAS' in commercialProducts:
-                commercialProducts.remove('TRANSFERÊNCIAS')
-            if 'CARREGAMENTOS' in commercialProducts:
+                commercial_products.remove("LEVANTAMENTOS")
+            commercial_products.discard("CONSULTAS")
+            commercial_products.discard("TRANSFERÊNCIAS")
+            if "CARREGAMENTOS" in commercial_products:
                 services["prepaid_top_up:mobile"] = "yes"
-                commercialProducts.remove('CARREGAMENTOS')
-            if 'PAGAMENTOS DE SERVIÇOS' in commercialProducts:
-                commercialProducts.remove('PAGAMENTOS DE SERVIÇOS')
-            if 'REQUISIÇÃO DE CHEQUES' in commercialProducts:
-                commercialProducts.remove('REQUISIÇÃO DE CHEQUES')
-            if 'DEPÓSITOS E CHEQUES' in commercialProducts:
+                commercial_products.remove("CARREGAMENTOS")
+            commercial_products.discard("PAGAMENTOS DE SERVIÇOS")
+            commercial_products.discard("REQUISIÇÃO DE CHEQUES")
+            if "DEPÓSITOS E CHEQUES" in commercial_products:
                 services["cash_in"] = "yes"
                 services["cheque_in"] = "yes"
-                commercialProducts.remove('DEPÓSITOS E CHEQUES')
-            if 'LEVANTAMENTOS E DEPÓSITOS' in commercialProducts:
+                commercial_products.remove("DEPÓSITOS E CHEQUES")
+            if "LEVANTAMENTOS E DEPÓSITOS" in commercial_products:
                 services["cash_out"] = "yes"
                 services["cash_in"] = "yes"
-                commercialProducts.remove('LEVANTAMENTOS E DEPÓSITOS')
-            if 'LEVANTAMENTOS E CHEQUES' in commercialProducts:
+                commercial_products.remove("LEVANTAMENTOS E DEPÓSITOS")
+            if "LEVANTAMENTOS E CHEQUES" in commercial_products:
                 services["cash_out"] = "yes"
                 services["cheque_in"] = "yes"
-                commercialProducts.remove('LEVANTAMENTOS E CHEQUES')
-            if 'SERVIÇO DE BALCÃO' in commercialProducts:
-                commercialProducts.remove('SERVIÇO DE BALCÃO')
-            if 'MÁQUINA DE DEPÓSITOS' in commercialProducts:
+                commercial_products.remove("LEVANTAMENTOS E CHEQUES")
+            commercial_products.discard("SERVIÇO DE BALCÃO")
+            if "MÁQUINA DE DEPÓSITOS" in commercial_products:
                 services["cash_in"] = "yes"
-                commercialProducts.remove('MÁQUINA DE DEPÓSITOS')
-            if 'DEPÓSITO DE NOTAS NA CONTA DE TERCEIROS' in commercialProducts:
+                commercial_products.remove("MÁQUINA DE DEPÓSITOS")
+            if "DEPÓSITO DE NOTAS NA CONTA DE TERCEIROS" in commercial_products:
                 services["cash_in"] = "yes"
-                commercialProducts.remove('DEPÓSITO DE NOTAS NA CONTA DE TERCEIROS')
-            if 'NÃO TEM SERVIÇO DE CAIXA' in commercialProducts:
-                commercialProducts.remove('NÃO TEM SERVIÇO DE CAIXA')
-            if 'APENAS SERVIÇOS COMERCIAIS DISPONÍVEIS' in commercialProducts:
-                commercialProducts.remove('APENAS SERVIÇOS COMERCIAIS DISPONÍVEIS')
+                commercial_products.remove("DEPÓSITO DE NOTAS NA CONTA DE TERCEIROS")
+            commercial_products.discard("NÃO TEM SERVIÇO DE CAIXA")
+            commercial_products.discard("APENAS SERVIÇOS COMERCIAIS DISPONÍVEIS")
 
-            if commercialProducts != set():
-                d["x-dld-commercial_products"] = ";".join(sorted(commercialProducts))
+            if commercial_products != set():
+                d["x-dld-commercial_products"] = ";".join(sorted(commercial_products))
 
         if "dialogAttribute" in nd:
             if "WIFI" in nd["dialogAttribute"]:
@@ -376,26 +337,27 @@ if __name__ == "__main__":
                 services["cash_in"] = "yes"
 
         for service in ALL_SERVICES:
-            if service in services:
-                d[service] = services[service]
-            else:
-                d[service] = ""
+            d[service] = services.get(service, "")
 
         if "spokenlanguages" in nd:
             keys = [k for k in list(d.data["tags"]) if k.startswith("language:")]
-            
+
             languages = {lang.lower() for lang in nd["spokenlanguages"]}
-            
+
             for k in keys:
                 lang = k.split(":", 1)[1]
                 if lang.lower() not in languages:
                     d[k] = ""
-                    
-            for l in languages:
-                if d[f"language:{l}"] != "yes":
-                    d[f"language:{l}"] = "yes"
 
-        if d.kind == "new" and not d["addr:street"] and not (d["addr:housenumber"] or d["nohousenumber"] or d["addr:housename"]):
+            for lang in languages:
+                if d[f"language:{lang}"] != "yes":
+                    d[f"language:{lang}"] = "yes"
+
+        if (
+            d.kind == "new"
+            and not d["addr:street"]
+            and not (d["addr:housenumber"] or d["nohousenumber"] or d["addr:housename"])
+        ):
             d["x-dld-addr"] = nd["location"]["address"]
 
     for d in old_data:
