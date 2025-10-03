@@ -3,7 +3,16 @@
 import itertools
 from multiprocessing import Pool
 
-from impl.common import DiffDict, fetch_json_data, fetch_html_data, overpass_query, titleize, distance, opening_weekdays, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_html_data,
+    fetch_json_data,
+    opening_weekdays,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 LEVEL1_DATA_URL = "https://www.5asec.pt/ajax/stores"
@@ -24,7 +33,7 @@ def fetch_level1_data():
 
 
 def fetch_level2_data(data):
-    result_tree = fetch_html_data(LEVEL2_DATA_URL.format(id=data['nid']))
+    result_tree = fetch_html_data(LEVEL2_DATA_URL.format(id=data["nid"]))
     return {
         **data,
         "link": result_tree.xpath("//head/link[@rel='canonical']/@href")[0],
@@ -35,10 +44,7 @@ def fetch_level2_data(data):
         "schedule": [
             {
                 "label": el.xpath("./*/*[@class='field-label']/text()")[0],
-                "items": [
-                    eli.xpath("./*[@class='placeholder']/text()")
-                    for eli in el.xpath(".//*[@class='period']")
-                ],
+                "items": [eli.xpath("./*[@class='placeholder']/text()") for eli in el.xpath(".//*[@class='period']")],
             }
             for el in result_tree.xpath("//*[contains(@class, 'schedule-day')]")
         ],
@@ -83,30 +89,28 @@ if __name__ == "__main__":
         schedule = [
             {
                 "d": DAYS.index(x["label"]),
-                "t": ",".join([f"{(t[0] + '00')[:5]}-{(t[1] + '00')[:5]}" for t in x["items"]]).replace("H", ":") or "off"
+                "t": ",".join([f"{(t[0] + '00')[:5]}-{(t[1] + '00')[:5]}" for t in x["items"]]).replace("H", ":") or "off",
             }
             for x in nd["schedule"]
         ]
         schedule = [
             {
                 "d": sorted([x["d"] for x in g]),
-                "t": k
+                "t": k,
             }
             for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
         ]
-        schedule = [
-            f"{opening_weekdays(x['d'])} {x['t']}"
-            for x in sorted(schedule, key=lambda x: x["d"][0])
-        ]
+        schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
         if schedule:
             d["opening_hours"] = "; ".join(schedule)
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"
 
-        phones = []
-        for phone in nd["phone"].replace(" ", "").split("/"):
-            if len(phone) == 9:
-                phones.append(f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}")
+        phones = [
+            f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+            for phone in nd["phone"].replace(" ", "").split("/")
+            if len(phone) == 9
+        ]
         if phones:
             d["contact:phone"] = ";".join(phones)
         else:
@@ -124,7 +128,7 @@ if __name__ == "__main__":
         d["addr:postcode"] = nd["zip-code"]
         d["addr:city"] = CITIES.get(nd["zip-code"], titleize(nd["city"]))
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
-            street = nd["address"].split(",", 1) + [""]
+            street = [*nd["address"].split(",", 1), ""]
             d["addr:street"] = street[0].strip()
             d["addr:housenumber"] = street[1].strip()
 

@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
-import itertools
 import json
 import re
 
 from unidecode import unidecode
 
-from impl.common import BASE_NAME, DiffDict, fetch_html_data, overpass_query, titleize, distance, opening_weekdays, write_diff
-from impl.config import CONFIG
+from impl.common import DiffDict, distance, fetch_html_data, overpass_query, write_diff
 
 
 DATA_URL = "https://www.radiopopular.pt/lojas/"
@@ -49,10 +47,7 @@ CITIES = {
 
 def fetch_data():
     result_tree = fetch_html_data(DATA_URL)
-    result = [
-        json.loads(x)
-        for x in result_tree.xpath("//@data-rp-info")
-    ]
+    result = [json.loads(x) for x in result_tree.xpath("//@data-rp-info")]
     return result
 
 
@@ -68,7 +63,7 @@ def schedule_time(v):
 
 def get_url_part(value):
     e = unidecode(value)
-    e = re.sub(r'\W', " ", e)
+    e = re.sub(r"\W", " ", e)
     e = e.strip()
     e = re.sub(r"\s+", "-", e)
     return e.lower()
@@ -81,10 +76,6 @@ if __name__ == "__main__":
 
     for nd in new_data:
         public_id = str(nd["id"])
-        #branch = titleize(nd["name"].strip())
-        #is_ex = branch.endswith("Express")
-        #is_con = branch.endswith("Connect")
-        #branch = re.sub(r"\s+(Express|Connect)$", "", branch)
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
@@ -113,10 +104,7 @@ if __name__ == "__main__":
             [y.strip() for y in x.replace("<br>", "").strip().split(":", 1)]
             for x in re.sub(r"(?<=\D)(?<!\dh)\b\s*-\s*(?=\d)", ": ", nd["schedule"].strip()).split("\n")
         ]
-        schedule = [
-            " ".join([SCHEDULE_DAYS.get(x[0]), schedule_time(x[1])])
-            for x in schedule
-        ]
+        schedule = [" ".join([SCHEDULE_DAYS.get(x[0]), schedule_time(x[1])]) for x in schedule]
         d["opening_hours"] = "; ".join(schedule)
         if d["source:opening_hours"] != "survey":
             d["source:opening_hours"] = "website"

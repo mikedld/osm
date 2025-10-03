@@ -3,7 +3,7 @@
 import itertools
 import re
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, distance, opening_weekdays, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, write_diff
 
 
 DATA_URL = "https://www.audika.pt/api/clinics/getclinics/{347A23B3-5B62-480A-984B-F51C53E516E8}"
@@ -20,20 +20,23 @@ def fetch_data():
 def schedule_time(v):
     ss = []
     for m in re.finditer(r"(\b\d+[:.]\d+)h?(\s*[ap]m)?\s*[-–]\s*(\b\d+[:.]\d+)h?(\s*[ap]m)?", v.lower()):
-        x = [m[1].strip().replace(".", ":").rjust(5, "0"), (m[2] or "").strip(), m[3].strip().replace(".", ":").rjust(5, "0"), (m[4] or "").strip()]
+        x = [
+            m[1].strip().replace(".", ":").rjust(5, "0"),
+            (m[2] or "").strip(),
+            m[3].strip().replace(".", ":").rjust(5, "0"),
+            (m[4] or "").strip(),
+        ]
         x[1] = x[1] or x[3]
         if x[0].startswith("12"):
             if x[1] == "am":
                 x[0] = f"00{x[0][2]}"
-        else:
-            if x[1] == "pm":
-                x[0] = f"{int(x[0].split(':')[0]) + 12}:{x[0].split(':')[1]}"
+        elif x[1] == "pm":
+            x[0] = f"{int(x[0].split(':')[0]) + 12}:{x[0].split(':')[1]}"
         if x[2].startswith("12"):
             if x[3] == "am":
                 x[2] = f"00{x[2][2]}"
-        else:
-            if x[3] == "pm":
-                x[2] = f"{int(x[2].split(':')[0]) + 12}:{x[2].split(':')[1]}"
+        elif x[3] == "pm":
+            x[2] = f"{int(x[2].split(':')[0]) + 12}:{x[2].split(':')[1]}"
         ss.append(f"{x[0]}-{x[2]}")
     if not ss and v.lower().strip() in ("", "encerrado", "fechado"):
         ss.append("off")
@@ -76,7 +79,7 @@ if __name__ == "__main__":
 
         schedule = [
             {
-                "d": DAYS.index(x["DayName"].lower()),
+                "d": DAYS.index(x["DayName"].strip().lower()),
                 "t": schedule_time(x["DayHours"]),
             }
             for x in nd["BusinessHours"]
@@ -84,14 +87,11 @@ if __name__ == "__main__":
         schedule = [
             {
                 "d": sorted([x["d"] for x in g]),
-                "t": k
+                "t": k,
             }
             for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
         ]
-        schedule = [
-            f"{opening_weekdays(x['d'])} {x['t']}"
-            for x in sorted(schedule, key=lambda x: x["d"][0])
-        ]
+        schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
         schedule.sort(key=lambda x: x.endswith(" off"))
         schedule = "; ".join(schedule)
         d["opening_hours"] = schedule

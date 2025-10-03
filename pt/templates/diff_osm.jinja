@@ -2,7 +2,7 @@
 <osm version="0.6" generator="JOSM">
 {% set new_id = namespace(value=-100000) -%}
 {%- for d in diff -%}
-  <{{ d.data["type"] }} id="{% if d.kind == "new" %}{{ new_id.value }}{% set new_id.value = new_id.value - 1 %}{% else %}{{ d.data["id"] }}{% endif %}"{% if d.kind != "old" %} action="modify"{% endif %} visible="true"{% if d.kind != "new" %} timestamp="{{ d.data["timestamp"] }}" uid="{{ d.data["uid"] }}" user="{{ d.data["user"] | e }}" version="{{ d.data["version"] }}" changeset="{{ d.data["changeset"] }}"{% endif %}{% if d.data["type"] == "node" %} lat="{{ d.lat }}" lon="{{ d.lon }}"{% endif %}>
+  <{{ d.data["type"] }} id="{% if d.kind == "new" %}{{ new_id.value }}{% set new_id.value = new_id.value - 1 %}{% else %}{{ d.data["id"] }}{% endif %}"{% if d.kind != "old" %} action="modify"{% endif %} visible="true"{% if d.kind != "new" %} timestamp="{{ d.data["timestamp"] }}" uid="{{ d.data["uid"] }}" user="{{ d.data["user"] }}" version="{{ d.data["version"] }}" changeset="{{ d.data["changeset"] }}"{% endif %}{% if d.data["type"] == "node" %} lat="{{ d.lat }}" lon="{{ d.lon }}"{% endif %}>
 {%- if d.data["type"] == "way" -%}
 {%- for nid in d.data["nodes"] -%}
     <nd ref="{{ nid }}" />
@@ -15,7 +15,7 @@
 {%- endif -%}
 {%- for key, value in d.data["tags"] | dictsort -%}
 {%- if value -%}
-    <tag k="{{ key }}" v="{{ value | e }}" />
+    <tag k="{{ key }}" v="{{ value }}" />
 {%- endif -%}
 {%- endfor -%}
     <tag k="x-dld-kind" v="{{ d.kind }}" />

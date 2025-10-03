@@ -55,10 +55,14 @@ SCHEDULE_HOURS_EX = {
 
 def fetch_data():
     def post_process(page):
-        page = re.sub(r"^.*\baddresses:", "", page, flags=re.S)
-        page = re.sub(r"\].*", "]", page, flags=re.S)
-        page = re.sub(r"\b(id|name|coordinates|street|zip|city|short_content|phone|fax|country|country_name|email|schedule|image|zoneID):", r'"\1":', page)
-        page = re.sub(r"\}\s*,\s*\]", "}]", page, flags=re.S)
+        page = re.sub(r"^.*\baddresses:", "", page, flags=re.DOTALL)
+        page = re.sub(r"\].*", "]", page, flags=re.DOTALL)
+        page = re.sub(
+            r"\b(id|name|coordinates|street|zip|city|short_content|phone|fax|country|country_name|email|schedule|image|zoneID):",
+            r'"\1":',
+            page,
+        )
+        page = re.sub(r"\}\s*,\s*\]", "}]", page, flags=re.DOTALL)
         page = page.replace("'", '"')
         return page
 
@@ -70,7 +74,7 @@ def fetch_data():
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name=Agriloja](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query("nwr[shop][name=Agriloja](area.country);")]
 
     for nd in new_data:
         public_id = nd["id"]

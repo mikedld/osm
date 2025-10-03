@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 from lxml import etree
 from more_itertools import flatten
 
-from impl.common import DiffDict, fetch_json_data, fetch_html_data, overpass_query, distance, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.turiscar.pt/pt/estacoes"
@@ -39,7 +39,7 @@ SCHEDULE_HOURS_MAPPING = {
 
 def fetch_level1_data():
     def post_process(page):
-        page = re.sub(r"^.*var\s+aLocais\s*=\s*\[(.+?)\];.*$", r"[\1]", page, flags=re.S)
+        page = re.sub(r"^.*var\s+aLocais\s*=\s*\[(.+?)\];.*$", r"[\1]", page, flags=re.DOTALL)
         page = page.replace('"', '\\"')
         page = page.replace("'", '"')
         return page
@@ -74,7 +74,9 @@ def fetch_level2_data(data):
         ],
         "schedule": [
             x.strip().lower().replace("–", "-")
-            for x in result_tree.xpath("//div[contains(@class, 'map-detail-info') and ./h4/text() = 'Horário de Funcionamento']//text()")
+            for x in result_tree.xpath(
+                "//div[contains(@class, 'map-detail-info') and ./h4/text() = 'Horário de Funcionamento']//text()"
+            )
             if x.strip() and x.strip() != "Horário de Funcionamento"
         ],
     }
@@ -85,7 +87,7 @@ if __name__ == "__main__":
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query(f'nwr[amenity][name~"Turiscar"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity][name~"Turiscar"](area.country);')]
 
     for nd in new_data:
         public_id = str(nd["id"])
@@ -115,17 +117,11 @@ if __name__ == "__main__":
                 re.sub(r"^(?:encerra(?:do:)?(?:\s+aos)?\s+)(.+?)$|^(.+?)(?:\s*-\s*encerrado)$", r"\1\2 : encerrado", x)
                 for x in schedule
             ]
-            schedule = [
-                re.sub(r"^(sábado|.*?-feira):?\s*(?=\d)(.+?)$", r"\1 : \2", x)
-                for x in schedule
-            ]
+            schedule = [re.sub(r"^(sábado|.*?-feira):?\s*(?=\d)(.+?)$", r"\1 : \2", x) for x in schedule]
             for i in range(len(schedule) - 1, 0, -1):
                 if re.match(r"\d", schedule[i]) and re.match(r"\d", schedule[i - 1]):
                     schedule[i - 1] += f" e {schedule.pop(i)}"
-            schedule = list(flatten(
-                x.split(" : ")
-                for x in schedule
-            ))
+            schedule = list(flatten(x.split(" : ") for x in schedule))
             schedule = [list(x) for x in itertools.batched(schedule, 2)]
             for s in schedule:
                 sa = s[0]
@@ -145,10 +141,7 @@ if __name__ == "__main__":
                             break
                     ss.append(sb)
                 s[1] = ",".join(ss)
-            schedule = [
-                " ".join(x)
-                for x in schedule
-            ]
+            schedule = [" ".join(x) for x in schedule]
             d["opening_hours"] = "; ".join(schedule)
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"

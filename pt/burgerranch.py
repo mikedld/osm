@@ -2,7 +2,7 @@
 
 import re
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, distance, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.burgerranch.com/localizacoes/"
@@ -12,7 +12,7 @@ REF = "ref"
 
 def fetch_data():
     def post_process(page):
-        return re.sub(r"^.*var restaurants\s*=\s*\[(.+?)\];.*$", r"[\1]", page, flags=re.S)
+        return re.sub(r"^.*var restaurants\s*=\s*\[(.+?)\];.*$", r"[\1]", page, flags=re.DOTALL)
 
     return fetch_json_data(DATA_URL, post_process=post_process)
 
@@ -25,10 +25,10 @@ if __name__ == "__main__":
     new_node_id = -10000
 
     for nd in new_data:
-        public_id = "<NONE>" # nd["id"]
+        public_id = "<NONE>"  # nd["id"]
         tags_to_reset = set()
 
-        d = None # next((od for od in old_data if od[REF] == public_id), None)
+        d = None  # next((od for od in old_data if od[REF] == public_id), None)
         if d is None:
             coord = [float(nd["latitude"]), float(nd["longitude"])]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         d["name"] = "Burger Ranch"
         d["brand"] = "Burger Ranch"
         d["brand:wikidata"] = "Q1014891"
-        # d["brand:wikipedia"] = ""
+        # d["brand:wikipedia"] = ""  # noqa: ERA001
         d["branch"] = titleize(nd["title"])
 
         d["contact:phone"] = "+351 282 422 274"
@@ -85,9 +85,9 @@ if __name__ == "__main__":
         if d.kind != "old":
             d.revert(REF)
             continue
-        # ref = d[REF]
+        # ref = d[REF]  # noqa: ERA001
         # if ref and any(nd for nd in new_data if ref == nd["id"]):
-        #     continue
+        #     continue  # noqa: ERA001
         d.kind = "del"
 
     old_data.sort(key=lambda d: d[REF])

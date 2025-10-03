@@ -4,7 +4,7 @@ import re
 
 from lxml import etree
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, distance, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://wells.pt/lojas-wells"
@@ -35,6 +35,7 @@ BRANCH_ABBREVS = (
     (r"\bPdl\b", "Ponta Delgada"),
     (r"\bPonte de Sôr\b", "Ponte de Sor"),
     (r"\bQta?\b", "Quinta"),
+    (r"\bS João\b", "São João"),
     (r"\bS\.\s?J\.", "São João"),
     (r"\bS\.Atº\b", "Santo António"),
     (r"\bS\. F\. Marinha\b", "São Félix da Marinha"),
@@ -48,6 +49,14 @@ BRANCH_ABBREVS = (
     (r"\bVitoria\b", "Vitória"),
 )
 BRANCHES = {
+    "Aqua Portimao": "Aqua Portimão",
+    "Caldas Rainha Continente Bom Dia": "Caldas da Rainha Continente Bom Dia",
+    "Caldas Rainha Continente Modelo": "Caldas da Rainha Continente Modelo",
+    "Castelo Branco Parque Barrocal": "Castelo Branco Parque do Barrocal",
+    "Pacos Ferreira Ferrara Plaza": "Paços de Ferreira Ferrara Plaza",
+    "Portimao Cabeço do Mocho": "Portimão Cabeço do Mocho",
+    "Portimao Continente Shopping": "Portimão Continente Shopping",
+    "São João da Madeira 8 Avenida": "São João da Madeira 8ª Avenida",
 }
 SCHEDULE_DAYS_MAPPING = {
     r"^$|segunda a domingo-?|todos os dias?": "Mo-Su",
@@ -56,20 +65,22 @@ SCHEDULE_DAYS_MAPPING = {
     r"dom(ingo|\.?) a (qui(nta(-feira)?)?\.?|5ªf)": "Su-Th",
     r"s[aá]b\.": "Sa",
     r"dom\.?": "Su",
-    r"sáb e dom\.": "Sa,Su",
+    r"sáb\.? [ea] dom\.": "Sa,Su",
+    r"sex\.": "Fr",
     r"sex\. e sáb\.": "Fr,Sa",
     r"feriados": "PH",
     r"dom\.? e feriados": "Su,PH",
     r"sáb\.? dom\.? e feriados": "Sa,Su,PH",
     r"sex(tas|\.),? sáb(ados|\.) e v[eé]sp(era|\.)( de)? feriados?": "Fr,Sa,PH -1 day",
     r"véspera de feriado, sex e sáb": "Fr,Sa,PH -1 day",
+    r"vésperas de feriados": "PH -1 day",
 }
 SCHEDULE_HOURS_MAPPING = {
     r"(\d{2})h\s*às\s*(\d{2})h": r"\1:00-\2:00",
     r"(\d{2})h\s*às\s*(\d{2})h(\d{2})": r"\1:00-\2:\3",
-    r"(\d{1})[:h](\d{2})h?\s*(?:às|-)\s*(\d{2})[:h](\d{2})": r"0\1:\2-\3:\4",
-    r"(?:das )?(\d{2})[:h](\d{2})\s*(?:às|-)\s*(\d{2})[:h](\d{2})": r"\1:\2-\3:\4",
-    r"encerrad[ao]": r"off",
+    r"(\d{1})[:h](\d{2})h?\s*(?:às|-)\s*(\d{2})[:h](\d{2})h?": r"0\1:\2-\3:\4",
+    r"(?:das )?(\d{2})[:h](\d{2})h?\s*(?:às|-)\s*(\d{2})[:h](\d{2})h?": r"\1:\2-\3:\4",
+    r"encerrad[ao]|:h às :h": r"off",
 }
 POSTCODES = {
     "2853": "9500-465",
@@ -84,19 +95,25 @@ CITIES = {
     "2725-537": "Mem Martins",
     "2825-004": "Caparica",
     "2975-333": "Quinta do Conde",
+    "2590-041": "Sobral de Monte Agraço",
     "3080-228": "Figueira da Foz",
     "3720-256": "Oliveira de Azeméis",
+    "4200-008": "São Mamede de Infesta",
     "4420-490": "Valbom",
     "4450-565": "Leça da Palmeira",
+    "4460-384": "São Mamede de Infesta",
     "4505-374": "Fiães",
     "4525-117": "Canedo",
     "4535-211": "Mozelos",
     "4535-401": "Santa Maria de Lamas",
+    "4764-501": "Vila Nova de Famalicão",
     "4820-273": "Fafe",
+    "4920-260": "Vila Nova de Cerveira",
     "7500-200": "Vila Nova de Santo André",
     "8400-656": "Parchal",
     "8900-258": "Vila Real de Santo António",
     "9050-299": "São Gonçalo",
+    "9500-376": "Ponta Delgada",
     "9500-465": "Ponta Delgada",
     "9560-414": "Lagoa",
     "9600-516": "Ribeira Grande",
@@ -121,11 +138,14 @@ def fetch_data():
         {
             "id": x["info"][0][0].attrib["data-store-id"],
             "phones": [
-                re.sub(r"^\s*([';]\s*)?(([^0-9:]+)\s*:?)?\s*(\d+)/?$", r"\3:\4", y.lower()).replace("geral", "").replace("saude", "saúde").split(":")
+                re.sub(r"^\s*([';]\s*)?(([^0-9:]+)\s*:?)?\s*(\d+)/?$", r"\3:\4", y.lower())
+                .replace("geral", "")
+                .replace("saude", "saúde")
+                .split(":")
                 for y in x["info"].xpath("//a[contains(@class, 'w-store-locator-phone')]/text()")
             ],
             "services": [y.strip() for y in x["info"].xpath(".//p[contains(@class, 'w-store-service')]/text()")],
-            **{k: v for k, v in x.items() if k not in ("info",)}
+            **{k: v for k, v in x.items() if k not in ("info",)},
         }
         for x in result
     ]
@@ -139,8 +159,8 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = nd["id"]
         branch = re.sub(r"^Wells\s+", "", titleize(nd["name"]))
-        is_opt = re.search(r"\b(óp?tica|opt)\b", branch, flags=re.I)
-        branch = re.sub(r"\b(óp?tica|opt)\b", " ", branch, flags=re.I).strip()
+        is_opt = re.search(r"\b(óp?tica|opt)\b", branch, flags=re.IGNORECASE)
+        branch = re.sub(r"\b(óp?tica|opt)\b", " ", branch, flags=re.IGNORECASE).strip()
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
@@ -169,15 +189,22 @@ if __name__ == "__main__":
 
         tags_to_reset.update({"amenity", "dispensing", "healthcare"})
 
-        schedule = re.split(r"\s*[;\n]\s*", re.sub(r"(\d+[h:]\d+)\.", r"\1;", nd["storeHours"].lower().replace("horário:", "")))
-        schedule = [[y.strip() for y in re.sub(r"^([^0-9:]*?)\s*(?=\d(?!ª)|das |encerrad)", r"\1: ", x).split(":", 1)] for x in schedule]
+        schedule = re.split(
+            r"\s*<p>\s*",
+            re.sub(r"(\d+[h:]\d+)\.", r"\1;", re.sub(r"horário:|^<p>|</p>", "", nd["storeHours"].lower())),
+            flags=re.DOTALL,
+        )
+        schedule = [
+            [y.strip() for y in re.sub(r"^([^0-9:]*?)\s*(?=\d(?!ª)|das |encerrad|:h)", r"\1: ", x).split(":", 1)]
+            for x in schedule
+        ]
         for s in schedule:
             if len(s) != 2:
-                s[:] = ["<ERR>"]
+                s[:] = [f"<ERR:{s}>"]
                 continue
 
             sa = s[0]
-            sb = f"<ERR>"
+            sb = f"<ERR:{sa}>"
             for sma, smb in SCHEDULE_DAYS_MAPPING.items():
                 if re.fullmatch(sma, sa) is not None:
                     sb = re.sub(sma, smb, sa)
@@ -186,7 +213,7 @@ if __name__ == "__main__":
 
             ss = []
             for sa in re.split(r"\s*(?:\be\b|/|,)\s*", s[1]):
-                sb = "<ERR>"
+                sb = f"<ERR:{sa}>"
                 for sma, smb in SCHEDULE_HOURS_MAPPING.items():
                     if re.fullmatch(sma, sa) is not None:
                         sb = re.sub(sma, smb, sa)
@@ -197,6 +224,8 @@ if __name__ == "__main__":
             schedule = [["Mo-Su,PH", schedule[0][1]], *schedule[2:]]
         if len(schedule) >= 2 and schedule[0][0] == "Mo-Sa" and schedule[1][0] == "PH" and schedule[0][1] == schedule[1][1]:
             schedule = [["Mo-Sa,PH", schedule[0][1]], *schedule[2:]]
+        if len(schedule) == 2 and schedule[0][0] == "Mo-Su" and schedule[1][0] == "Su,PH":
+            schedule[0][0] = "Mo-Sa"
         schedule = "; ".join([" ".join(x) for x in schedule])
         d["opening_hours"] = schedule
 
@@ -224,12 +253,19 @@ if __name__ == "__main__":
             d["source:opening_hours"] = "website"
 
         postcode = POSTCODES.get(public_id, nd["postalCode"])
+        if postcode.endswith("-000") and postcode[:4] == d["addr:postcode"][:4]:
+            postcode = d["addr:postcode"]
         if len(postcode) == 4:
             postcode += "-000"
         d["addr:postcode"] = postcode
         d["addr:city"] = CITIES.get(postcode, titleize(nd["city"].strip()))
 
-        if not d["addr:street"] and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"]) and not d["addr:place"] and not d["addr:suburb"]:
+        if (
+            not d["addr:street"]
+            and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"])
+            and not d["addr:place"]
+            and not d["addr:suburb"]
+        ):
             d["x-dld-addr"] = "; ".join([nd["address1"], nd["address2"]])
 
         for key in tags_to_reset:

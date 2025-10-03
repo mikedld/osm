@@ -4,7 +4,7 @@ import json
 import re
 from multiprocessing import Pool
 
-from impl.common import DiffDict, fetch_html_data, overpass_query, distance, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_html_data, overpass_query, titleize, write_diff
 
 
 AGENCIAS_DATA_URL = "https://www.cgd.pt/Corporativo/Rede-CGD/Pages/Agencias.aspx"
@@ -42,14 +42,10 @@ DAYS_OPEN = {
     "2ª, 4ª e 6ª (3ª e 5ª, apenas se coincidirem com os dias 8 e 19 de cada mês)": [
         "Mo,We,Fr",
         f"{DAYS_8_AND_19} Tu,Th",
-        # ["Mo,We,Fr", None],
-        # ["Tu,Th", "on 8th and 19th of each month"],
     ],
     "3ª e 5ª (2ª, 4ª e 6ª apenas se coincidirem com os dias 8 e 19 de cada mês)": [
         "Tu,Th",
         f"{DAYS_8_AND_19} Mo,We,Fr",
-        # ["Tu,Th", None],
-        # ["Mo,We,Fr", "on 8th and 19th of each month"],
     ],
 }
 SCHEDULE_HOURS_MAPPING = {
@@ -61,23 +57,20 @@ SCHEDULE_HOURS_MAPPING = {
 
 def fetch_level1_data(url):
     result_tree = fetch_html_data(url)
-    return [
-        f"{url.split('?')[0]}{href}"
-        for href in result_tree.xpath("//a[contains(@class, 'agencias')]/@href")
-    ]
+    return [f"{url.split('?')[0]}{href}" for href in result_tree.xpath("//a[contains(@class, 'agencias')]/@href")]
 
 
 def fetch_level2_data(url):
     result_tree = fetch_html_data(url)
     result = result_tree.xpath("//script[contains(text(), 'var agencias =')]/text()")[0]
-    result = json.loads(re.sub(r".*var agencias =|;$", "", result, flags=re.S).replace("'", '"'))
+    result = json.loads(re.sub(r".*var agencias =|;$", "", result, flags=re.DOTALL).replace("'", '"'))
     result = [
         {
             "branch": r[0],
             "lat": r[1],
             "lon": r[2],
             "id": str(r[3]),
-            "url": "/".join(url.split("/", 3)[:3]) + result_tree.xpath(f"//a[@id='l{r[3]}']/@href")[0].split('?')[0],
+            "url": "/".join(url.split("/", 3)[:3]) + result_tree.xpath(f"//a[@id='l{r[3]}']/@href")[0].split("?")[0],
             "subtitle": "".join(result_tree.xpath(f"//a[@id='l{r[3]}']//span[@class='subtitle-text-right']/text()")),
             "addr": [x.strip() for x in result_tree.xpath(f"//div[@id='addr{r[3]}']//text()") if x.strip()],
         }
@@ -88,7 +81,7 @@ def fetch_level2_data(url):
         k = "0Esta Agência"
         if i := next((i for i, s in enumerate(a) if k in s and not s.startswith(k)), None):
             s = a[i].split(k, 1)
-            a[i:i + 1] = [s[0] + k[0], k[1:] + s[1]]
+            a[i : i + 1] = [s[0] + k[0], k[1:] + s[1]]
         for i in range(len(a) - 2, -1, -1):
             if a[i] in ("Telefone:", "Horário:", "Dias da semana:") or (a[i].endswith("ª") and a[i + 1].startswith("(")):
                 a[i] += f" {a.pop(i + 1)}"
@@ -149,10 +142,10 @@ if __name__ == "__main__":
             "Esta agência só presta serviço de tesouraria através de equipamentos automáticos.",
             "Área automática com levantamento e depósito de notas, moedas e cheques.",
             "A nova área automática está disponível 24h/ 7.",
-            "-"
+            "-",
         ):
             if s in nd["addr"]:
-              nd["addr"].remove(s)
+                nd["addr"].remove(s)
 
         days_open = next((a for a in nd["addr"] if a.startswith("Dias da semana:")), None)
         if days_open:
@@ -169,7 +162,9 @@ if __name__ == "__main__":
         if hours_closed:
             nd["addr"].remove(hours_closed)
             hours_closed = hours_closed.split(":", 1)[1].strip()
-        treasury_hours_closes = next((a for a in nd["addr"] if re.match(r"^(Tesouraria [Ee]ncerrada|Encerramento tesouraria):.*", a)), None)
+        treasury_hours_closes = next(
+            (a for a in nd["addr"] if re.match(r"^(Tesouraria [Ee]ncerrada|Encerramento tesouraria):.*", a)), None
+        )
         if treasury_hours_closes:
             nd["addr"].remove(treasury_hours_closes)
             treasury_hours_closes = treasury_hours_closes.split(":", 1)[1].strip()
@@ -188,11 +183,10 @@ if __name__ == "__main__":
         elif hours_open:
             x = hours_open
             hours_open = schedule_time(hours_open)
-            if hours_open != "<ERR>":
-                if hours_closed:
-                    o = hours_open.split("-")
-                    c = schedule_time(hours_closed).split("-")
-                    hours_open = f"{o[0]}-{c[0]},{c[1]}-{o[1]}"
+            if hours_open != "<ERR>" and hours_closed:
+                o = hours_open.split("-")
+                c = schedule_time(hours_closed).split("-")
+                hours_open = f"{o[0]}-{c[0]},{c[1]}-{o[1]}"
             schedule = "; ".join([f"{d} {hours_open}" for d in days_open]) + "; Sa,Su,PH off"
         if schedule:
             d["opening_hours"] = schedule
