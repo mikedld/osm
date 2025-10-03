@@ -13,6 +13,7 @@ dependencies = [
     "requests (>=2.32.3,<3.0.0)",
     "retrying (>=1.3.4,<2.0.0)",
     "unidecode (>=1.4.0,<2.0.0)",
+    "shapely (>=2.1.2,<3.0.0)",
 ]
 
 [tool.poetry.group.dev.dependencies]
@@ -26,7 +27,7 @@ line-length = 128
 
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = ["ANN", "COM812", "D", "PLR2004", "PLW2901", "RET504", "RUF001", "T201"]
+ignore = ["ANN", "COM812", "D", "FIX002", "PLR2004", "PLW2901", "RET504", "RUF001", "T201", "TD"]
 
 pylint.max-args = 8
 

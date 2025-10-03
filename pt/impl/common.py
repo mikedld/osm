@@ -6,7 +6,7 @@ from gzip import compress, decompress
 from hashlib import sha256
 from json import dumps as json_dumps
 from json import loads as json_loads
-from math import atan2, cos, radians, sin, sqrt
+from math import asin, atan2, cos, degrees, pi, radians, sin, sqrt
 from pathlib import Path
 
 import pytz
@@ -15,6 +15,8 @@ from humanize import naturaltime
 from jinja2 import Environment, FileSystemLoader
 from lxml import etree
 from retrying import retry
+from shapely import voronoi_polygons
+from shapely.geometry import Point, Polygon, shape
 
 import __main__
 
@@ -25,6 +27,8 @@ BASE_DIR = Path(__main__.__file__).parent
 BASE_NAME = Path(__main__.__file__).stem
 
 CACHE_DIR = BASE_DIR / "cache"
+
+EARTH_RADIUS = 6378137
 
 LISBON_TZ = pytz.timezone("Europe/Lisbon")
 
@@ -166,6 +170,12 @@ def titleize(name):
     )
 
 
+def frange(x, y, step):
+    while x < y:
+        yield x
+        x += step
+
+
 def distance(a, b):
     dlat = radians(b[0]) - radians(a[0])
     dlon = radians(b[1]) - radians(a[1])
@@ -173,6 +183,78 @@ def distance(a, b):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     d = 6371000 * c
     return d
+
+
+def relation_polygon(rel_id, params=None):
+    full_params = {
+        "id": rel_id,
+        "params": params or "0",
+    }
+    # TODO: Make BASE_NAME-agnostic to avoid extra fetches.
+    return shape(fetch_json_data("https://polygons.openstreetmap.fr/get_geojson.py", params=full_params))
+
+
+def country_polygon():
+    return relation_polygon(295480, "0.020000-0.005000-0.005000")
+
+
+def offset(c1, distance, bearing):
+    lat1 = radians(c1[1])
+    lon1 = radians(c1[0])
+    d_by_r = distance / EARTH_RADIUS
+    lat = asin(sin(lat1) * cos(d_by_r) + cos(lat1) * sin(d_by_r) * cos(bearing))
+    lon = lon1 + atan2(sin(bearing) * sin(d_by_r) * cos(lat1), cos(d_by_r) - sin(lat1) * sin(lat))
+    return [degrees(lon), degrees(lat)]
+
+
+def circle(center, radius, *, edges=32, bearing=0, direction=1):
+    start = radians(bearing)
+    coordinates = [offset(center, radius, start + (direction * 2 * pi * -i) / edges) for i in range(edges)]
+    coordinates.append(coordinates[0])
+    return Polygon(coordinates)
+
+
+def label_point(g):
+    pts = {Point(p) for e in voronoi_polygons(g, only_edges=True).geoms for p in e.coords if g.contains(Point(p))}
+    pmax = max(pts, default=None, key=lambda p: min(p.distance(g.exterior), min(p.distance(g.interiors), default=360)))
+    if pmax is None:
+        pmax = g.centroid
+    return (pmax.x, pmax.y)
+
+
+def cover_polygon(g, radius, query):
+    geoms = [g]
+    sradius = radius * 0.95
+
+    while geoms:
+        g = geoms.pop()
+        if hasattr(g, "geoms"):
+            geoms.extend(g.geoms)
+            continue
+        if g.is_empty:
+            continue
+
+        rp = label_point(g)
+
+        if circle(rp, radius).contains(g):
+            g -= circle(rp, query(rp))
+        else:
+            bounds = g.bounds
+            lat_step = offset(bounds[0:2], sradius, 0)[1] - bounds[1]
+            lat_offset = lat_step - (rp[1] - bounds[1]) % lat_step
+            lon_step = offset(bounds[0:2], sradius * 2, 90)[0] - bounds[0]
+            lon_offset = lon_step - (rp[0] - bounds[0]) % lon_step
+
+            odd = int((rp[1] - bounds[1]) / lat_step) % 2 != 0
+            for lat in frange(bounds[1] - lat_offset, bounds[3] + lat_step, lat_step):
+                for lon in frange(bounds[0] - lon_offset + (0 if odd else lon_step / 2), bounds[2] + lon_step, lon_step):
+                    c = [lon, lat]
+                    if not circle(c, radius).intersects(g):
+                        continue
+                    g -= circle(c, query(c))
+                odd = not odd
+
+        geoms.append(g)
 
 
 def opening_weekdays(days):
