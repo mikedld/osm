@@ -380,85 +380,20 @@ def write_diff(title, ref, diff, *, html=True, osm=True):
         stats_file.write_text(json_dumps(stats))
 
 
-LANDLINE_REGIONAL_CODES = {
-    "Abrantes": "241",
-    "Angra do Heroísmo": "295",
-    "Arganil": "235",
-    "Aveiro": "234",
-    "Barreiro": "207",
-    "Beja": "284",
-    "Braga": "253",
-    "Bragança": "273",
-    "Caldas da Rainha": "262",
-    "Castelo Branco": "272",
-    "Castro Verde": "286",
-    "Chaves": "276",
-    "Coimbra": "239",
-    "Covilhã": "275",
-    "Estremoz": "268",
-    "Évora": "266",
-    "Faro": "289",
-    "Figueira da Foz": "233",
-    "Funchal": "291",
-    "Gouveia": "238",
-    "Guarda": "271",
-    "Horta": "292",
-    "Idanha-a-Nova": "277",
-    "Leiria": "244",
-    "Lisboa": "21",
-    "Marco de Canaveses": "255",
-    "Mealhada": "231",
-    "Mirandela": "278",
-    "Moura": "285",
-    "Odemira": "283",
-    "Penafiel": "255",
-    "Peso da Régua": "254",
-    "Pombal": "236",
-    "Ponta Delgada": "296",
-    "Ponte de Sôr": "242",
-    "Portalegre": "245",
-    "Portimão": "282",
-    "Porto": "22",
-    "Proença-a-Nova": "274",
-    "Santarém": "243",
-    "Santiago do Cacém": "269",
-    "São João da Madeira": "256",
-    "Seia": "238",
-    "Setúbal": "265",
-    "Tavira": "281",
-    "Torre de Moncorvo": "279",
-    "Torres Novas": "249",
-    "Torres Vedras": "261",
-    "Valença": "251",
-    "Viana do Castelo": "258",
-    "Vila Franca de Xira": "263",
-    "Vila Nova de Famalicão": "252",
-    "Vila Real": "259",
-    "Viseu": "232",
-}
-
-
 def format_phonenumber(phone):
-    phone = re.sub(r"[^\d]", "", phone)
+    phone = re.sub(r"\D+", "", phone)
+    if not phone:
+        return ""
 
     if len(phone) == 9:
-        phone = "351" + phone
+        phone = f"351{phone}"
     elif len(phone) != 12:
-        return phone
+        return f"<ERR:{phone}>"
 
-    if phone.startswith("3519"):  # Mobile numbers, formatted as +351 9xx xxx xxx
+    if phone.startswith("351"):
         return f"+{phone[:3]} {phone[3:6]} {phone[6:9]} {phone[9:]}"
 
-    if phone.startswith("3512"):  # Landline numbers
-        region_code = phone[3:6]
-        if region_code in LANDLINE_REGIONAL_CODES.values():
-            return f"+{phone[:3]} {phone[3:6]} {phone[6:9]} {phone[9:]}"
-        region_code = phone[3:5]
-        if region_code in LANDLINE_REGIONAL_CODES.values():
-            return f"+{phone[:3]} {phone[3:5]} {phone[5:8]} {phone[8:]}"
-        return phone
-
-    return phone
+    return f"<ERR:{phone}>"
 
 
 def to_ranges(nums):
