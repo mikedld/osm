@@ -24,30 +24,50 @@ MAX_RADIUS = 100_000
 REF = "ref"
 
 CITY_FIXES = {
-    "Vila Pouca Aguiar": "Vila Pouca de Aguiar",
-    "Canelas Vng": "Canelas",
-    "Macedo Cavaleiros": "Macedo de Cavaleiros",
-    "Portela Lrs": "Portela",
-    "Vila Franca Xira": "Vila Franca de Xira",
-    "Charneca Caparica": "Charneca da Caparica",
-    "Sta Maria da Feira": "Santa Maria da Feira",
-    "V. Real S. António": "Vila Real de Santo António",
-    "Pampilhosa Serra": "Pampilhosa da Serra",
-    "Celeirós Brg": "Celeirós",
-    "Cernache Bonjardim": "Cernache de Bonjardim",
-    "Paredes Pnf": "Paredes",
     "Balazar Pvz": "Balazar",
     "Barcelinhos Bcl": "Barcelinhos",
-    "Gandra Prd": "Gandra",
-    "Oliveira Hospital": "Oliveira do Hospital",
-    "São Brás Alportel": "São Brás de Alportel",
     "Calheta (Madeira)": "Calheta",
-    "Stª Cruz Graciosa": "Santa Cruz da Graciosa",
-    "Ponta Delgada - a. Quental": "Ponta Delgada - A. Quental",
-}
-POSTCODE_CITY_FIXES = {
-    **CITY_FIXES,
+    "Canelas Vng": "Canelas",
+    "Celeirós Brg": "Celeirós",
+    "Cernache Bonjardim": "Cernache de Bonjardim",
+    "Charneca Caparica": "Charneca da Caparica",
     "Estreito Câmara de Lobos": "Estreito de Câmara de Lobos",
+    "Gandra Prd": "Gandra",
+    "Macedo Cavaleiros": "Macedo de Cavaleiros",
+    "Oliveira Hospital": "Oliveira do Hospital",
+    "Paços Ferreira": "Paços de Ferreira",
+    "Pampilhosa Serra": "Pampilhosa da Serra",
+    "Paredes Pnf": "Paredes",
+    "Ponta Delgada - a. Quental": "Ponta Delgada - A. Quental",
+    "Portela Lrs": "Portela",
+    "São Brás Alportel": "São Brás de Alportel",
+    "Stª Cruz Graciosa": "Santa Cruz da Graciosa",
+    "Sta Maria da Feira": "Santa Maria da Feira",
+    "Termas S. Vicente": "Termas de São Vicente",
+    "V. N. Famalicão": "Vila Nova de Famalicão",
+    "V. N. Gaia": "Vila Nova de Gaia",
+    "V. Real S. António": "Vila Real de Santo António",
+    "V.N. Famalicão": "Vila Nova de Famalicão",
+    "Vila Franca Xira": "Vila Franca de Xira",
+    "Vila Pouca Aguiar": "Vila Pouca de Aguiar",
+}
+CITY_LOC_FIXES = {
+    "5 Outubro": "5 de Outubro",
+    "a. Quental": "Antero de Quental",
+    "Areias São João": "Areias de São João",
+    "Av. do Infante": "Avenida do Infante",
+    "Av. Roma": "Avenida de Roma",
+    "Avenida Londres": "Avenida de Londres",
+    "Benfica Calhariz": "Benfica - Calhariz",
+    "Benfica Igreja": "Benfica - Igreja",
+    "Columbano B. Pinheiro": "Columbano Bordalo Pinheiro",
+    "Fontes P. Melo": "Fontes Pereira de Melo",
+    "Heróis Angola": "Heróis de Angola",
+    "Largo Chafariz": "Largo do Chafariz",
+    "M. Albuquerque": "Mouzinho de Albuquerque",
+    "Parque Nações": "Parque das Nações",
+    "Pç. D. Maria II": "Praça Dona Maria II",
+    "R. Júlio Dinis": "Rua de Júlio Dinis",
 }
 WEEKDAY2STR = {
     "MONDAY": "Mo",
@@ -75,17 +95,30 @@ MONTH_NAMES = {
 }
 
 
+def fix_branch(name):
+    branches = []
+    for branch in re.split(r"\s+/\s+", titleize(name)):
+        full_branch = []
+        if m := re.fullmatch(r"((?:Grandes )?Empresas|Work Café)(?:\s*-)?\s*(.+)", branch):
+            full_branch.append(m[1])
+            branch = m[2]
+        branch = re.sub(r"^(Cascais|Évora|Lisboa|Porto(?=\s+\d))(\s*-)?\s*", r"\1 - ", branch)
+        if m := re.fullmatch(r"(.+?) - (.+)", branch):
+            city, loc = m[1], m[2]
+            city = CITY_FIXES.get(city, city)
+            loc = CITY_LOC_FIXES.get(loc, loc)
+            branch = f"{city} - {loc}"
+        else:
+            branch = CITY_FIXES.get(branch, branch)
+        full_branch.append(branch)
+        branches.append(" - ".join(full_branch))
+    return ";".join(branches)
+
+
 def fix_city(city):
     city = titleize(city)
     if city in CITY_FIXES:
         return CITY_FIXES[city]
-    return city
-
-
-def fix_postcode_city(city):
-    city = titleize(city)
-    if city in POSTCODE_CITY_FIXES:
-        return POSTCODE_CITY_FIXES[city]
     return city
 
 
@@ -166,6 +199,7 @@ if __name__ == "__main__":
 
     for nd in new_data:
         public_id = nd["poicode"]
+        branch = fix_branch(nd["name"])
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
@@ -206,13 +240,14 @@ if __name__ == "__main__":
         d["brand"] = "Santander"
         d["brand:wikidata"] = "Q4854116"
         d["brand:wikipedia"] = "pt:Banco Santander Portugal"
-        ref_name = fix_city(nd["name"])
-        if ref_name not in d["ref_name"].split(";"):
-            d["ref_name"] = ref_name
-        if nd["status"]["code"] not in ("In_Service", "IN_SERVICE"):
+        if d["branch"] not in branch.split(";"):
+            d["branch"] = branch
+        if nd["status"]["code"].lower() != "in_service":
             d["x-dld-status"] = nd["status"]["code"]
         d["addr:postcode"] = nd["location"]["zipcode"]
-        d["addr:city"] = fix_postcode_city(nd["location"]["city"])
+        d["addr:city"] = fix_city(nd["location"]["city"])
+
+        tags_to_reset.add("ref_name")
 
         if nd["location"]["urlPhoto"] is not None:
             d["image"] = nd["location"]["urlPhoto"]
