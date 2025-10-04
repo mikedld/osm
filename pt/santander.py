@@ -184,16 +184,7 @@ def fetch_data():
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [
-        DiffDict(e)
-        for e in overpass_query(
-            """
-(
-    nwr[amenity=bank][name~"Santander"](area.country);
-);
-"""
-        )
-    ]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity=bank][name~"Santander"](area.country);')]
 
     new_node_id = -10000
     old_node_ids = {d.data["id"] for d in old_data}
@@ -282,7 +273,8 @@ if __name__ == "__main__":
             d["contact:instagram"] = socials.get("instagramLink", "")
             d["contact:tiktok"] = socials.get("tiktokLink", "")
 
-        d["website"] = nd.get("urlDetailPage", "")
+        d["website"] = nd.get("urlDetailPage", "") or "https://www.santander.pt/"
+        d["source:contact"] = "website"
 
         tags_to_reset.update({"phone", "mobile", "fax", "contact:mobile", "contact:website"})
 
@@ -316,6 +308,7 @@ if __name__ == "__main__":
         if days_off != []:
             opening_hours += "; " + ",".join(days_off) + " off"
         d["opening_hours"] = opening_hours
+        d["source:opening_hours"] = "website"
 
         services = {}
 
