@@ -103,6 +103,14 @@ def fix_working_hours(working_hours):
     return working_hours
 
 
+def safe_remove(s, item, fallback=None):
+    try:
+        s.remove(item)
+    except KeyError:
+        return fallback
+    return item
+
+
 ALL_SERVICES = [
     "atm",
     "cash_out",
@@ -283,43 +291,37 @@ if __name__ == "__main__":
         # Services
         if "comercialProducts" in nd:
             commercial_products = {product["default"].upper() for product in nd["comercialProducts"]}
-            if "MULTIBANCO" in commercial_products:
+            commercial_products -= {
+                "CONSULTAS",
+                "TRANSFERÊNCIAS",
+                "PAGAMENTOS DE SERVIÇOS",
+                "REQUISIÇÃO DE CHEQUES",
+                "SERVIÇO DE BALCÃO",
+                "NÃO TEM SERVIÇO DE CAIXA",
+                "APENAS SERVIÇOS COMERCIAIS DISPONÍVEIS",
+            }
+            if safe_remove(commercial_products, "MULTIBANCO"):
                 services["atm"] = "yes"
-                commercial_products.remove("MULTIBANCO")
-            if "LEVANTAMENTOS" in commercial_products:
+            if safe_remove(commercial_products, "LEVANTAMENTOS"):
                 services["cash_out"] = "yes"
-                commercial_products.remove("LEVANTAMENTOS")
-            commercial_products.discard("CONSULTAS")
-            commercial_products.discard("TRANSFERÊNCIAS")
-            if "CARREGAMENTOS" in commercial_products:
+            if safe_remove(commercial_products, "CARREGAMENTOS"):
                 services["prepaid_top_up:mobile"] = "yes"
-                commercial_products.remove("CARREGAMENTOS")
-            commercial_products.discard("PAGAMENTOS DE SERVIÇOS")
-            commercial_products.discard("REQUISIÇÃO DE CHEQUES")
-            if "DEPÓSITOS E CHEQUES" in commercial_products:
+            if safe_remove(commercial_products, "DEPÓSITOS E CHEQUES"):
                 services["cash_in"] = "yes"
                 services["cheque_in"] = "yes"
-                commercial_products.remove("DEPÓSITOS E CHEQUES")
-            if "LEVANTAMENTOS E DEPÓSITOS" in commercial_products:
+            if safe_remove(commercial_products, "LEVANTAMENTOS E DEPÓSITOS"):
                 services["cash_out"] = "yes"
                 services["cash_in"] = "yes"
-                commercial_products.remove("LEVANTAMENTOS E DEPÓSITOS")
-            if "LEVANTAMENTOS E CHEQUES" in commercial_products:
+            if safe_remove(commercial_products, "LEVANTAMENTOS E CHEQUES"):
                 services["cash_out"] = "yes"
                 services["cheque_in"] = "yes"
-                commercial_products.remove("LEVANTAMENTOS E CHEQUES")
-            commercial_products.discard("SERVIÇO DE BALCÃO")
-            if "MÁQUINA DE DEPÓSITOS" in commercial_products:
+            if safe_remove(commercial_products, "MÁQUINA DE DEPÓSITOS"):
                 services["cash_in"] = "yes"
-                commercial_products.remove("MÁQUINA DE DEPÓSITOS")
-            if "DEPÓSITO DE NOTAS NA CONTA DE TERCEIROS" in commercial_products:
+            if safe_remove(commercial_products, "DEPÓSITO DE NOTAS NA CONTA DE TERCEIROS"):
                 services["cash_in"] = "yes"
-                commercial_products.remove("DEPÓSITO DE NOTAS NA CONTA DE TERCEIROS")
-            commercial_products.discard("NÃO TEM SERVIÇO DE CAIXA")
-            commercial_products.discard("APENAS SERVIÇOS COMERCIAIS DISPONÍVEIS")
 
-            if commercial_products != set():
-                d["x-dld-commercial_products"] = ";".join(sorted(commercial_products))
+            if commercial_products:
+                d["x-dld-commercial-products"] = ";".join(sorted(commercial_products))
 
         if "dialogAttribute" in nd:
             if "WIFI" in nd["dialogAttribute"]:
