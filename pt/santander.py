@@ -161,6 +161,7 @@ if __name__ == "__main__":
 
     for nd in new_data:
         public_id = nd["poicode"]
+        tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
         if d is None:
@@ -177,6 +178,7 @@ if __name__ == "__main__":
             old_data.append(d)
             new_node_id -= 1
 
+        d["ref"] = public_id
         d["amenity"] = "bank"
 
         if nd["subType"]["code"] == "WORKCAFE":
@@ -210,33 +212,36 @@ if __name__ == "__main__":
         if nd["location"]["urlPhoto"] is not None:
             d["image"] = nd["location"]["urlPhoto"]
 
-        if d["contact:phone"]:
-            formatted_phone = ";".join([format_phonenumber(phonenumber) for phonenumber in d["contact:phone"].split(";")])
-            if formatted_phone != d["contact:phone"]:
-                d["contact:phone"] = formatted_phone
-
-        if "contactData" in nd:
+        if contacts := nd.get("contactData"):
             phones = []
-            if "phoneNumber" in nd["contactData"]:
-                phone_formatted = format_phonenumber(nd["contactData"]["phoneNumber"])
-                if phone_formatted not in d["contact:phone"].split(";"):
-                    d["contact:phone"] += ";" + phone_formatted
-            if nd["contactData"]["customerPhone"] != "":
-                phone_formatted = format_phonenumber(nd["contactData"]["customerPhone"])
-                if phone_formatted not in d["contact:phone"].split(";"):
-                    d["contact:phone"] += ";" + phone_formatted
-            if nd["contactData"]["fax"] != "":
-                d["contact:fax"] = format_phonenumber(nd["contactData"]["fax"])
-            if nd["contactData"]["email"] not in d["contact:email"].split(";"):
-                d["contact:email"] = nd["contactData"]["email"]
+            if (phone := format_phonenumber(contacts.get("phoneNumber"))) and phone not in phones:
+                phones.append(phone)
+            if (phone := format_phonenumber(contacts.get("customerPhone"))) and phone not in phones:
+                phones.append(phone)
+            if phones:
+                d["contact:phone"] = ";".join(phones)
+            else:
+                tags_to_reset.add("contact:phone")
+            if fax := format_phonenumber(contacts.get("fax")):
+                d["contact:fax"] = fax
+            else:
+                tags_to_reset.add("contact:fax")
+            if (email := contacts.get("email")) and not email.endswith(".local"):
+                d["contact:email"] = email
+            else:
+                tags_to_reset.add("contact:email")
 
-        if "socialData" in nd:
-            d["contact:youtube"] = nd["socialData"].get("youtubeLink", "")
-            d["contact:facebook"] = nd["socialData"].get("facebookLink", "")
-            d["contact:twitter"] = nd["socialData"].get("twitterLink", "")
-            d["contact:linkedin"] = nd["socialData"].get("linkedinLink", "")
-            d["contact:instagram"] = nd["socialData"].get("instagramLink", "")
-            d["contact:tiktok"] = nd["socialData"].get("tiktokLink", "")
+        if socials := nd.get("socialData"):
+            d["contact:youtube"] = socials.get("youtubeLink", "")
+            d["contact:facebook"] = socials.get("facebookLink", "")
+            d["contact:twitter"] = socials.get("twitterLink", "")
+            d["contact:linkedin"] = socials.get("linkedinLink", "")
+            d["contact:instagram"] = socials.get("instagramLink", "")
+            d["contact:tiktok"] = socials.get("tiktokLink", "")
+
+        d["website"] = nd.get("urlDetailPage", "")
+
+        tags_to_reset.update({"phone", "mobile", "fax", "contact:mobile", "contact:website"})
 
         # Schedule
         opening_hours = ""
@@ -272,12 +277,6 @@ if __name__ == "__main__":
         if days_off != []:
             opening_hours += "; " + ",".join(days_off) + " off"
         d["opening_hours"] = opening_hours
-
-        if "urlDetailPage" in nd:
-            d["website"] = nd["urlDetailPage"]
-
-        if public_id not in d[REF].split(";"):
-            d["ref"] = public_id
 
         services = {}
 
@@ -354,6 +353,10 @@ if __name__ == "__main__":
             and not (d["addr:housenumber"] or d["nohousenumber"] or d["addr:housename"])
         ):
             d["x-dld-addr"] = nd["location"]["address"]
+
+        for key in tags_to_reset:
+            if d[key]:
+                d[key] = ""
 
     for d in old_data:
         if d.kind != "old":
