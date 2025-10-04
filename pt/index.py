@@ -34,6 +34,7 @@ SCRIPTS = (
     "radiopopular.py",
     "recheio.py",
     "roady.py",
+    "santander.py",
     "solinca.py",
     "spar.py",
     "staples.py",
