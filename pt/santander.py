@@ -34,6 +34,7 @@ CITY_FIXES = {
     "Estreito Câmara de Lobos": "Estreito de Câmara de Lobos",
     "Gandra Prd": "Gandra",
     "Macedo Cavaleiros": "Macedo de Cavaleiros",
+    "Oliveira Azeméis": "Oliveira de Azeméis",
     "Oliveira Hospital": "Oliveira do Hospital",
     "Paços Ferreira": "Paços de Ferreira",
     "Pampilhosa Serra": "Pampilhosa da Serra",
@@ -103,7 +104,7 @@ def fix_branch(name):
         if m := re.fullmatch(r"((?:Grandes )?Empresas|Work Café)(?:\s*-)?\s*(.+)", branch):
             full_branch.append(m[1])
             branch = m[2]
-        branch = re.sub(r"^(Cascais|Évora|Lisboa|Porto(?=\s+\d))(\s*-)?\s*", r"\1 - ", branch)
+        branch = re.sub(r"^(Cascais|Évora|Lisboa|Portela|Porto(?=\s+\d))(\s*-)?\s*", r"\1 - ", branch)
         if m := re.fullmatch(r"(.+?) - (.+)", branch):
             city, loc = m[1], m[2]
             city = CITY_FIXES.get(city, city)
@@ -216,7 +217,7 @@ if __name__ == "__main__":
         d["amenity"] = "bank"
 
         if nd["subType"]["code"] == "WORKCAFE":
-            d["name"] = "Santander (Work Café)"
+            d["name"] = "Santander Work Café"
             d["office"] = "coworking"
             d["branch:type"] = ""
         elif nd["subType"]["code"] == "EMPRESAS":
@@ -232,8 +233,8 @@ if __name__ == "__main__":
         d["operator"] = "Banco Santander (Portugal)"
         d["operator:wikidata"] = "Q4854116"
         d["operator:wikipedia"] = "pt:Banco Santander Portugal"
-        d["brand"] = "Santander"
-        d["brand:wikidata"] = "Q4854116"
+        d["brand"] = "Banco Santander"
+        d["brand:wikidata"] = "Q6496310"
         d["brand:wikipedia"] = "pt:Banco Santander Portugal"
         if d["branch"] not in branch.split(";"):
             d["branch"] = branch
