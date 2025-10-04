@@ -161,7 +161,8 @@ if __name__ == "__main__":
 
     for nd in new_data:
         public_id = nd["poicode"]
-        d = next((od for od in old_data if public_id in od[REF].split(";")), None)
+
+        d = next((od for od in old_data if od[REF] == public_id), None)
         if d is None:
             coord = [nd["location"]["coordinates"][1], nd["location"]["coordinates"][0]]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
@@ -357,8 +358,8 @@ if __name__ == "__main__":
     for d in old_data:
         if d.kind != "old":
             continue
-        ref = d[REF].split(";") if d[REF] else None
-        if ref and any(nd for nd in new_data if nd["poicode"] in ref):
+        ref = d[REF]
+        if ref and any(nd for nd in new_data if ref == nd["poicode"]):
             continue
         d.kind = "del"
 
