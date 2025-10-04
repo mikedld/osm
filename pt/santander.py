@@ -61,6 +61,7 @@ CITY_LOC_FIXES = {
     "Benfica Calhariz": "Benfica - Calhariz",
     "Benfica Igreja": "Benfica - Igreja",
     "Columbano B. Pinheiro": "Columbano Bordalo Pinheiro",
+    "Fernão Magalhães": "Fernão de Magalhães",
     "Fontes P. Melo": "Fontes Pereira de Melo",
     "Heróis Angola": "Heróis de Angola",
     "Largo Chafariz": "Largo do Chafariz",
