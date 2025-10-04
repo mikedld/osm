@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import re
 
 from impl.common import (
     DAYS,
@@ -89,17 +90,13 @@ def fix_postcode_city(city):
 
 
 def fix_working_hours(working_hours):
+    if not working_hours or (len(working_hours) == 1 and working_hours[0] in (None, "Encerrado")):
+        return ["off"]
     for i in range(len(working_hours)):
-        if "-" in working_hours[i]:
-            start, finish = working_hours[i].split("-")
-            # as numbers
-            start_h, start_m = map(int, start.split(":"))
-            finish_h, finish_m = map(int, finish.split(":"))
-            start = f"{start_h:02d}:{start_m:02d}"
-            finish = f"{finish_h:02d}:{finish_m:02d}"
-            working_hours[i] = f"{start}-{finish}"
+        if m := re.fullmatch(r"(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})", working_hours[i]):
+            working_hours[i] = f"{int(m[1]):02}:{m[2]}-{int(m[3]):02}:{m[4]}"
         else:
-            continue
+            working_hours[i] = f"<ERR:{working_hours[i]}>"
     return working_hours
 
 
@@ -256,13 +253,9 @@ if __name__ == "__main__":
         schedule = nd["schedule"]
         working_days = {}
 
-        for workday in schedule["workingDay"]:
+        for workday, worktime in schedule["workingDay"].items():
             wd = WEEKDAY2STR[workday]
-            if schedule["workingDay"][workday] == []:
-                continue
-            working_hours = ",".join(fix_working_hours(schedule["workingDay"][workday]))
-            if working_hours == "Encerrado":
-                continue
+            working_hours = ",".join(fix_working_hours(worktime))
             if working_hours not in working_days:
                 working_days[working_hours] = []
             working_days[working_hours].append(wd)
@@ -274,7 +267,7 @@ if __name__ == "__main__":
             opening_hours += ",".join(days) + " " + working_hours
         days_off = []
         for day in schedule["specialDay"]:
-            if day["time"] == [None]:
+            if fix_working_hours(day["time"]) == ["off"]:
                 month, day = day["date"].split("-")
                 month_name = MONTH_NAMES[month]
                 days_off.append(f"{month_name} {day}")
