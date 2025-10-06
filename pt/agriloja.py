@@ -2,7 +2,7 @@
 
 import re
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.agriloja.pt/pt/as-nossas-lojas_596.html"
@@ -79,14 +79,16 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = nd["id"]
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = list(map(float, re.split(r"\s*[,;]\s*", nd["coordinates"].strip())))[:2]
         if d is None:
-            coord = re.split("[,;]", nd["coordinates"])
-
+            ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
+            if len(ds) == 1:
+                d = ds[0]
+        if d is None:
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id}"
-            d.data["lat"] = float(coord[0].strip())
-            d.data["lon"] = float(coord[1].strip())
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
 
         tags_to_reset = set()

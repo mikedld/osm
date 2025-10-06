@@ -4,7 +4,17 @@ import datetime
 import json
 import re
 
-from impl.common import BASE_DIR, BASE_NAME, LISBON_TZ, DiffDict, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import (
+    BASE_DIR,
+    BASE_NAME,
+    LISBON_TZ,
+    DiffDict,
+    distance,
+    fetch_json_data,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 DATA_URL = "https://storage.googleapis.com/pro-bucket-wcorp-files/json/data.js"
@@ -67,6 +77,11 @@ if __name__ == "__main__":
         private_id = str(nd["id"])
         public_id = str(nd["site_public_id"])
         d = next((od for od in old_data if od[REF] == public_id or od[REF][1:] == private_id[1:]), None)
+        coord = [nd["lt"], nd["lg"]]
+        if d is None:
+            ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
+            if len(ds) == 1:
+                d = ds[0]
         if d is None:
             d = DiffDict()
             d.data["type"] = "node"

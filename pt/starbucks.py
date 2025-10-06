@@ -4,7 +4,7 @@ import datetime
 import itertools
 import re
 
-from impl.common import LISBON_TZ, DiffDict, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
+from impl.common import LISBON_TZ, DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.starbucks.pt/api/v2/stores/"
@@ -45,14 +45,16 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = nd["storeNumber"]
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = [float(nd["coordinates"]["latitude"]), float(nd["coordinates"]["longitude"])]
         if d is None:
-            coord = nd["coordinates"]
-
+            ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
+            if len(ds) == 1:
+                d = ds[0]
+        if d is None:
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id}"
-            d.data["lat"] = float(coord["latitude"])
-            d.data["lon"] = float(coord["longitude"])
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
 
         tags_to_reset = set()
