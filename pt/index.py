@@ -39,6 +39,7 @@ SCRIPTS = (
     "spar.py",
     "staples.py",
     "starbucks.py",
+    "synlab.py",
     "telpark.py",
     "turiscar.py",
     "washy.py",
