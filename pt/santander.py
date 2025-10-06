@@ -278,7 +278,7 @@ if __name__ == "__main__":
         d["website"] = nd.get("urlDetailPage", "") or "https://www.santander.pt/"
         d["source:contact"] = "website"
 
-        tags_to_reset.update({"phone", "mobile", "fax", "contact:mobile", "contact:website"})
+        tags_to_reset.update({"phone", "mobile", "fax", "email", "contact:mobile", "contact:website"})
 
         # Schedule
         opening_hours = ""
