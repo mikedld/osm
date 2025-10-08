@@ -11,10 +11,10 @@ DATA_URL = "https://www.bricomarche.pt/apoio-ao-cliente/horarios-de-loja/"
 REF = "ref"
 
 SCHEDULE_DAYS_MAPPING = {
-    r"seg( a |-)sex(ta?)?": "Mo-Fr",
+    r"seg(unda)?( a |-)sex(ta?)?": "Mo-Fr",
     r"seg(unda)?( [-a] |-)s[aá]b(ado)?": "Mo-Sa",
     r"(de )?seg(unda)?(-feira)?( [-a] |-)dom(ingo)?|todos os dias": "Mo-Su",
-    r"sab": "Sa",
+    r"s[aá]b(ado)?": "Sa",
     r"sab-dom": "Sa,Su",
     r"dom(ingo)?": "Su",
     r"dom(ingo)? e feriados?": "Su,PH",
@@ -99,7 +99,7 @@ if __name__ == "__main__":
         if (parts := list(filter(lambda x: x, re.split(r"\s*\|?\s*\b(loja|bâtidrive)\b:?\s*", schedule)))) and len(parts) > 1:
             parts = dict(itertools.batched(parts, 2))
             schedule = parts.get("loja", "")
-        schedule = re.split(r"\s*[/|\r\n]+\s*", re.sub(r"(\dh|[:h]\d\d)\s*[-]?\s*(sab|dom)", r"\1|\2", schedule))
+        schedule = re.split(r"\s*[/|\r\n]+\s*", re.sub(r"(\dh|[:h]\d\d)\s*[-]?\s*(s[aá]b|dom)", r"\1|\2", schedule))
         schedule = [re.split(r"\s*[:,]\s+|\s+das\s+", x, maxsplit=1) for x in schedule]
         schedule = [["seg-dom", x[0]] if len(x) == 1 else x for x in schedule]
         schedule = [
