@@ -45,7 +45,7 @@ STREET_FIXUPS = {
     "valongo | rua jose joaquim ribeiro teles": "avenida engenheiro josé joaquim ribeiro teles",
     "vila nova de gaia | rua de raimundo de carvalho": "rua raimundo de carvalho",
     "vila nova de gaia | rua rechousa": "rua da rechousa",
-    "viseu | estrada nacional 231": "estrada de nelas",
+    "viseu | estrada nacional 231": "avenida doutor alexandre alves",
 }
 
 
