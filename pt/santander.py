@@ -233,8 +233,8 @@ if __name__ == "__main__":
         d["operator"] = "Banco Santander (Portugal)"
         d["operator:wikidata"] = "Q4854116"
         d["operator:wikipedia"] = "pt:Banco Santander Portugal"
-        d["brand"] = "Banco Santander"
-        d["brand:wikidata"] = "Q6496310"
+        d["brand"] = "Santander"
+        d["brand:wikidata"] = "Q4854116"
         d["brand:wikipedia"] = "pt:Banco Santander Portugal"
         if d["branch"] not in branch.split(";"):
             d["branch"] = branch
