@@ -72,7 +72,7 @@ CITIES = {
 def fetch_data():
     result_tree = fetch_html_data(DATA_URL)
     result = [
-        dict(re.findall(r"var (\w+) = (.+?);\n", x))
+        dict(re.findall(r"var (\w+) = (.+?);\n", x, flags=re.DOTALL))
         for x in re.findall(r"(var lat =.*?\n\n)", result_tree.xpath("//script[@nonce]/text()")[0], flags=re.DOTALL)
     ]
     result = [
@@ -212,7 +212,7 @@ if __name__ == "__main__":
 
         d["addr:postcode"], d["addr:city"] = nd["postalCode"]
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
-            d["x-dld-addr"] = nd["address"]
+            d["x-dld-addr"] = nd["address"].replace("\n", "; ")
 
         for key in tags_to_reset:
             if d[key]:
