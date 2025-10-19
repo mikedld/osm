@@ -15,8 +15,102 @@ LEVEL2_DATA_URL = "https://www.auchan.pt/pt/loja"
 
 REF = "ref"
 
-BRANCHES = {
+CITY_FIXES = {
+    "Alcácer Sal": "Alcácer do Sal",
+    "Caldas Rainha": "Caldas da Rainha",
+    "Rio Mouro": "Rio de Mouro",
+    "S.Brás de Alportel": "São Brás de Alportel",
     "Sta Maria Lamas": "Santa Maria de Lamas",
+}
+CITY_LOC_FIXES = {
+    "1 Maio": "1 de Maio",
+    "25 Abril": "25 de Abril",
+    "5 Outubro": "5 de Outubro",
+    "9 Julho": "9 de Julho",
+    "Afonso Albuquerque": "Afonso de Albuquerque",
+    "Alameda Oceanos": "Alameda dos Oceanos",
+    "Alfredo Silva": "Alfredo da Silva",
+    "Alvares Cabral": "Álvares Cabral",
+    "Arístides Sousa Mendes": "Aristides de Sousa Mendes",
+    "Avenida D. João II": "Avenida Dom João II",
+    "Bento Jesus Caraça": "Bento de Jesus Caraça",
+    "Bomb Voluntários Algés": "Bombeiros Voluntários de Algés",
+    "Calçada Quintinha": "Calçada da Quintinha",
+    "Casal Serra": "Casal da Serra",
+    "Cidade Horta": "Cidade da Horta",
+    "Cidade Viseu": "Cidade de Viseu",
+    "Circular Sul": "Circular do Sul",
+    "Combatentes Gr. Guerra": "Combatentes da Grande Guerra",
+    "Conde Redondo": "Conde de Redondo",
+    "Coração Maria": "Coração de Maria",
+    "Cristóvão Gama": "Cristóvão da Gama",
+    "D Dinis": "Dom Dinis",
+    "D Filipa Vilhena": "Dona Filipa de Vilhena",
+    "D Marcelino Franco": "Dom Marcelino Franco",
+    "D Maria II": "Dona Maria II",
+    "D Nuno Álvares Pereira": "Dom Nuno Álvares Pereira",
+    "D Pedro V": "Dom Pedro V",
+    "D. Manuel II": "Dom Manuel II",
+    "D. Nuno Álvares Pereira": "Dom Nuno Álvares Pereira",
+    "D.Pedro IV": "Dom Pedro IV",
+    "Diogo Silves": "Diogo de Silves",
+    "Direita Dafundo": "Direita do Dafundo",
+    "Direita Massamá": "Direita de Massamá",
+    "Dr António Elvas": "Doutor António Elvas",
+    "Dr Aresta Branco": "Doutor Aresta Branco",
+    "Dr Dário Gandra Nunes": "Doutor Dário Gandra Nunes",
+    "Dr Francisco Sousa Tavares": "Doutor Francisco Sousa Tavares",
+    "Dr Henrique de Barros": "Doutor Henrique de Barros",
+    "Dr João Santos": "Doutor João Santos",
+    "Dr João Silva": "Doutor João Silva",
+    "Duque Loulé": "Duque de Loulé",
+    "Eng Ferreira Dias": "Engenheiro Ferreira Dias",
+    "Est Benfica": "Estrada de Benfica",
+    "Est Luz": "Estrada da Luz",
+    "Est Marquês Pombal": "Estrada Marquês de Pombal",
+    "Est Mem Martins": "Estrada de Mem Martins",
+    "Est S Domingos": "Estrada de São Domingos",
+    "Fontes Pereira Melo": "Fontes Pereira de Melo",
+    "Forno Tijolo": "Forno do Tijolo",
+    "Foros Amora": "Foros de Amora",
+    "Gabriel Ferreira Castro": "Gabriel Ferreira de Castro",
+    "Gen Humberto Delgado": "General Humberto Delgado",
+    "Helena Vaz Silva": "Helena Vaz da Silva",
+    "Heróis Liberdade": "Heróis da Liberdade",
+    "Infante D Augusto": "Infante Dom Augusto",
+    "Infante D Henrique": "Infante Dom Henrique",
+    "Infante D Pedro": "Infante Dom Pedro",
+    "Infante Sagres": "Infante de Sagres",
+    "Jaime Mota": "Jaime da Mota",
+    "João Barros": "João de Barros",
+    "José Conceição Nunes": "José da Conceição Nunes",
+    "Luís Camões": "Luís de Camões",
+    "Luis Pastor Macedo": "Luis Pastor de Macedo",
+    "Luis Queiroz": "Luis de Queiroz",
+    "Major Neutel Abreu": "Major Neutel de Abreu",
+    "Marquês Pombal": "Marquês de Pombal",
+    "Marquês Sá Bandeira": "Marquês Sá da Bandeira",
+    "Mouzinho Albuquerque": "Mouzinho de Albuquerque",
+    "Oscar Monteiro Torres": "Óscar Monteiro Torres",
+    "Padre Manuel Nóbrega": "Padre Manuel da Nóbrega",
+    "Pct Bento Gonçalves": "Praceta Bento Gonçalves",
+    "Penha França": "Penha de França",
+    "Prof Dr Augusto Abreu Lopes": "Professor Doutor Augusto Abreu Lopes",
+    "Prof Francisco Gentil": "Professor Francisco Gentil",
+    "Qta Campo": "Quinta do Campo",
+    "Qta Lomba": "Quinta da Lomba",
+    "Rua da Beneficiência": "Rua da Beneficência",
+    "Rui Gomes Silva": "Rui Gomes da Silva",
+    "S Bento": "São Bento",
+    "S Paulo": "São Paulo",
+    "S Sebastião": "São Sebastião",
+    "Sá Bandeira": "Sá da Bandeira",
+    "Saraiva Carvalho": "Saraiva de Carvalho",
+    "Terreiro Bispo": "Terreiro do Bispo",
+    "Ulisses Alves": "Ulysses Alves",
+    "Urb Qta Sto Amaro": "Urbanização Quinta de Santo Amaro",
+    "Vilar Andorinho": "Vilar de Andorinho",
+    "Visconde Santarém": "Visconde de Santarém",
 }
 EVENTS_MAPPING = {
     r"Horário feriados: (\d{2}:\d{2}) - (\d{2}:\d{2})": r"PH \1-\2",
@@ -57,6 +151,26 @@ def fetch_level2_data(data):
     }
 
 
+def fix_branch(branch):
+    branch = re.sub(r"^(Algés|Lisboa)(?:\s+-)?\s+(.+)$", r"\2 - \1", branch)
+    branch = re.sub(r"(?<!-)(?<!\s)\s+(Almada|Campolide|Graça|Porto)$", r" - \1", branch)
+    if m := re.fullmatch(r"(.+?) - (.+)", branch):
+        loc, city = m[1], m[2]
+        city = CITY_FIXES.get(city, city)
+        if m := re.fullmatch(r"(.+?)\s+(\d+)", loc):
+            loc = f"{CITY_LOC_FIXES.get(m[1], m[1])} {m[2]}"
+        else:
+            loc = CITY_LOC_FIXES.get(loc, loc)
+        branch = f"{loc} - {city}"
+    else:
+        branch = CITY_FIXES.get(branch, branch)
+        if m := re.fullmatch(r"(.+?)\s+(\d+)", branch):
+            branch = f"{CITY_LOC_FIXES.get(m[1], m[1])} {m[2]}"
+        else:
+            branch = CITY_LOC_FIXES.get(branch, branch)
+    return branch
+
+
 if __name__ == "__main__":
     new_data = fetch_level1_data()
     with Pool(4) as p:
@@ -93,7 +207,7 @@ if __name__ == "__main__":
             new_node_id -= 1
 
         name = re.sub(r"^(Auchan( Supermercado)?|My Auchan( Saúde e Bem-Estar)?|Auchan).+", r"\1", nd["name"])
-        branch = re.sub(r"[ ]{2,}", " ", nd["name"][len(name) :]).strip()
+        branch = fix_branch(re.sub(r"[ ]{2,}", " ", nd["name"][len(name) :]).strip())
         is_super = name == "Auchan Supermercado"
         is_my = name == "My Auchan"
         is_my_saude = name == "My Auchan Saúde e Bem-Estar"
@@ -107,7 +221,7 @@ if __name__ == "__main__":
             d["shop"] = d["shop"] or ("convenience" if is_my else "supermarket")
             tags_to_reset.add("amenity")
         d["name"] = name
-        d["branch"] = BRANCHES.get(branch, branch)
+        d["branch"] = branch
         d["brand"] = "My Auchan" if is_my or is_my_saude else ("Auchan Supermercado" if is_super else "Auchan")
         d["brand:wikidata"] = "Q115800307" if is_my or is_my_saude else ("Q105857776" if is_super else "Q758603")
         d["brand:wikipedia"] = "pt:Auchan"
