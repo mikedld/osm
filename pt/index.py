@@ -18,6 +18,7 @@ SCRIPTS = (
     "burgerranch.py",
     "celeiro.py",
     "cgd.py",
+    "chip7.py",
     "continente.py",
     "decathlon.py",
     "element.py",
