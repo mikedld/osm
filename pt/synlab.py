@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import re
 from itertools import batched, groupby
 from urllib.parse import urljoin
@@ -70,6 +71,9 @@ CITIES = {
 
 
 def fetch_data():
+    def parse_js_string(value):
+        return json.loads(value.strip("; ")).strip('" ')
+
     result_tree = fetch_html_data(DATA_URL)
     result = [
         dict(re.findall(r"var (\w+) = (.+?);\n", x, flags=re.DOTALL))
@@ -80,15 +84,15 @@ def fetch_data():
             # "id": str(uuid.uuid5(uuid.NAMESPACE_URL, "synlab:" + x["slug"].strip('" ').split("/")[2])),  # noqa: ERA001
             "lat": float(re.sub(r'.*"([^"]+)".*', r"\1", x["lat"]).replace(",", ".")),
             "lng": float(re.sub(r'.*"([^"]+)".*', r"\1", x["lng"]).replace(",", ".")),
-            "name": x["name"].strip('" '),
-            "phoneNumber": x["phoneNumber"].strip('" '),
-            "email": x["email"].strip('" '),
-            "atd": x["atd"].strip('";. ').lower(),
-            "atdClinics": x["atdClinics"].strip('";. ').lower(),
-            "address": x["address"].strip('" '),
-            "postalCode": x["postalCode"].strip('" ').split('" + " " + "'),
-            "parking": x["parking"].strip('" '),
-            "slug": x["slug"].strip('" '),
+            "name": parse_js_string(x["name"]),
+            "phoneNumber": parse_js_string(x["phoneNumber"]),
+            "email": parse_js_string(x["email"]),
+            "atd": parse_js_string(x["atd"]).strip(". ").lower(),
+            "atdClinics": parse_js_string(x["atdClinics"]).strip(". ").lower(),
+            "address": parse_js_string(x["address"]),
+            "postalCode": [parse_js_string(c) for c in x["postalCode"].split(' + " " + ')],
+            "parking": parse_js_string(x["parking"]),
+            "slug": parse_js_string(x["slug"]),
         }
         for x in result
     ]
