@@ -22,6 +22,7 @@ SCRIPTS = (
     "continente.py",
     "decathlon.py",
     "element.py",
+    "emel.py",
     "espacocasa.py",
     "froiz.py",
     "jysk.py",

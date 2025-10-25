@@ -86,6 +86,20 @@ class DiffDict:
         return repr({"data": self.data, "kind": self.kind})
 
 
+class RedoIter:
+    def __init__(self, items):
+        self.redo = False
+        self._items = items
+
+    def __iter__(self):
+        i = 0
+        while i < len(self._items):
+            self.redo = False
+            yield self._items[i]
+            if not self.redo:
+                i += 1
+
+
 class Locker:
     def __init__(self, name):
         self._name = name

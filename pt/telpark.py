@@ -3,7 +3,7 @@
 import re
 from multiprocessing import Pool
 
-from impl.common import DiffDict, distance, fetch_json_data, overpass_query, write_diff
+from impl.common import DiffDict, RedoIter, distance, fetch_json_data, overpass_query, write_diff
 
 
 LEVEL1_DATA_URL = "https://www.telpark.com/pt/wp-json/wp/v2/country"
@@ -86,20 +86,6 @@ def lookup_title(items, title):
 def fixup_price(price):
     price = "-".join([x.replace(",", ".").strip("€ ").removesuffix(".00") for x in price.split("/")])
     return f"{price} EUR"
-
-
-class RedoIter:
-    def __init__(self, items):
-        self.redo = False
-        self._items = items
-
-    def __iter__(self):
-        i = 0
-        while i < len(self._items):
-            self.redo = False
-            yield self._items[i]
-            if not self.redo:
-                i += 1
 
 
 if __name__ == "__main__":
