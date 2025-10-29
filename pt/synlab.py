@@ -72,7 +72,7 @@ CITIES = {
 
 def fetch_data():
     def parse_js_string(value):
-        return json.loads(value.strip("; ")).strip('" ')
+        return (json.loads(value.strip("; ")) or "").strip('" ')
 
     result_tree = fetch_html_data(DATA_URL)
     result = [
