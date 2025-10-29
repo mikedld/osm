@@ -67,7 +67,10 @@ def fetch_level1_data():
     result = [
         {
             **x,
-            "extra": next(e for e in extras if match_title(x, e)),
+            "extra": next(
+                (e for e in extras if match_title(x, e)),
+                {"step_url": "=", "latitude": 38.306893, "longitude": -17.050891, "address": "?"},
+            ),
         }
         for x in result
     ]
@@ -99,6 +102,8 @@ if __name__ == "__main__":
 
     old_data = [DiffDict(e) for e in overpass_query('nwr[leisure][name~"Element( |$)"](area.country);')]
 
+    new_node_id = -10000
+
     for nd in new_data:
         public_id = nd["id"].lstrip("0")
         d = next((od for od in old_data if od[REF] == public_id), None)
@@ -112,9 +117,10 @@ if __name__ == "__main__":
         if d is None:
             d = DiffDict()
             d.data["type"] = "node"
-            d.data["id"] = f"-{public_id}"
+            d.data["id"] = str(new_node_id)
             d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
+            new_node_id -= 1
 
         tags_to_reset = set()
 
