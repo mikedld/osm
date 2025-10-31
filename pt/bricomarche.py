@@ -18,17 +18,19 @@ SCHEDULE_DAYS_MAPPING = {
     r"sab-dom": "Sa,Su",
     r"dom(ingo)?": "Su",
     r"dom(ingo)? e feriados?": "Su,PH",
+    r"páscoa, natal e ano novo": "easter,Dec 25,Jan 01",
 }
 SCHEDULE_HOURS_MAPPING = {
     r"(\d{1})h?[:.h](\d{2})[hm]?(?: (?:-|[aà]s) |-)(\d{2})h?[:.h](\d{2})[hm]?": r"0\1:\2-\3:\4",
     r"(?:das )?(\d{1})h(?: (?:-|às) |-)(\d{2})h": r"0\1:00-\2:00",
-    r"(\d{1})h(?: - |-)(\d{2})[.h](\d{2})h?": r"0\1:00-\2:\3",
+    r"(\d{1})h(?: - |-)(\d{2})[:.h](\d{2})h?": r"0\1:00-\2:\3",
     r"(\d{1})h(\d{2})-(\d{1})h": r"0\1:\2-0\3:00",
     r"(\d{1})h(\d{2})-(\d{2})h": r"0\1:\2-\3:00",
     r"(?:das )?(\d{2})[:h](\d{2})[hm]?(?: (?:-|as) |-)(\d{2})[:h](\d{2})[hm.]?": r"\1:\2-\3:\4",
     r"(?:das )?(\d{2})[:h](\d{2})h?(?: às |-)(\d{2})h": r"\1:\2-\3:00",
     r"(\d{2})h(?: (?:-|às) |-)(\d{2})h": r"\1:00-\2:00",
-    r"(\d{2})h-(\d{2})h(\d{2})": r"\1:00-\2:\3",
+    r"(?:das )?(\d{2})h-(\d{2})[:h](\d{2})h?": r"\1:00-\2:\3",
+    r".*\bfechados?\b.*": "off",
 }
 BRANCHES = {
     "Charneca da Caparica": "Charneca de Caparica",
@@ -99,12 +101,13 @@ if __name__ == "__main__":
         if (parts := list(filter(lambda x: x, re.split(r"\s*\|?\s*\b(loja|bâtidrive)\b:?\s*", schedule)))) and len(parts) > 1:
             parts = dict(itertools.batched(parts, 2))
             schedule = parts.get("loja", "")
-        schedule = re.split(r"\s*[/|\r\n]+\s*", re.sub(r"(\dh|[:h]\d\d)\s*[-]?\s*(s[aá]b|dom)", r"\1|\2", schedule))
+        schedule = re.split(r"\s*[/|\r\n]+\s*", re.sub(r"(\dh|[:h]\d\d)\s*[-,]?\s*(s[aá]b|dom|fechados)", r"\1|\2", schedule))
         schedule = [re.split(r"\s*[:,]\s+|\s+das\s+", x, maxsplit=1) for x in schedule]
         schedule = [["seg-dom", x[0]] if len(x) == 1 else x for x in schedule]
+        schedule = [[x[1], x[0]] if "fechado" in x[0] else x for x in schedule]
         schedule = [
             [
-                schedule_time(x[0], SCHEDULE_DAYS_MAPPING),
+                schedule_time(x[0].strip("."), SCHEDULE_DAYS_MAPPING),
                 ",".join([schedule_time(t, SCHEDULE_HOURS_MAPPING) for t in re.split(r"\s+e\s+", x[1])]),
             ]
             for x in schedule
