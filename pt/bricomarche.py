@@ -95,7 +95,7 @@ if __name__ == "__main__":
         d["brand:wikipedia"] = "en:Bricomarché"
         d["branch"] = BRANCHES.get(branch, branch)
 
-        schedule = re.sub(r"\s{2,}", " ", re.sub(r"(sábado|domingo) - ", r"\1: ", nd["schedule"].lower().strip()))
+        schedule = re.sub(r"\s{2,}", " ", re.sub(r"(sábado|domingo) - ", r"\1: ", (nd["schedule"] or "").lower().strip()))
         if (parts := list(filter(lambda x: x, re.split(r"\s*\|?\s*\b(loja|bâtidrive)\b:?\s*", schedule)))) and len(parts) > 1:
             parts = dict(itertools.batched(parts, 2))
             schedule = parts.get("loja", "")
@@ -122,14 +122,14 @@ if __name__ == "__main__":
 
         phones = [
             re.sub(r"^([0-9 ]+).*", r"\1", x).replace(" ", "")
-            for x in re.split(r"\s*[/,]\s*", re.sub(r"\(.+?\)", "", nd["phone_number"]))
+            for x in re.split(r"\s*[/,]\s*", re.sub(r"\(.+?\)", "", nd["phone_number"] or ""))
         ]
         phones = [f"+351 {x[0:3]} {x[3:6]} {x[6:9]}" for x in phones if len(x) == 9]
         if phones:
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
-        if emails := list(filter(lambda x: x, re.split(r"\s*,\s*", nd["main_email"].strip()))):
+        if emails := list(filter(lambda x: x, re.split(r"\s*,\s*", (nd["main_email"] or "").strip()))):
             for email in set(emails) - set(d["contact:email"].split(";")):
                 d["contact:email"] = f"{d['contact:email']};{email}".strip("; ")
         else:
@@ -144,10 +144,10 @@ if __name__ == "__main__":
 
         d["source:contact"] = "website"
 
-        if city := titleize(nd["locality"]):
+        if city := titleize(nd["locality"] or ""):
             d["addr:city"] = d["addr:city"] or city
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
-            d["x-dld-addr"] = re.sub(r"(<br\s*/?>\s*)+", "; ", nd["address"]).strip()
+            d["x-dld-addr"] = re.sub(r"(<br\s*/?>\s*)+", "; ", nd["address"] or "").strip()
 
         for key in tags_to_reset:
             if d[key]:
