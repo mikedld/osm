@@ -23,7 +23,7 @@ SCHEDULE_DAYS_MAPPING = {
     r"sábados? e domingos?": "Sa,Su",
     r"sábados, domingos e feriados": "Sa,Su,PH",
     r"domingos?( é)?": "Su",
-    r"domingos? e feriados": "Su,PH",
+    r"domingos? e feriados?": "Su,PH",
     r"feriados": "PH",
 }
 SCHEDULE_DAYS_OFF_MAPPING = {
@@ -42,7 +42,9 @@ SCHEDULE_HOURS_MAPPING = {
     r"(?:das )?(\d{1})h [àáa]s (\d{2})h e das (\d{2})[:.h](\d{2}) [àáa]s (\d{2})h": r"0\1:00-\2:00,\3:\4-\5:00",
     r"(?:das )?(\d{1})h [àáa]s (\d{2})[:.h](\d{2})": r"0\1:00-\2:\3",
     r"(?:das )?(\d{1})h [àáa]s (\d{2})[:.h](\d{2}) e das (\d{2})h [àáa]s (\d{2})h": r"0\1:00-\2:\3,\4:00-\5:00",
-    r"(?:das )?(\d{1})h [àáa]s (\d{2})[:.h](\d{2}) e das (\d{2})[:.h](\d{2}) [àáa]s (\d{2})h?": r"0\1:00-\2:\3,\4:\5-\6:00",
+    r"(?:das )?(\d{1})h [àáa]s (\d{2})[:.h](\d{2}) e(?: das)? (\d{2})[:.h](\d{2}) [àáa]s (\d{2})h?": (
+        r"0\1:00-\2:\3,\4:\5-\6:00"
+    ),
     r"(?:das )?(\d{1})h ao (\d{2})[:.h](\d{2})": r"0\1:00-\2:\3",
     r"(?:das )?(\d{1})[:.h](\d{2}) - (\d{2})[:.h](\d{2})": r"0\1:\2-\3:\4",
     r"(?:das )?(\d{1})[:.h](\d{2}) - (\d{2})[:.h](\d{2}) e das (\d{2})[:.h](\d{2}) - (\d{2})[:.h](\d{2})": (
@@ -209,7 +211,7 @@ if __name__ == "__main__":
         delta = 0
         for i, s in enumerate(list(schedule)):
             p = re.split(
-                r"\s+(?=\bdas\b)|(?:(?<=\))|(?<=sexta)|(?<=sab)|(?<=s[áa]bado)|(?<=domingo)|(?<=domingos)|(?<=feriados))\s*[:,]?\s*(?=\d)",
+                r"\s+(?=\bdas\b)|(?:(?<=\))|(?<=sexta)|(?<=sab)|(?<=s[áa]bado)|(?<=domingo)|(?<=domingos)|(?<=feriado)|(?<=feriados))\s*[:,]?\s*(?=\d)",
                 s,
                 maxsplit=1,
             )
@@ -223,7 +225,7 @@ if __name__ == "__main__":
                 p[0], p[1] = f"{p[0]} {m[2]}", m[1]
             if len(p) == 2:
                 p = [
-                    schedule_time(p[0].strip("-, "), SCHEDULE_DAYS_MAPPING)[1],
+                    schedule_time(p[0].strip("-,. "), SCHEDULE_DAYS_MAPPING)[1],
                     schedule_time(unicodedata.normalize("NFC", p[1]), SCHEDULE_HOURS_MAPPING)[1],
                 ]
             elif (doff := schedule_time(p[0].strip("() "), SCHEDULE_DAYS_OFF_MAPPING)) and doff[0]:
