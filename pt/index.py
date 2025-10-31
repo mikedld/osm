@@ -33,6 +33,7 @@ SCRIPTS = (
     "mercadona.py",
     "meusuper.py",
     "minisom.py",
+    "novobanco.py",
     "pingodoce.py",
     "radiopopular.py",
     "recheio.py",
