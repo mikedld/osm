@@ -140,8 +140,8 @@ if __name__ == "__main__":
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"
 
-        d["addr:city"] = titleize(nd["location"][1])
-        postcode = nd["location"][2]
+        d["addr:city"] = titleize(nd["location"][1]) if nd["location"] else d["addr:city"]
+        postcode = nd["location"][2] if nd["location"] else d["addr:postcode"]
         if len(postcode) == 8 and postcode.endswith("-000"):
             postcode = postcode[:4]
         if len(postcode) == 4:
