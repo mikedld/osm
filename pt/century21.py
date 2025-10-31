@@ -80,8 +80,9 @@ if __name__ == "__main__":
 
         tags_to_reset.add("shop")
 
-        if phone := format_phonenumber(nd["phone"]):
-            d["contact:phone"] = phone
+        phones = nd["phone"].split("  ")
+        if phones := [x for x in (format_phonenumber(x) for x in phones) if x]:
+            d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
         if email := nd["email"]:
