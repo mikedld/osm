@@ -13,13 +13,10 @@ REF = "ref"
 
 def fetch_data():
     params = {
-        "brand": "HearUSA",
-        "country": "PT",
+        "siteName": "widexPT",
         "take": 8000,
-        "audience": "Retail",
-        "urlformat": "country/zip(8)/city/title/id",
-        "detailsurl": "/centros-auditivos/pagina-centro/",
         "baAvailableShops": "undefined",
+        "language": "pt-PT",
     }
     result = fetch_json_data(DATA_URL, params=params)
     result = [x for x in result if x["headingLabel"]["isPrimary"]]
