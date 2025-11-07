@@ -75,7 +75,7 @@ if __name__ == "__main__":
         schedule = [
             {
                 "d": x["dayOfWeek"] - 1,
-                "t": f"{x['from1']}-{x['to1'][:5]}",
+                "t": f"{x['from1']}-{x['to1'][:5]}" if not x.get("closed", False) else "off",
             }
             for x in nd["openingHours"]
         ]
