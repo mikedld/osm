@@ -53,6 +53,8 @@ if __name__ == "__main__":
 
     old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"Washy"](area.country);')]
 
+    new_node_id = -10000
+
     for nd in new_data:
         public_id = nd["identifier"]
         tags_to_reset = set()
@@ -66,10 +68,11 @@ if __name__ == "__main__":
         if d is None:
             d = DiffDict()
             d.data["type"] = "node"
-            d.data["id"] = f"-{int(public_id)}"
+            d.data["id"] = str(new_node_id)
             d.data["lat"] = float(nd["lat"])
             d.data["lon"] = float(nd["lng"])
             old_data.append(d)
+            new_node_id -= 1
 
         d[REF] = public_id
         d["shop"] = "laundry"
