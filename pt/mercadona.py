@@ -74,12 +74,11 @@ if __name__ == "__main__":
         custom_ohs = json.loads(custom_ohs_file.read_text())
 
     for nd in new_data:
-        private_id = str(nd["id"])
-        public_id = str(nd["site_public_id"])
-        d = next((od for od in old_data if od[REF] == public_id or od[REF][1:] == private_id[1:]), None)
+        public_id = str(nd["id"])
+        d = next((od for od in old_data if od[REF] == public_id), None)
         coord = [nd["lt"], nd["lg"]]
         if d is None:
-            ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
+            ds = [x for x in old_data if (not x[REF] or len(x[REF]) == 4) and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
         if d is None:
@@ -170,7 +169,7 @@ if __name__ == "__main__":
         if d.kind != "old":
             continue
         ref = d[REF]
-        if ref and any(nd for nd in new_data if ref == str(nd["site_public_id"]) or ref[1:] == str(nd["id"])[1:]):
+        if ref and any(nd for nd in new_data if ref == str(nd["id"]) or ref[1:] == str(nd["id"])[1:]):
             continue
         d.kind = "del"
 
