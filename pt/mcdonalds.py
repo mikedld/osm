@@ -146,7 +146,8 @@ if __name__ == "__main__":
     old_data = [
         DiffDict(e)
         for e in overpass_query(
-            'nwr[amenity][amenity!=charging_station][amenity!=bicycle_rental][amenity!=social_facility][amenity!=parking][name~"McDonald"](area.country);'
+            "nwr[amenity][amenity!=charging_station][amenity!=bicycle_rental][amenity!=social_facility][amenity!=parking]"
+            ' [name~"mc ?donald",i](area.country);'
         )
     ]
 
