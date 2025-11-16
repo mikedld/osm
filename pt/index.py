@@ -24,6 +24,7 @@ SCRIPTS = (
     "decathlon.py",
     "element.py",
     "emel.py",
+    "era.py",
     "espacocasa.py",
     "froiz.py",
     "jysk.py",

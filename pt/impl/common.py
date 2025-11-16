@@ -119,14 +119,23 @@ def cache_name(key):
 
 
 def fetch_json_data(
-    url, params=None, *, encoding="utf-8", headers=None, data=None, json=None, post_process=None, verify_cert=True
+    url,
+    params=None,
+    *,
+    encoding="utf-8",
+    headers=None,
+    var_headers=None,
+    data=None,
+    json=None,
+    post_process=None,
+    verify_cert=True,
 ):
     cache_file = cache_name(f"{url}:{params}:{headers}:{data}:{json}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url} {params}")  # noqa: ERA001
         common_args = {
             "params": params or {},
-            "headers": {"user-agent": "mikedld-osm/1.0", **(headers or {})},
+            "headers": {"user-agent": "mikedld-osm/1.0", **(headers or {}), **(var_headers or {})},
             "proxies": PROXIES,
             "verify": verify_cert,
         }
