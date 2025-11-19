@@ -240,13 +240,14 @@ if __name__ == "__main__":
                     launch_break = f"{m[1]}:{m[2]},{m[3]}:{m[4]}-"
                     events.remove(ea)
                     break
-            opens = {x["opens"] for x in schedule}
+            opens = {x["opens"] for x in schedule if x}
             schedule = [
                 {
                     "d": DAYS.index(x["dayOfWeek"]),
                     "t": f"{x['opens']}-{launch_break}{x['closes']}",
                 }
                 for x in schedule
+                if x
             ]
             for i in range(len(DAYS)):
                 if not any(x for x in schedule if x["d"] == i):
