@@ -172,7 +172,7 @@ def fetch_html_data(url, params=None, *, encoding="utf-8", headers=None):
 
 @retry(stop_max_attempt_number=3, wait_fixed=10000)
 def overpass_query(query, country="PT"):
-    full_query = f'[out:json]; area[admin_level=2]["ISO3166-1"="{country}"] -> .country; {query} out meta center;'
+    full_query = f'[out:json][timeout:300]; area[admin_level=2]["ISO3166-1"="{country}"] -> .country; {query} out meta center;'
     cache_file = cache_name(full_query).with_suffix(".cache.overpass.gz")
     if not ENABLE_OVERPASS_CACHE or not cache_file.exists():
         # print(f"Querying Overpass: {full_query}")  # noqa: ERA001
