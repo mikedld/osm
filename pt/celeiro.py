@@ -136,7 +136,11 @@ if __name__ == "__main__":
         schedule = [
             re.split(r"\s*(?:[-–:](?!feira)|\bdas\b)\s*", x.strip().lower(), maxsplit=1)
             for x in nd["schedule"].split("</br>")
-            if x.strip(" *") not in ("", "Chamada para a rede fixa nacional.", "O horário pode diferir durante feriados.")
+            if not re.match(
+                r"($|chamada para a rede fixa nacional|o horário pode diferir durante feriados|loja temporariamente encerrada)",
+                x.strip(" *"),
+                re.IGNORECASE,
+            )
         ]
         for s in schedule:
             if len(s) != 2:
