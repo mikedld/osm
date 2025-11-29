@@ -20,7 +20,7 @@ from shapely.geometry import Point, Polygon, shape
 
 import __main__
 
-from .config import ENABLE_CACHE, ENABLE_OVERPASS_CACHE, PROXIES
+from .config import ENABLE_CACHE, ENABLE_GMAPS_CACHE, ENABLE_OVERPASS_CACHE, PROXIES
 
 
 BASE_DIR = Path(__main__.__file__).parent
@@ -301,6 +301,23 @@ def gregorian_easter(year):
         full_moon -= 1
     week = full_moon // 7 - 38
     return datetime.date.fromordinal(week * 7)
+
+
+def lookup_gmaps_coords(gmaps_url):
+    coords_regex = r"/@(-?[0-9.]+),(-?[0-9.]+),"
+    m = re.search(coords_regex, gmaps_url)
+    if not m:
+        cache_file = cache_name(gmaps_url).with_suffix(".cache.gmaps.url")
+        if not ENABLE_GMAPS_CACHE or not cache_file.exists():
+            r = requests.head(gmaps_url, allow_redirects=True, timeout=30)
+            r.raise_for_status()
+            gmaps_url = r.url
+            if ENABLE_GMAPS_CACHE:
+                cache_file.write_bytes(gmaps_url.encode("utf-8"))
+        else:
+            gmaps_url = cache_file.read_bytes().decode("utf-8")
+        m = re.search(coords_regex, gmaps_url)
+    return [float(m[1]), float(m[2])] if m else None
 
 
 def lookup_postcode(postcode):

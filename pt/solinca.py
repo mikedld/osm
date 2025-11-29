@@ -4,7 +4,16 @@ import re
 from itertools import count
 from multiprocessing import Pool
 
-from impl.common import DiffDict, distance, fetch_html_data, lookup_postcode, overpass_query, titleize, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_html_data,
+    lookup_gmaps_coords,
+    lookup_postcode,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 DATA_URL = "https://www.solinca.pt/solinca-ginasios/"
@@ -50,9 +59,14 @@ def fetch_level2_data(data):
         postcode = m[1].replace(" ", "")
         if len(postcode) == 4:
             postcode += "-000"
-        location = lookup_postcode(postcode)
-        if not location and "-" in postcode:
-            location = lookup_postcode(postcode.split("-", 1)[0])
+        if len(gmaps_urls := result_tree.xpath("//a[.//span/text() = 'Ver no mapa >']/@href")) == 1 and (
+            coords := lookup_gmaps_coords(gmaps_urls[0])
+        ):
+            location = [coords, m[3].split(",")[0].strip()]
+        else:
+            location = lookup_postcode(postcode)
+            if not location and "-" in postcode:
+                location = lookup_postcode(postcode.split("-", 1)[0])
         if location:
             location.append(postcode)
     return {

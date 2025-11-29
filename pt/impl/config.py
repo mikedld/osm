@@ -16,6 +16,7 @@ CONFIG = _config
 
 ENABLE_CACHE = CONFIG.get("general", {}).get("enable_cache", True)
 ENABLE_OVERPASS_CACHE = CONFIG.get("general", {}).get("enable_overpass_cache", True)
+ENABLE_GMAPS_CACHE = CONFIG.get("general", {}).get("enable_gmaps_cache", True)
 
 PROXIES = CONFIG.get("general", {}).get("proxies", {})
 
