@@ -8,7 +8,17 @@ import uuid
 from multiprocessing import Pool
 from urllib.parse import urljoin, urlsplit
 
-from impl.common import DiffDict, fetch_json_data, fetch_html_data, overpass_query, titleize, distance, opening_weekdays, lookup_postcode, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_html_data,
+    fetch_json_data,
+    lookup_postcode,
+    opening_weekdays,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 DATA_URL = "https://www.mcdonalds.pt/restaurantes"
@@ -52,7 +62,7 @@ CITIES = {
 
 def fetch_level1_data():
     def post_process(page):
-        return re.sub(r"^.*var restaurantsJson\s*=\s*'\[(.+)\]'.*$", r"[\1]", page, flags=re.S)
+        return re.sub(r"^.*var restaurantsJson\s*=\s*'\[(.+)\]'.*$", r"[\1]", page, flags=re.DOTALL)
 
     result = fetch_json_data(DATA_URL, post_process=post_process)
     return [
@@ -70,8 +80,12 @@ def fetch_level2_data(data):
         **data,
         "id": str(uuid.uuid5(uuid.NAMESPACE_URL, "mcdonalds:" + urlsplit(data["Url"]).path.split("/")[2])),
         "schedules": {
-            "".join(el.xpath('h6/text()')).strip(): {
-                re.sub(r"V[ée]spera\s+(de\s+)?[Ff]eriado", r"Véspera Feriado", "".join(el2.xpath('cite/text()')).strip()): "".join(el2.xpath('span/text()')).strip()
+            "".join(el.xpath("h6/text()")).strip(): {
+                re.sub(
+                    r"V[ée]spera\s+(de\s+)?[Ff]eriado",
+                    r"Véspera Feriado",
+                    "".join(el2.xpath("cite/text()")).strip(),
+                ): "".join(el2.xpath("span/text()")).strip()
                 for el2 in el.xpath("ul/li")
             }
             for el in result_tree.xpath("//div[contains(@class, 'restaurantSchedule__service')]")
@@ -105,14 +119,11 @@ def opening_hours(data, title):
     schedule = [
         {
             "d": sorted([x["d"] for x in g]),
-            "t": k
+            "t": k,
         }
         for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
     ]
-    schedule = [
-        f"{opening_weekdays(x['d'])} {x['t']}"
-        for x in sorted(schedule, key=lambda x: x["d"][0])
-    ]
+    schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
     if exs := {k: v for k, v in data["schedules"].get(title, {}).items() if k not in DAYS}:
         for k, v in exs.items():
             if re.fullmatch(r"Véspera Fe?riado", k):
@@ -132,7 +143,13 @@ if __name__ == "__main__":
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity][amenity!=charging_station][amenity!=bicycle_rental][amenity!=social_facility][amenity!=parking][name~"McDonald"](area.country);')]
+    old_data = [
+        DiffDict(e)
+        for e in overpass_query(
+            "nwr[amenity][amenity!=charging_station][amenity!=bicycle_rental][amenity!=social_facility][amenity!=parking]"
+            ' [name~"mc ?donald",i](area.country);'
+        )
+    ]
 
     new_node_id = -10000
 

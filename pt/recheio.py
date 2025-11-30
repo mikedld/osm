@@ -6,7 +6,7 @@ from multiprocessing import Pool
 from lxml import etree
 from unidecode import unidecode
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, distance, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.recheio.pt/portal/pt-PT/webruntime/api/apex/execute"
@@ -17,7 +17,7 @@ SCHEDULE_DAYS = (
     ("RCH_WeekHours__c", "Mo-Fr"),
     ("RCH_SaturdayHours__c", "Sa"),
     ("RCH_SundayHours__c", "Su"),
-    # ("RCH_Holidays__c", "PH"),
+    # ("RCH_Holidays__c", "PH"),  # noqa: ERA001
 )
 HOLIDAYS = {
     r"\b(\d{2}) de junho": r"Jun \1",
@@ -68,7 +68,7 @@ def fetch_level2_data(data):
         "method": "getStoreById",
         "isContinuation": False,
         "cacheable": False,
-        "params":{
+        "params": {
             "id": data["Id"],
         },
     }
@@ -83,7 +83,7 @@ def fetch_level2_data(data):
 
 def get_url_part(value):
     e = unidecode(value)
-    e = re.sub(r'\W', " ", e)
+    e = re.sub(r"\W", " ", e)
     e = e.strip()
     e = re.sub(r"\s+", "-", e)
     return e.lower()
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
         d[REF] = public_id
         d["shop"] = "wholesale"
-        # d["wholesale"] = "supermarket"
+        # d["wholesale"] = "supermarket"  # noqa: ERA001
         d["name"] = "Recheio"
         d["brand"] = "Recheio"
         d["brand:wikidata"] = "Q7302409"
@@ -125,7 +125,9 @@ if __name__ == "__main__":
 
         schedule = []
         for key, days in SCHEDULE_DAYS:
-            value = re.sub(r"[\s\uFEFF]+", " ", ";".join(etree.fromstring(nd[key], etree.HTMLParser()).xpath("//text()")), flags=re.S)
+            value = re.sub(
+                r"[\s\uFEFF]+", " ", ";".join(etree.fromstring(nd[key], etree.HTMLParser()).xpath("//text()")), flags=re.DOTALL
+            )
             value = value.split(":", 1)[1]
             value = re.sub(r"\s*;(\s*;)*\s*", ";", value)
             value = re.sub(r"^[\s;]+|[\s;]+$", "", value)
@@ -140,11 +142,10 @@ if __name__ == "__main__":
                     v = [m[1], [x.lower().strip() for x in m[2].split(",")]]
                 else:
                     v = [v, []]
-                if len(v[1]) == 1:
-                    if m := re.fullmatch(r"encerra das (\d{2}:\d{2}) às (\d{2}:\d{2})", v[1][0]):
-                        outer = v[0].split("-")
-                        inner = [m[1], m[2]]
-                        v = [f"{outer[0]}-{inner[0]},{inner[1]}-{outer[1]}", []]
+                if len(v[1]) == 1 and (m := re.fullmatch(r"encerra das (\d{2}:\d{2}) às (\d{2}:\d{2})", v[1][0])):
+                    outer = v[0].split("-")
+                    inner = [m[1], m[2]]
+                    v = [f"{outer[0]}-{inner[0]},{inner[1]}-{outer[1]}", []]
                 if v[0] == "Encerrado":
                     v[0] = "off"
                 if schedule and schedule[-1][1] == v[0]:
@@ -172,9 +173,9 @@ if __name__ == "__main__":
         d["contact:email"] = nd["RCH_ManagerEmail__c"]
         d["website"] = f"https://www.recheio.pt/portal/pt-PT/store-locator/detail?id={nd['Id']}"
         d["contact:facebook"] = "Recheio.pt"
-        d["contact:youtube"] = "https://www.youtube.com/@recheiopt"
-        d["contact:instagram"] = "https://www.linkedin.com/company/recheiosa/"
-        d["contact:linkedin"] = "recheiopt"
+        d["contact:youtube"] = "@recheiopt"
+        d["contact:instagram"] = "recheiopt"
+        d["contact:linkedin"] = "https://www.linkedin.com/company/recheiosa/"
 
         tags_to_reset.update({"phone", "mobile", "email", "contact:mobile", "contact:website"})
 

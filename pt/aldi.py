@@ -5,7 +5,7 @@ import re
 
 from unidecode import unidecode
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, distance, opening_weekdays, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://locator.uberall.com/api/storefinders/ALDINORDPT_YTvsWfhEG5TCPruM6ab6sZIi0Xodyx/locations/all"
@@ -75,27 +75,26 @@ if __name__ == "__main__":
         schedule = [
             {
                 "d": x["dayOfWeek"] - 1,
-                "t": f"{x['from1']}-{x['to1'][:5]}"
+                "t": f"{x['from1']}-{x['to1'][:5]}" if not x.get("closed", False) else "off",
             }
             for x in nd["openingHours"]
         ]
         schedule = [
             {
                 "d": sorted([x["d"] for x in g]),
-                "t": k
+                "t": k,
             }
             for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
         ]
-        schedule = [
-            f"{opening_weekdays(x['d'])} {x['t']}"
-            for x in sorted(schedule, key=lambda x: x["d"][0])
-        ]
+        schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
         if schedule:
             d["opening_hours"] = "; ".join(schedule)
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"
 
-        d["website"] = f"https://www.aldi.pt/tools/lojas-e-horarios-de-funcionamento.html/l/{get_url_part(nd['city'])}/{get_url_part(nd['streetAndNumber'])}/{nd['id']}"
+        d["website"] = (
+            f"https://www.aldi.pt/tools/lojas-e-horarios-de-funcionamento.html/l/{get_url_part(nd['city'])}/{get_url_part(nd['streetAndNumber'])}/{nd['id']}"
+        )
         d["contact:email"] = "portugal@aldi.pt"
         d["contact:facebook"] = "AldiSupermercados.pt"
         d["contact:youtube"] = "https://www.youtube.com/@aldi.portugal"

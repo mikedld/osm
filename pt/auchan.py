@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-import json
 import itertools
+import json
 import re
 from multiprocessing import Pool
 
 from lxml import etree
 
-from impl.common import DiffDict, fetch_json_data, fetch_html_data, overpass_query, opening_weekdays, distance, write_diff
+from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, opening_weekdays, overpass_query, write_diff
 
 
 LEVEL1_DATA_URL = "https://www.auchan.pt/pt/lojas"
@@ -15,8 +15,102 @@ LEVEL2_DATA_URL = "https://www.auchan.pt/pt/loja"
 
 REF = "ref"
 
-BRANCHES = {
+CITY_FIXES = {
+    "Alcácer Sal": "Alcácer do Sal",
+    "Caldas Rainha": "Caldas da Rainha",
+    "Rio Mouro": "Rio de Mouro",
+    "S.Brás de Alportel": "São Brás de Alportel",
     "Sta Maria Lamas": "Santa Maria de Lamas",
+}
+CITY_LOC_FIXES = {
+    "1 Maio": "1 de Maio",
+    "25 Abril": "25 de Abril",
+    "5 Outubro": "5 de Outubro",
+    "9 Julho": "9 de Julho",
+    "Afonso Albuquerque": "Afonso de Albuquerque",
+    "Alameda Oceanos": "Alameda dos Oceanos",
+    "Alfredo Silva": "Alfredo da Silva",
+    "Alvares Cabral": "Álvares Cabral",
+    "Arístides Sousa Mendes": "Aristides de Sousa Mendes",
+    "Avenida D. João II": "Avenida Dom João II",
+    "Bento Jesus Caraça": "Bento de Jesus Caraça",
+    "Bomb Voluntários Algés": "Bombeiros Voluntários de Algés",
+    "Calçada Quintinha": "Calçada da Quintinha",
+    "Casal Serra": "Casal da Serra",
+    "Cidade Horta": "Cidade da Horta",
+    "Cidade Viseu": "Cidade de Viseu",
+    "Circular Sul": "Circular do Sul",
+    "Combatentes Gr. Guerra": "Combatentes da Grande Guerra",
+    "Conde Redondo": "Conde de Redondo",
+    "Coração Maria": "Coração de Maria",
+    "Cristóvão Gama": "Cristóvão da Gama",
+    "D Dinis": "Dom Dinis",
+    "D Filipa Vilhena": "Dona Filipa de Vilhena",
+    "D Marcelino Franco": "Dom Marcelino Franco",
+    "D Maria II": "Dona Maria II",
+    "D Nuno Álvares Pereira": "Dom Nuno Álvares Pereira",
+    "D Pedro V": "Dom Pedro V",
+    "D. Manuel II": "Dom Manuel II",
+    "D. Nuno Álvares Pereira": "Dom Nuno Álvares Pereira",
+    "D.Pedro IV": "Dom Pedro IV",
+    "Diogo Silves": "Diogo de Silves",
+    "Direita Dafundo": "Direita do Dafundo",
+    "Direita Massamá": "Direita de Massamá",
+    "Dr António Elvas": "Doutor António Elvas",
+    "Dr Aresta Branco": "Doutor Aresta Branco",
+    "Dr Dário Gandra Nunes": "Doutor Dário Gandra Nunes",
+    "Dr Francisco Sousa Tavares": "Doutor Francisco Sousa Tavares",
+    "Dr Henrique de Barros": "Doutor Henrique de Barros",
+    "Dr João Santos": "Doutor João Santos",
+    "Dr João Silva": "Doutor João Silva",
+    "Duque Loulé": "Duque de Loulé",
+    "Eng Ferreira Dias": "Engenheiro Ferreira Dias",
+    "Est Benfica": "Estrada de Benfica",
+    "Est Luz": "Estrada da Luz",
+    "Est Marquês Pombal": "Estrada Marquês de Pombal",
+    "Est Mem Martins": "Estrada de Mem Martins",
+    "Est S Domingos": "Estrada de São Domingos",
+    "Fontes Pereira Melo": "Fontes Pereira de Melo",
+    "Forno Tijolo": "Forno do Tijolo",
+    "Foros Amora": "Foros de Amora",
+    "Gabriel Ferreira Castro": "Gabriel Ferreira de Castro",
+    "Gen Humberto Delgado": "General Humberto Delgado",
+    "Helena Vaz Silva": "Helena Vaz da Silva",
+    "Heróis Liberdade": "Heróis da Liberdade",
+    "Infante D Augusto": "Infante Dom Augusto",
+    "Infante D Henrique": "Infante Dom Henrique",
+    "Infante D Pedro": "Infante Dom Pedro",
+    "Infante Sagres": "Infante de Sagres",
+    "Jaime Mota": "Jaime da Mota",
+    "João Barros": "João de Barros",
+    "José Conceição Nunes": "José da Conceição Nunes",
+    "Luís Camões": "Luís de Camões",
+    "Luis Pastor Macedo": "Luis Pastor de Macedo",
+    "Luis Queiroz": "Luis de Queiroz",
+    "Major Neutel Abreu": "Major Neutel de Abreu",
+    "Marquês Pombal": "Marquês de Pombal",
+    "Marquês Sá Bandeira": "Marquês Sá da Bandeira",
+    "Mouzinho Albuquerque": "Mouzinho de Albuquerque",
+    "Oscar Monteiro Torres": "Óscar Monteiro Torres",
+    "Padre Manuel Nóbrega": "Padre Manuel da Nóbrega",
+    "Pct Bento Gonçalves": "Praceta Bento Gonçalves",
+    "Penha França": "Penha de França",
+    "Prof Dr Augusto Abreu Lopes": "Professor Doutor Augusto Abreu Lopes",
+    "Prof Francisco Gentil": "Professor Francisco Gentil",
+    "Qta Campo": "Quinta do Campo",
+    "Qta Lomba": "Quinta da Lomba",
+    "Rua da Beneficiência": "Rua da Beneficência",
+    "Rui Gomes Silva": "Rui Gomes da Silva",
+    "S Bento": "São Bento",
+    "S Paulo": "São Paulo",
+    "S Sebastião": "São Sebastião",
+    "Sá Bandeira": "Sá da Bandeira",
+    "Saraiva Carvalho": "Saraiva de Carvalho",
+    "Terreiro Bispo": "Terreiro do Bispo",
+    "Ulisses Alves": "Ulysses Alves",
+    "Urb Qta Sto Amaro": "Urbanização Quinta de Santo Amaro",
+    "Vilar Andorinho": "Vilar de Andorinho",
+    "Visconde Santarém": "Visconde de Santarém",
 }
 EVENTS_MAPPING = {
     r"Horário feriados: (\d{2}:\d{2}) - (\d{2}:\d{2})": r"PH \1-\2",
@@ -40,17 +134,41 @@ def fetch_level1_data():
 
 
 def fetch_level2_data(data):
-    store_id = re.sub(r'.*data-store-id="([^"]+)".*', r"\1", data["infoWindowHtml"], flags=re.S)
+    store_id = re.sub(r'.*data-store-id="([^"]+)".*', r"\1", data["infoWindowHtml"], flags=re.DOTALL)
     params = {
         "StoreID": store_id,
     }
     result_tree = fetch_html_data(LEVEL2_DATA_URL, params=params)
     return {
         "id": store_id,
-        "events": [x.strip() for x in "".join(result_tree.xpath("//div[contains(@class, 'store-events')]//text()")).split("\n") if x.strip()],
+        "events": [
+            x.strip()
+            for x in "".join(result_tree.xpath("//div[contains(@class, 'store-events')]//text()")).split("\n")
+            if x.strip()
+        ],
         **data,
         **json.loads(result_tree.xpath("//script[@type='application/ld+json']/text()")[0]),
     }
+
+
+def fix_branch(branch):
+    branch = re.sub(r"^(Algés|Lisboa)(?:\s+-)?\s+(.+)$", r"\2 - \1", branch)
+    branch = re.sub(r"(?<!-)(?<!\s)\s+(Almada|Campolide|Graça|Porto)$", r" - \1", branch)
+    if m := re.fullmatch(r"(.+?) - (.+)", branch):
+        loc, city = m[1], m[2]
+        city = CITY_FIXES.get(city, city)
+        if m := re.fullmatch(r"(.+?)\s+(\d+)", loc):
+            loc = f"{CITY_LOC_FIXES.get(m[1], m[1])} {m[2]}"
+        else:
+            loc = CITY_LOC_FIXES.get(loc, loc)
+        branch = f"{loc} - {city}"
+    else:
+        branch = CITY_FIXES.get(branch, branch)
+        if m := re.fullmatch(r"(.+?)\s+(\d+)", branch):
+            branch = f"{CITY_LOC_FIXES.get(m[1], m[1])} {m[2]}"
+        else:
+            branch = CITY_LOC_FIXES.get(branch, branch)
+    return branch
 
 
 if __name__ == "__main__":
@@ -58,10 +176,16 @@ if __name__ == "__main__":
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query(
-        '( nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][name~"Auchan"](area.country); ' +
-        'nwr[amenity][amenity!=fuel][amenity!=charging_station][amenity!=parking][name~"Auchan"](area.country); '
-        'nwr[shop][name~"Minipreço|Mais[ ]?Perto"](area.country); );')]
+    old_data = [
+        DiffDict(e)
+        for e in overpass_query(
+            "("
+            'nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][~"^(name|brand)$"~"Auchan"](area.country);'
+            'nwr[amenity][amenity!=fuel][amenity!=charging_station][amenity!=parking][~"^(name|brand)$"~"Auchan"](area.country);'
+            'nwr[shop][~"^(name|brand)$"~"Minipreço|Mais[ ]?Perto"](area.country);'
+            ");"
+        )
+    ]
 
     new_node_id = -10000
 
@@ -83,7 +207,7 @@ if __name__ == "__main__":
             new_node_id -= 1
 
         name = re.sub(r"^(Auchan( Supermercado)?|My Auchan( Saúde e Bem-Estar)?|Auchan).+", r"\1", nd["name"])
-        branch = re.sub(r"[ ]{2,}", " ", nd["name"][len(name):]).strip()
+        branch = fix_branch(re.sub(r"[ ]{2,}", " ", nd["name"][len(name) :]).strip())
         is_super = name == "Auchan Supermercado"
         is_my = name == "My Auchan"
         is_my_saude = name == "My Auchan Saúde e Bem-Estar"
@@ -92,17 +216,18 @@ if __name__ == "__main__":
         d[REF] = public_id
         if is_my_saude:
             d["amenity"] = "pharmacy"
+            tags_to_reset.add("shop")
         else:
-            d["shop"] = "convenience" if is_my else "supermarket"
-        d["name"] = name.replace("My Auchan", "MyAuchan")
-        d["branch"] = BRANCHES.get(branch, branch)
-        d["brand"] = "MyAuchan" if is_my or is_my_saude else ("Auchan Supermercado" if is_super else "Auchan")
+            d["shop"] = d["shop"] or ("convenience" if is_my else "supermarket")
+            tags_to_reset.add("amenity")
+        d["name"] = name
+        d["branch"] = branch
+        d["brand"] = "My Auchan" if is_my or is_my_saude else ("Auchan Supermercado" if is_super else "Auchan")
         d["brand:wikidata"] = "Q115800307" if is_my or is_my_saude else ("Q105857776" if is_super else "Q758603")
         d["brand:wikipedia"] = "pt:Auchan"
 
-        if old_name := d.old_tags.get("name"):
-            if "Auchan" not in old_name:
-                d["old_name"] = old_name
+        if (old_name := d.old_tags.get("name")) and "Auchan" not in old_name:
+            d["old_name"] = old_name
 
         if d["operator"] not in (None, "Auchan"):
             tags_to_reset.add("operator")
@@ -115,29 +240,30 @@ if __name__ == "__main__":
                     launch_break = f"{m[1]}:{m[2]},{m[3]}:{m[4]}-"
                     events.remove(ea)
                     break
-            opens = set(x["opens"] for x in schedule)
+            opens = {x["opens"] for x in schedule if x}
             schedule = [
                 {
                     "d": DAYS.index(x["dayOfWeek"]),
                     "t": f"{x['opens']}-{launch_break}{x['closes']}",
                 }
                 for x in schedule
+                if x
             ]
+            for i in range(len(DAYS)):
+                if not any(x for x in schedule if x["d"] == i):
+                    schedule.append({"d": i, "t": "off"})
             schedule = [
                 {
                     "d": sorted([x["d"] for x in g]),
-                    "t": k
+                    "t": k,
                 }
                 for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
             ]
-            schedule = [
-                f"{opening_weekdays(x['d'])} {x['t']}"
-                for x in sorted(schedule, key=lambda x: x["d"][0])
-            ]
+            schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
             if events:
                 events.sort(key=lambda x: -ord(x[0]))
                 if len(opens) == 1:
-                    opens = list(opens)[0]
+                    opens = next(iter(opens))
                     for ea in events:
                         if "Auchan Saúde e Bem-Estar:" in ea:
                             continue
@@ -178,15 +304,11 @@ if __name__ == "__main__":
             d["addr:city"] = address["addressLocality"]
         d["addr:postcode"] = address["postalCode"]
 
-        # street = [x.strip() for x in address["streetAddress"].split(f", {address['addressLocality']}", 1)[0].split(",", 1)]
-        # if len(street) == 1:
-        #     street = [x.strip() for x in street[0].split("nº", 1)]
-        # if len(street) == 2:
-        #     street[1] = [re.sub(r"Lote[ ]+", "LT ", x, flags=re.I).strip() for x in re.split(r"[nN]\.?º|,|\be\b", street[1]) if x.strip()]
-        #     d["addr:street"] = street[0]
-        #     d["addr:housenumber"] = ";".join(street[1])
-
-        if d.kind == "new" and not d["addr:street"] and not (d["addr:housenumber"] or d["nohousenumber"] or d["addr:housename"]):
+        if (
+            d.kind == "new"
+            and not d["addr:street"]
+            and not (d["addr:housenumber"] or d["nohousenumber"] or d["addr:housename"])
+        ):
             d["x-dld-addr"] = address["streetAddress"]
 
         for key in tags_to_reset:

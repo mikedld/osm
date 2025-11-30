@@ -6,7 +6,7 @@ import uuid
 from multiprocessing import Pool
 from urllib.parse import urljoin, urlsplit
 
-from impl.common import DiffDict, fetch_html_data, overpass_query, distance, opening_weekdays, write_diff
+from impl.common import DiffDict, distance, fetch_html_data, opening_weekdays, overpass_query, write_diff
 
 
 DATA_URL = "https://feed.continente.pt/lojas"
@@ -87,14 +87,30 @@ def fetch_level2_data(data):
     result_tree = fetch_html_data(data["url"])
     return {
         **data,
-        "id": str(uuid.uuid5(uuid.NAMESPACE_URL, "continente:" + re.sub(r"^continente-", "", urlsplit(data["url"]).path.split("/")[2]))),
+        "id": str(
+            uuid.uuid5(
+                uuid.NAMESPACE_URL, "continente:" + re.sub(r"^continente-", "", urlsplit(data["url"]).path.split("/")[2])
+            )
+        ),
         "services": [x.strip().lower() for x in result_tree.xpath("//li[@class='serviceTag']//text()") if x.strip()],
         "schedule": {
-            "".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-day')]/text()")): re.sub(r":0(\d\d)", r":\1", "-".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-time')]/time/text()")))
+            "".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-day')]/text()")): re.sub(
+                r":0(\d\d)",
+                r":\1",
+                "-".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-time')]/time/text()")),
+            )
             for el in result_tree.xpath("//table[contains(@class, 'storeDetailHeaderMap__table')]/tr")
         },
-        "phone": re.sub(r"[^+0-9]", "", "".join(result_tree.xpath("//a[contains(@class, 'storeDetailHeaderMap__button')][contains(@href, 'tel:')]/@href"))),
-        "addr": [x.strip() for x in "".join(result_tree.xpath("//p[contains(@class, 'storeDetailHeaderMap__address')]/text()")).split("\n") if x.strip()],
+        "phone": re.sub(
+            r"[^+0-9]",
+            "",
+            "".join(result_tree.xpath("//a[contains(@class, 'storeDetailHeaderMap__button')][contains(@href, 'tel:')]/@href")),
+        ),
+        "addr": [
+            x.strip()
+            for x in "".join(result_tree.xpath("//p[contains(@class, 'storeDetailHeaderMap__address')]/text()")).split("\n")
+            if x.strip()
+        ],
     }
 
 
@@ -103,14 +119,19 @@ if __name__ == "__main__":
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][shop!=newsagent][shop!=florist][shop!=tobacco][name~"[Cc][Oo][Nn][Tt][Ii][Nn][Ee][Nn][Tt][Ee]"](area.country);')]
+    old_data = [
+        DiffDict(e)
+        for e in overpass_query(
+            'nwr[shop][shop!=newsagent][shop!=florist][shop!=tobacco][name~"[Cc][Oo][Nn][Tt][Ii][Nn][Ee][Nn][Tt][Ee]"](area.country);'
+        )
+    ]
 
     new_node_id = -10000
 
     for nd in new_data:
         public_id = nd["id"]
         name = re.sub(r"^(Continente( Bom Dia| Modelo)?).*", r"\1", nd["name"])
-        branch = nd["name"][len(name):].strip()
+        branch = nd["name"][len(name) :].strip()
         is_bd = name == "Continente Bom Dia"
         is_mod = name == "Continente Modelo"
         tags_to_reset = set()
@@ -136,11 +157,15 @@ if __name__ == "__main__":
             new_node_id -= 1
 
         d[REF] = public_id
-        d["shop"] = "supermarket" if not is_bd or ("talho" in nd["services"] and "mercearia" in nd["services"]) else "convenience"
+        d["shop"] = (
+            "supermarket" if not is_bd or ("talho" in nd["services"] and "mercearia" in nd["services"]) else "convenience"
+        )
         d["name"] = name
         d["brand"] = "Continente Bom Dia" if is_bd else ("Continente Modelo" if is_mod else "Continente")
         d["brand:wikidata"] = "Q123570507" if is_bd else ("Q1892188" if is_mod else "Q2995683")
-        d["brand:wikipedia"] = "pt:Continente Bom Dia" if is_bd else ("pt:Continente Modelo" if is_mod else "pt:Continente (hipermercados)")
+        d["brand:wikipedia"] = (
+            "pt:Continente Bom Dia" if is_bd else ("pt:Continente Modelo" if is_mod else "pt:Continente (hipermercados)")
+        )
         d["branch"] = BRANCHES.get(branch, branch)
 
         if schedule := nd["schedule"]:
@@ -154,14 +179,11 @@ if __name__ == "__main__":
             schedule = [
                 {
                     "d": sorted([x["d"] for x in g]),
-                    "t": k
+                    "t": k,
                 }
                 for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
             ]
-            schedule = [
-                f"{opening_weekdays(x['d'])} {x['t']}"
-                for x in sorted(schedule, key=lambda x: x["d"][0])
-            ]
+            schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
             schedule = "; ".join(schedule)
             d["opening_hours"] = schedule
             if d["source:opening_hours"] != "survey":
@@ -192,7 +214,12 @@ if __name__ == "__main__":
         elif postcode:
             d["addr:postcode"] = "<ERR>"
         d["addr:city"] = CITIES.get(postcode, CITIES.get(nd["city"], nd["city"]))
-        if not d["addr:street"] and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"]) and not d["addr:place"] and not d["addr:suburb"]:
+        if (
+            not d["addr:street"]
+            and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"])
+            and not d["addr:place"]
+            and not d["addr:suburb"]
+        ):
             d["x-dld-addr"] = "; ".join(nd["addr"])
 
         for key in tags_to_reset:

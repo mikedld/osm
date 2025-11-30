@@ -4,7 +4,7 @@ import datetime
 import itertools
 import re
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, opening_weekdays, write_diff
+from impl.common import LISBON_TZ, DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.starbucks.pt/api/v2/stores/"
@@ -40,19 +40,21 @@ def fetch_data():
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity][name=Starbucks](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query("nwr[amenity][name=Starbucks](area.country);")]
 
     for nd in new_data:
         public_id = nd["storeNumber"]
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = [float(nd["coordinates"]["latitude"]), float(nd["coordinates"]["longitude"])]
         if d is None:
-            coord = nd["coordinates"]
-
+            ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
+            if len(ds) == 1:
+                d = ds[0]
+        if d is None:
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id}"
-            d.data["lat"] = float(coord["latitude"])
-            d.data["lon"] = float(coord["longitude"])
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
 
         tags_to_reset = set()
@@ -71,7 +73,7 @@ if __name__ == "__main__":
         elif nd["openHours"]:
             schedule = [
                 {
-                    "d": datetime.datetime.strptime(x["date"].split("T")[0], "%Y-%m-%d").date().weekday(),
+                    "d": datetime.datetime.strptime(x["date"].split("T")[0], "%Y-%m-%d").astimezone(LISBON_TZ).date().weekday(),
                     "t": f"{x['openTime'][:5]}-{x['closeTime'][:5]}",
                 }
                 for x in nd["openHours"]
@@ -79,14 +81,11 @@ if __name__ == "__main__":
             schedule = [
                 {
                     "d": sorted([x["d"] for x in g]),
-                    "t": k
+                    "t": k,
                 }
                 for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
             ]
-            schedule = [
-                f"{opening_weekdays(x['d'])} {x['t']}"
-                for x in sorted(schedule, key=lambda x: x["d"][0])
-            ]
+            schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
             d["opening_hours"] = "; ".join(schedule)
 
         phone = nd["phoneNumber"].lstrip("0")
@@ -118,7 +117,17 @@ if __name__ == "__main__":
             d["addr:postcode"] = f"{postcode[:4]}-{postcode[4:]}"
 
         if d.kind == "new" and not d["addr:street"] and not (d["addr:housenumber"] or d["nohousenumber"]):
-            d["x-dld-addr"] = "; ".join([x for x in (nd["address"]["streetAddressLine1"], nd["address"]["streetAddressLine2"], nd["address"]["streetAddressLine3"]) if x])
+            d["x-dld-addr"] = "; ".join(
+                [
+                    x
+                    for x in (
+                        nd["address"]["streetAddressLine1"],
+                        nd["address"]["streetAddressLine2"],
+                        nd["address"]["streetAddressLine3"],
+                    )
+                    if x
+                ]
+            )
 
         for key in tags_to_reset:
             if d[key]:

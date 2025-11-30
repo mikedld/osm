@@ -2,7 +2,7 @@
 
 import re
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.agriloja.pt/pt/as-nossas-lojas_596.html"
@@ -55,10 +55,14 @@ SCHEDULE_HOURS_EX = {
 
 def fetch_data():
     def post_process(page):
-        page = re.sub(r"^.*\baddresses:", "", page, flags=re.S)
-        page = re.sub(r"\].*", "]", page, flags=re.S)
-        page = re.sub(r"\b(id|name|coordinates|street|zip|city|short_content|phone|fax|country|country_name|email|schedule|image|zoneID):", r'"\1":', page)
-        page = re.sub(r"\}\s*,\s*\]", "}]", page, flags=re.S)
+        page = re.sub(r"^.*\baddresses:", "", page, flags=re.DOTALL)
+        page = re.sub(r"\].*", "]", page, flags=re.DOTALL)
+        page = re.sub(
+            r"\b(id|name|coordinates|street|zip|city|short_content|phone|fax|country|country_name|email|schedule|image|zoneID):",
+            r'"\1":',
+            page,
+        )
+        page = re.sub(r"\}\s*,\s*\]", "}]", page, flags=re.DOTALL)
         page = page.replace("'", '"')
         return page
 
@@ -70,19 +74,21 @@ def fetch_data():
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name=Agriloja](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query("nwr[shop][name=Agriloja](area.country);")]
 
     for nd in new_data:
         public_id = nd["id"]
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = list(map(float, re.split(r"\s*[,;]\s*", nd["coordinates"].strip())))[:2]
         if d is None:
-            coord = re.split("[,;]", nd["coordinates"])
-
+            ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
+            if len(ds) == 1:
+                d = ds[0]
+        if d is None:
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id}"
-            d.data["lat"] = float(coord[0].strip())
-            d.data["lon"] = float(coord[1].strip())
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
 
         tags_to_reset = set()

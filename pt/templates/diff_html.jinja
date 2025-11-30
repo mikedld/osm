@@ -11,9 +11,7 @@
   <style type="text/css">
   body { font-family: sans-serif; font-size: 10pt; }
   #map { width: 100%; height: 50vh; }
-  @media (prefers-color-scheme: dark) {
-    .map-tiles { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
-  }
+  .leaflet-control-zoom-in { border-bottom: none !important; }
   .oldv { background-color: red; color: white; }
   .newv { background-color: green; color: white; }
   .tbl-diff-new { font-weight: bold; color: green; }
@@ -28,6 +26,18 @@
   .diff-cluster, .legend { padding: 3px 6px; background-color: Window; color: WindowText; white-space: nowrap; border: 2px solid WindowFrame; border-radius: 5px; }
   .legend > * { vertical-align: middle; }
   .icn-legend { display: inline-block; width: 4px; height: 4px; margin-bottom: 3px;}
+  @media (prefers-color-scheme: dark) {
+    body { background-color: #222222; color: #dddddd; }
+    a { color: #66aaff}
+    a:visited { color: #2266bb; }
+    .map-tiles { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+    .leaflet-control-zoom a[role=button] { background-color: #222222; color: #888888; }
+    .leaflet-control-attribution { background-color: #222222cc !important; color: #dddddd; }
+    .oldv { color: #222222; }
+    .newv { color: #222222; }
+    .icn-diff { background: #222222; color: #dddddd; }
+    .diff-cluster, .legend { background-color: #222222; color: #dddddd; border-color: #444444; }
+  }
   </style>
 </head>
 <body>
@@ -58,16 +68,16 @@
 {% if d.kind != "new" -%}
 (<a href="https://www.openstreetmap.org/{{ d.data["type"] }}/{{ d.data["id"] }}/history/{{ d.data["version"] }}">v{{ d.data["version"] }}</a>,
 <a href="https://www.openstreetmap.org/changeset/{{ d.data["changeset"] }}">#{{ d.data["changeset"] }}</a>,
-<a href="https://www.openstreetmap.org/user/{{ d.data["user"] | e }}">{{ d.data["user"] | e }}</a>,
-<abbr title="{{ d.data["timestamp"] | e }}">{{ d.data["timestamp"] | fromisoformat | naturaltime }}</abbr>)
+<a href="https://www.openstreetmap.org/user/{{ d.data["user"] }}">{{ d.data["user"] }}</a>,
+<abbr title="{{ d.data["timestamp"] }}">{{ d.data["timestamp"] | fromisoformat | naturaltime }}</abbr>)
 {%- endif %}
 (to {% if d.kind == "new" %}add{% elif d.kind == "del" %}remove{% elif d.kind == "mod" %}modify{% else %}?{% endif %}):<p>
 <ul>
 {% for key, value in d.data["tags"] | dictsort -%}
-<li><b>{{ key | e }}</b> = {% if key in d.old_tags -%}
-"<span class="oldv">{{ d.old_tags[key] | e }}</span>" &rarr; "<span class="newv">{{ value | e }}</span>"
+<li><b>{{ key }}</b> = {% if key in d.old_tags -%}
+"<span class="oldv">{{ d.old_tags[key] }}</span>" &rarr; "<span class="newv">{{ value }}</span>"
 {%- else -%}
-"{{ value | e }}"
+"{{ value }}"
 {%- endif -%}
 </li>
 {% endfor -%}

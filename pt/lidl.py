@@ -5,7 +5,7 @@ import re
 
 from unidecode import unidecode
 
-from impl.common import DiffDict, fetch_json_data, overpass_query, titleize, distance, opening_weekdays, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
 from impl.config import CONFIG
 
 
@@ -172,7 +172,7 @@ def fetch_data():
             break
     for r in result:
         r["icons"] = []
-        for k in [x for x in r.keys() if x.startswith("INFOICON")]:
+        for k in [x for x in r if x.startswith("INFOICON")]:
             if v := r[k]:
                 r["icons"].append(v)
             r.pop(k)
@@ -224,19 +224,16 @@ if __name__ == "__main__":
             if re.sub(r"\W+", "", d["branch"].lower()) != re.sub(r"\W+", "", branch.lower()):
                 d["branch"] = titleize(branch)
 
-        #if "freeWiFi" in nd["icons"]:
-        #    d["internet_access"] = "yes"
-        #    d["internet_access:fee"] = "no"
+        # if "freeWiFi" in nd["icons"]:
+        #    d["internet_access"] = "yes"  # noqa: ERA001
+        #    d["internet_access:fee"] = "no"  # noqa: ERA001
 
-        schedule = [
-            re.split(r"\s+", x)
-            for x in nd["OpeningTimes"]
-        ]
+        schedule = [re.split(r"\s+", x) for x in nd["OpeningTimes"]]
         days = list(DAYS)
         if sorted([x[0] for x in schedule]) == sorted(days):
             days_offset = 0
             while days != [x[0] for x in schedule]:
-                days = days[1:] + [days[0]]
+                days = [*days[1:], days[0]]
                 days_offset += 1
         else:
             schedule = []
@@ -250,21 +247,20 @@ if __name__ == "__main__":
         schedule = [
             {
                 "d": sorted([x["d"] for x in g]),
-                "t": k
+                "t": k,
             }
             for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
         ]
-        schedule = [
-            f"{opening_weekdays(x['d'])} {x['t']}"
-            for x in sorted(schedule, key=lambda x: x["d"][0])
-        ]
+        schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
         if schedule:
             d["opening_hours"] = "; ".join(schedule)
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"
 
         d["contact:phone"] = "+351 210 207 000"
-        d["website"] = f"https://www.lidl.pt/s/pt-PT/pesquisa-de-loja/{get_url_part(nd['Locality'])}/{get_url_part(nd['AddressLine'])}/"
+        d["website"] = (
+            f"https://www.lidl.pt/s/pt-PT/pesquisa-de-loja/{get_url_part(nd['Locality'])}/{get_url_part(nd['AddressLine'])}/"
+        )
         d["contact:facebook"] = "lidlportugal"
         d["contact:youtube"] = "https://www.youtube.com/user/LidlPortugal"
         d["contact:instagram"] = "lidlportugal"
@@ -286,7 +282,10 @@ if __name__ == "__main__":
         city = CITIES.get(postcode, nd["Locality"])
         d["addr:city"] = city
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
-            if m := re.fullmatch(r"(.+?),?\s+(([Ll]oja |[Ll]ote )?\d+\w?((-|\s+[ae]\s+|\s*[/,]\s*)\d+\w?)*|[Ss]/[Nn]|[Kk][Mm]\s*\d.*)", nd["AddressLine"]):
+            if m := re.fullmatch(
+                r"(.+?),?\s+(([Ll]oja |[Ll]ote )?\d+\w?((-|\s+[ae]\s+|\s*[/,]\s*)\d+\w?)*|[Ss]/[Nn]|[Kk][Mm]\s*\d.*)",
+                nd["AddressLine"],
+            ):
                 street, num = m[1].lower(), m[2]
                 for r in STREET_ABBREVS:
                     street = re.sub(r[0], r[1], street.lower())
@@ -303,7 +302,7 @@ if __name__ == "__main__":
                     d["nohousenumber"] = "yes"
                     tags_to_reset.update({"addr:housenumber", "addr:milestone", "addr:unit"})
                 elif num.lower().startswith("km"):
-                    d["addr:milestone"] = re.sub(r"^km\s*", "", num, flags=re.I).replace(",", ".")
+                    d["addr:milestone"] = re.sub(r"^km\s*", "", num, flags=re.IGNORECASE).replace(",", ".")
                     tags_to_reset.update({"addr:housenumber", "nohousenumber", "addr:unit"})
                 elif num.lower().startswith("loja"):
                     d["addr:unit"] = titleize(num)

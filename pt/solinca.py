@@ -4,7 +4,16 @@ import re
 from itertools import count
 from multiprocessing import Pool
 
-from impl.common import DiffDict, fetch_html_data, overpass_query, distance, titleize, lookup_postcode, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_html_data,
+    lookup_gmaps_coords,
+    lookup_postcode,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 DATA_URL = "https://www.solinca.pt/solinca-ginasios/"
@@ -25,15 +34,17 @@ def fetch_level1_data():
             "sf_paged": page_idx,
         }
         result_tree = fetch_html_data(DATA_URL, params=params)
-        result.extend([
-            {
-                "id": re.sub(r"^.*\bpost-(\d+)\b.*$", r"\1", el.xpath("./@class")[0]),
-                "url": el.xpath("./a[1]/@href")[0],
-                "title": el.xpath(".//h3[@class='elementor-post__title']/text()")[0].strip().replace("–", "-"),
-                "type": el.xpath(".//p[@class='elementor-post-cat']/text()")[0].strip(),
-            }
-            for el in result_tree.xpath("//article")
-        ])
+        result.extend(
+            [
+                {
+                    "id": re.sub(r"^.*\bpost-(\d+)\b.*$", r"\1", el.xpath("./@class")[0]),
+                    "url": el.xpath("./a[1]/@href")[0],
+                    "title": el.xpath(".//h3[@class='elementor-post__title']/text()")[0].strip().replace("–", "-"),
+                    "type": el.xpath(".//p[@class='elementor-post-cat']/text()")[0].strip(),
+                }
+                for el in result_tree.xpath("//article")
+            ]
+        )
         if not result_tree.xpath("//nav[@class='elementor-pagination']/a[contains(@class, 'next')]/@href"):
             break
     return result
@@ -41,23 +52,28 @@ def fetch_level1_data():
 
 def fetch_level2_data(data):
     result_tree = fetch_html_data(data["url"])
-    info = [x.strip() for x in result_tree.xpath(f"//section[.//*[contains(text(), 'Horário')]]//text()") if x.strip()]
-    address = re.sub(r"[–—]", "-", re.sub(r"\s+", " ", " ".join(info[info.index("Morada") + 1:info.index("Ver no mapa >")])))
+    info = [x.strip() for x in result_tree.xpath("//section[.//*[contains(text(), 'Horário')]]//text()") if x.strip()]
+    address = re.sub(r"[–—]", "-", re.sub(r"\s+", " ", " ".join(info[info.index("Morada") + 1 : info.index("Ver no mapa >")])))
     location = None
     if m := re.search(r".+?\b(\d{4}(\s*-\s*\d{3})?)\b,?(\s+\D.*|$)", address):
         postcode = m[1].replace(" ", "")
         if len(postcode) == 4:
             postcode += "-000"
-        location = lookup_postcode(postcode)
-        if not location and "-" in postcode:
-            location = lookup_postcode(postcode.split("-", 1)[0])
+        if len(gmaps_urls := result_tree.xpath("//a[.//span/text() = 'Ver no mapa >']/@href")) == 1 and (
+            coords := lookup_gmaps_coords(gmaps_urls[0])
+        ):
+            location = [coords, m[3].split(",")[0].strip()]
+        else:
+            location = lookup_postcode(postcode)
+            if not location and "-" in postcode:
+                location = lookup_postcode(postcode.split("-", 1)[0])
         if location:
             location.append(postcode)
     return {
         **data,
         "location": location,
-        "schedule": [re.sub(r"\s+", " ", x) for x in info[info.index("Horário") + 1:info.index("Contacto")]],
-        "contacts": [re.sub(r"\s+", "", x) for x in info[info.index("Contacto") + 1:info.index("Localização")]],
+        "schedule": [re.sub(r"\s+", " ", x) for x in info[info.index("Horário") + 1 : info.index("Contacto")]],
+        "contacts": [re.sub(r"\s+", "", x) for x in info[info.index("Contacto") + 1 : info.index("Localização")]],
         "address": address,
     }
 
@@ -98,10 +114,7 @@ if __name__ == "__main__":
                 schedule.append([days, []])
             else:
                 schedule[-1][1].append(re.sub(r"(\d{2}:\d{2})\s*(?:-|às)\s*(\d{2}:\d{2})", r"\1-\2", s))
-        schedule = [
-            f"{days} {','.join(times)}"
-            for days, times in schedule
-        ]
+        schedule = [f"{days} {','.join(times)}" for days, times in schedule]
         d["opening_hours"] = "; ".join(schedule)
         if d["source:opening_hours"] != "survey":
             d["source:opening_hours"] = "website"
@@ -110,11 +123,10 @@ if __name__ == "__main__":
         for c in nd["contacts"]:
             if c.lower() in ("email", "fax", "tel"):
                 contacts.append([c.lower(), []])
+            elif len(c) == 3 and contacts[-1][0] == "tel" and contacts[-1][1] and len(contacts[-1][1][-1]) == 6:
+                contacts[-1][1][-1] += c
             else:
-                if len(c) == 3 and contacts[-1][0] == "tel" and contacts[-1][1] and len(contacts[-1][1][-1]) == 6:
-                    contacts[-1][1][-1] += c
-                else:
-                    contacts[-1][1].append(c)
+                contacts[-1][1].append(c)
         contacts = dict(contacts)
         phones = []
         for phone in contacts["tel"]:
@@ -125,10 +137,7 @@ if __name__ == "__main__":
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
-        faxes = []
-        for phone in contacts.get("fax", []):
-            if len(phone) == 9:
-                faxes.append(f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}")
+        faxes = [f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}" for phone in contacts.get("fax", []) if len(phone) == 9]
         if faxes:
             d["contact:fax"] = ";".join(faxes)
         else:
@@ -145,8 +154,8 @@ if __name__ == "__main__":
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"
 
-        d["addr:city"] = titleize(nd["location"][1])
-        postcode = nd["location"][2]
+        d["addr:city"] = titleize(nd["location"][1]) if nd["location"] else d["addr:city"]
+        postcode = nd["location"][2] if nd["location"] else d["addr:postcode"]
         if len(postcode) == 8 and postcode.endswith("-000"):
             postcode = postcode[:4]
         if len(postcode) == 4:

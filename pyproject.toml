@@ -8,11 +8,32 @@ dependencies = [
     "lxml (>=5.4.0,<6.0.0)",
     "more-itertools (>=10.7.0,<11.0.0)",
     "playwright (>=1.52.0,<2.0.0)",
+    "pytz (>=2025.2,<2026.0)",
     "pyyaml (>=6.0.2,<7.0.0)",
     "requests (>=2.32.3,<3.0.0)",
     "retrying (>=1.3.4,<2.0.0)",
     "unidecode (>=1.4.0,<2.0.0)",
+    "shapely (>=2.1.2,<3.0.0)",
 ]
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12.7"
 
 [tool.poetry]
 package-mode = false
+
+[tool.ruff]
+line-length = 128
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["ANN", "COM812", "D", "FIX002", "PLR2004", "PLW2901", "RET504", "RUF001", "T201", "TD"]
+
+pylint.max-args = 9
+
+[tool.ruff.lint.per-file-ignores]
+"pt/5asec.py" = ["N999"]
+
+[tool.ruff.lint.isort]
+known-local-folder = ["impl"]
+lines-after-imports = 2

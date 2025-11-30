@@ -6,7 +6,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from impl.common import DiffDict, cache_name, overpass_query, titleize, distance, write_diff
+from impl.common import DiffDict, cache_name, distance, overpass_query, titleize, write_diff
 from impl.config import ENABLE_CACHE, PLAYWRIGHT_CDP_URL, PLAYWRIGHT_CONTEXT_OPTS
 
 
@@ -55,19 +55,19 @@ CITIES = {
 def fetch_data(page_url, data_url):
     def filter_requests(route, request):
         if request.resource_type in ("stylesheet", "image", "media", "font") and "cloudflare.com" not in request.url:
-            # print(f"Aborting request: {request.url}")
+            # print(f"Aborting request: {request.url}")  # noqa: ERA001
             route.abort()
             return
         if re.search(r"(cookiebot|google(tagmanager)?|gstatic)\.com/", request.url):
-            # print(f"Aborting request: {request.url}")
+            # print(f"Aborting request: {request.url}")  # noqa: ERA001
             route.abort()
             return
-        # print(f"Making request: {request.url}")
+        # print(f"Making request: {request.url}")  # noqa: ERA001
         route.continue_()
 
     cache_file = Path(f"{cache_name(data_url)}.json")
     if not ENABLE_CACHE or not cache_file.exists():
-        # print(f"Querying URL: {data_url}")
+        # print(f"Querying URL: {data_url}")  # noqa: ERA001
         with sync_playwright() as p:
             browser = p.chromium.connect_over_cdp(PLAYWRIGHT_CDP_URL) if PLAYWRIGHT_CDP_URL else p.firefox.launch()
             context = browser.new_context(**PLAYWRIGHT_CONTEXT_OPTS)
@@ -87,16 +87,16 @@ def fetch_data(page_url, data_url):
 
 if __name__ == "__main__":
     page_url = "https://www.worten.pt/lojas-worten"
-    data_url = "https://www.worten.pt/_/api/graphql?wOperationName=getStores"
-    new_data = fetch_data(page_url, data_url)[0]["data"]["stores"]["stores"]
+    data_url = "https://www.worten.pt/worten-api/stores?"
+    new_data = fetch_data(page_url, data_url)["stores"]
 
     old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"Worten"](area.country);')]
 
     for nd in new_data:
         public_id = nd["id"]
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = [float(nd["latitude"]), float(nd["longitude"])]
         if d is None:
-            coord = [float(nd["latitude"]), float(nd["longitude"])]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:
                 d = ds[0]
@@ -104,12 +104,11 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id}"
-            d.data["lat"] = float(nd["latitude"])
-            d.data["lon"] = float(nd["longitude"])
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
 
         name = re.sub(r"^(Worten( Mobile)?).*", r"\1", nd["title"].replace("WRT", "Worten"))
-        branch = nd["title"].replace("WRT", "Worten")[len(name):].strip()
+        branch = nd["title"].replace("WRT", "Worten")[len(name) :].strip()
         is_mobile = "Mobile" in name
         tags_to_reset = set()
 
@@ -121,7 +120,12 @@ if __name__ == "__main__":
         d["brand:wikipedia"] = "pt:Worten"
         d["branch"] = branch
 
-        schedule = [x.replace("  ", " ").replace("–", "-").strip().lower() for x in re.split(r"[/|()\n]", nd["openingHours"]) if x.strip()]
+        schedule = [
+            x.replace("  ", " ").replace("–", "-").strip().lower()
+            for x in re.split(r"[/|()\n]", nd["openingHours"])
+            if x.strip()
+        ]
+        schedule = [x for x in schedule if "nos dias" not in x]  # TODO: Support these
         schedule = [re.sub(r"([-,])? das ", ": das ", x).replace(" e ", ", ") for x in schedule]
         schedule = [re.sub(r"(?<!:)(?:-? )(encerrados|\d+h-\d+h|\d+\.\d+\s*-\s*\d+\.\d+)", r": \1", x) for x in schedule]
         schedule = [[y.strip() for y in x.split(":", 1)] for x in schedule]
@@ -151,15 +155,11 @@ if __name__ == "__main__":
         if schedule.replace(" ", "") != d["opening_hours"].replace(" ", ""):
             d["opening_hours"] = schedule
 
-        phones = re.sub(r"\s+", "", nd["phoneNumber"]).split("(")[0].split(",")[0].split("/") if nd["phoneNumber"] else []
+        phones = re.sub(r"\s+", "", nd["phoneNumber"]).split("(")[0].split(",")[0].split("/") if nd.get("phoneNumber") else []
         for i in range(1, len(phones)):
             if len(phones[i]) < 9 and len(phones[i - 1]) == 9:
-                phones[i] = f"{phones[i - 1][:9 - len(phones[i])]}{phones[i]}"
-        phones = [
-            f"+351 {x[0:3]} {x[3:6]} {x[6:9]}"
-            for x in phones
-            if len(x) == 9
-        ]
+                phones[i] = f"{phones[i - 1][: 9 - len(phones[i])]}{phones[i]}"
+        phones = [f"+351 {x[0:3]} {x[3:6]} {x[6:9]}" for x in phones if len(x) == 9]
         if phones:
             d["contact:phone"] = ";".join(phones)
         else:
@@ -181,8 +181,8 @@ if __name__ == "__main__":
         address = nd["address"]
         d["addr:city"] = CITIES.get(address["postalCode"], titleize(re.split(r"\s+[-–]\s+|,\s+", address["city"])[0].strip()))
         d["addr:postcode"] = address["postalCode"]
-        if not d["addr:street"] and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"]) and not d["addr:place"] and not d["addr:suburb"]:
-            d["x-dld-addr"] = "; ".join(address["address"])
+        if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
+            d["x-dld-addr"] = address["address"]
 
         for key in tags_to_reset:
             if d[key]:
