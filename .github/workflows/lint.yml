@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+env:
+  CLICOLOR_FORCE: "1"
+
 jobs:
   ruff:
     runs-on: ubuntu-latest
