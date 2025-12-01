@@ -66,7 +66,7 @@ def fixup_schedule_time(v):
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"Brico[Mm]arch[eé]"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"bricomarch[eé]",i](area.country);')]
 
     new_node_id = -10000
 

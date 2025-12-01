@@ -104,7 +104,7 @@ if __name__ == "__main__":
         new_data = [d for ds in p.imap_unordered(fetch_level1_data, new_data) for d in ds]
         new_data = [d for ds in p.imap_unordered(fetch_level2_data, new_data) for d in ds]
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity=bank][name~"Caixa Geral"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity=bank][name~"caixa geral",i](area.country);')]
 
     for nd in new_data:
         public_id = nd["id"]

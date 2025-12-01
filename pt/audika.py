@@ -46,7 +46,7 @@ def schedule_time(v):
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"Audika|Ac[uú]stica M[eé]dica"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"audika|ac[uú]stica m[eé]dica",i](area.country);')]
 
     new_node_id = -10000
 

@@ -98,7 +98,7 @@ def schedule_time(v, mapping):
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"Chip ?7",i](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"chip ?7",i](area.country);')]
 
     for nd in new_data:
         public_id = str(nd["id"])

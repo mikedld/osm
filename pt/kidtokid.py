@@ -40,7 +40,7 @@ def fetch_data():
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"Kid to [Kk]id|KID2KID"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"kid( to |2)kid",i](area.country);')]
 
     for nd in new_data:
         public_id = str(nd["id"])

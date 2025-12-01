@@ -43,7 +43,7 @@ def get_url_part(value):
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"(^| )[Aa][Ll][Dd][Ii]( |$)"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"(^| )aldi( |$)",i](area.country);')]
 
     for nd in new_data:
         public_id = nd["identifier"]

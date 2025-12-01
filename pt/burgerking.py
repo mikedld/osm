@@ -272,7 +272,9 @@ if __name__ == "__main__":
 
     old_data = [
         DiffDict(e)
-        for e in overpass_query('nwr[amenity][amenity!=charging_station][~"^(name|brand)$"~"Burgu?er[ ]?King"](area.country);')
+        for e in overpass_query(
+            'nwr[amenity][amenity!=charging_station][~"^(name|brand)$"~"burgu?er[ ]?king",i](area.country);'
+        )
     ]
 
     for nd in new_data:

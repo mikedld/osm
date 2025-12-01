@@ -186,7 +186,7 @@ def fetch_data():
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity=bank][name~"Santander"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[amenity=bank][name~"santander",i](area.country);')]
 
     new_node_id = -10000
     old_node_ids = {d.data["id"] for d in old_data}

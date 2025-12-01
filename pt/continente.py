@@ -121,9 +121,7 @@ if __name__ == "__main__":
 
     old_data = [
         DiffDict(e)
-        for e in overpass_query(
-            'nwr[shop][shop!=newsagent][shop!=florist][shop!=tobacco][name~"[Cc][Oo][Nn][Tt][Ii][Nn][Ee][Nn][Tt][Ee]"](area.country);'
-        )
+        for e in overpass_query('nwr[shop][shop!=newsagent][shop!=florist][shop!=tobacco][name~"continente",i](area.country);')
     ]
 
     new_node_id = -10000

@@ -98,8 +98,8 @@ if __name__ == "__main__":
         DiffDict(e)
         for e in overpass_query(
             "("
-            'nwr[amenity=parking][~"^(name|brand|operator)$"~"(Tel|Em)park"](area.country);'
-            'node[amenity=parking_entrance][~"^(name|brand|operator)$"~"(Tel|Em)park"](area.country);'
+            'nwr[amenity=parking][~"^(name|brand|operator)$"~"(tel|em)park",i](area.country);'
+            'node[amenity=parking_entrance][~"^(name|brand|operator)$"~"(tel|em)park",i](area.country);'
             ");"
         )
     ]

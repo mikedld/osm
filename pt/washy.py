@@ -51,7 +51,7 @@ if __name__ == "__main__":
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"Washy"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"washy",i](area.country);')]
 
     new_node_id = -10000
 

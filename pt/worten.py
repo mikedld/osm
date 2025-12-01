@@ -90,7 +90,7 @@ if __name__ == "__main__":
     data_url = "https://www.worten.pt/worten-api/stores?"
     new_data = fetch_data(page_url, data_url)["stores"]
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"Worten"](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"worten",i](area.country);')]
 
     for nd in new_data:
         public_id = nd["id"]

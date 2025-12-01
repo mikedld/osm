@@ -85,9 +85,7 @@ if __name__ == "__main__":
     with Pool(4) as p:
         new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
-    old_data = [
-        DiffDict(e) for e in overpass_query(r'nwr[shop][shop!=newsagent][name~"\\b[Ss][Pp][Aa][Rr]\\b"](area.country);')
-    ]
+    old_data = [DiffDict(e) for e in overpass_query(r'nwr[shop][shop!=newsagent][name~"\\bspar\\b",i](area.country);')]
 
     for nd in new_data:
         public_id = str(nd["id"])

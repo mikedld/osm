@@ -180,9 +180,9 @@ if __name__ == "__main__":
         DiffDict(e)
         for e in overpass_query(
             "("
-            'nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][~"^(name|brand)$"~"Auchan"](area.country);'
-            'nwr[amenity][amenity!=fuel][amenity!=charging_station][amenity!=parking][~"^(name|brand)$"~"Auchan"](area.country);'
-            'nwr[shop][~"^(name|brand)$"~"Minipreço|Mais[ ]?Perto"](area.country);'
+            'nwr[shop][shop!=electronics][shop!=houseware][shop!=pet][~"^(name|brand)$"~"auchan",i](area.country);'
+            'nwr[amenity][amenity!=fuel][amenity!=charging_station][amenity!=parking][~"^(name|brand)$"~"auchan",i](area.country);'
+            'nwr[shop][~"^(name|brand)$"~"minipreço|mais[ ]?perto",i](area.country);'
             ");"
         )
     ]

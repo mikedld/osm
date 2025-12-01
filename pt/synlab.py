@@ -157,7 +157,7 @@ def process_schedule(schedule):
 if __name__ == "__main__":
     new_data = fetch_data()
 
-    old_data = [DiffDict(e) for e in overpass_query('nwr[healthcare][~"^(name|brand)$"~"Synlab",i](area.country);')]
+    old_data = [DiffDict(e) for e in overpass_query('nwr[healthcare][~"^(name|brand)$"~"synlab",i](area.country);')]
 
     new_node_id = -10000
 
