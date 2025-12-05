@@ -51,7 +51,7 @@ def fetch_level1_data():
         result_tree = fetch_html_data(DATA_URL, params=params)
         if not extras:
             extras = result_tree.xpath("//script[@id='solinca-element-js-extra']/text()")[0]
-            extras = re.sub(r"^.*var\s+gymsData\s*=\s*\{(.+)\};\s*$", r"{\1}", extras, flags=re.DOTALL)
+            extras = re.sub(r"^.*var\s+gymsData\s*=\s*\{(.+)\};.*$", r"{\1}", extras, flags=re.DOTALL)
             extras = json.loads(extras)["gyms"]
         result.extend(
             [
