@@ -133,7 +133,12 @@ if __name__ == "__main__":
             re.split(r"(?:\s+-)?\s+(?=encerrad)", x[0], maxsplit=1) if len(x) == 1 and "encerrad" in x[0] else x
             for x in schedule
         ]
-        schedule = [x for y in schedule for x in y if x not in ("loja aberta durante o periodo de almoço", "werepair guarda")]
+        schedule = [
+            x
+            for y in schedule
+            for x in y
+            if not re.search(r"loja aberta durante o periodo de almoço|werepair guarda|dezembro 2025", x)
+        ]
         schedule = [
             list(g) if k else next(g) for k, g in itertools.groupby(schedule, lambda x: re.search(r":|encerrad", x) is not None)
         ]
