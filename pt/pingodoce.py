@@ -61,6 +61,8 @@ if __name__ == "__main__":
         )
     ]
 
+    old_node_ids = {d.data["id"] for d in old_data}
+
     custom_ohs = {}
     custom_ohs_file = BASE_DIR / f"{BASE_NAME}-custom-ohs.json"
     if custom_ohs_file.exists():
@@ -80,6 +82,8 @@ if __name__ == "__main__":
             d.data["id"] = f"-{public_id}"
             d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
+        else:
+            old_node_ids.remove(d.data["id"])
 
         branch = (
             re.sub(r"^(pd&go|pingo doce express)\s+(-\s+)?", "", html.unescape(nd["name"]), flags=re.IGNORECASE)
@@ -165,12 +169,8 @@ if __name__ == "__main__":
     custom_ohs_file.write_text(json.dumps(custom_ohs))
 
     for d in old_data:
-        if d.kind != "old":
-            continue
-        ref = d[REF]
-        if ref and any(nd for nd in new_data if ref == nd["id"]):
-            continue
-        d.kind = "del"
+        if d.data["id"] in old_node_ids:
+            d.kind = "del"
 
     old_data.sort(key=lambda d: d[REF])
 

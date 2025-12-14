@@ -193,6 +193,8 @@ if __name__ == "__main__":
 
     old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"lidl",i](area.country);')]
 
+    old_node_ids = {d.data["id"] for d in old_data}
+
     for nd in new_data:
         public_id = nd["EntityID"]
         tags_to_reset = set()
@@ -210,6 +212,8 @@ if __name__ == "__main__":
             d.data["lat"] = float(nd["Latitude"])
             d.data["lon"] = float(nd["Longitude"])
             old_data.append(d)
+        else:
+            old_node_ids.remove(d.data["id"])
 
         d[REF] = public_id
         d["shop"] = "supermarket"
@@ -318,12 +322,8 @@ if __name__ == "__main__":
                 d[key] = ""
 
     for d in old_data:
-        if d.kind != "old":
-            continue
-        ref = d[REF]
-        if ref and any(nd for nd in new_data if ref == nd["EntityID"]):
-            continue
-        d.kind = "del"
+        if d.data["id"] in old_node_ids:
+            d.kind = "del"
 
     old_data.sort(key=lambda d: d[REF])
 

@@ -277,6 +277,8 @@ if __name__ == "__main__":
         )
     ]
 
+    old_node_ids = {d.data["id"] for d in old_data}
+
     for nd in new_data:
         public_id = nd["storeId"]
         branch = re.sub(r"(?<=\S)-\s", " - ", nd["customerFacingAddress"]["locale"] or "").split(" - ")[0]
@@ -296,6 +298,8 @@ if __name__ == "__main__":
             d.data["lat"] = nd["latitude"] or 38.306893
             d.data["lon"] = nd["longitude"] or -17.050891
             old_data.append(d)
+        else:
+            old_node_ids.remove(d.data["id"])
 
         d[REF] = public_id
         d["amenity"] = "fast_food"
@@ -370,12 +374,8 @@ if __name__ == "__main__":
                 d[key] = ""
 
     for d in old_data:
-        if d.kind != "old":
-            continue
-        ref = d[REF]
-        if ref and any(nd for nd in new_data if ref == nd["storeId"]):
-            continue
-        d.kind = "del"
+        if d.data["id"] in old_node_ids:
+            d.kind = "del"
 
     old_data.sort(key=lambda d: d[REF])
 

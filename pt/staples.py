@@ -61,6 +61,7 @@ if __name__ == "__main__":
     old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name~"^staples",i](area.country);')]
 
     new_node_id = -10000
+    old_node_ids = {d.data["id"] for d in old_data}
 
     for nd in new_data:
         public_id = str(nd["point_id"])
@@ -78,6 +79,8 @@ if __name__ == "__main__":
             d.data["lon"] = float(nd["coordY"])
             old_data.append(d)
             new_node_id -= 1
+        else:
+            old_node_ids.remove(d.data["id"])
 
         tags_to_reset = set()
 
@@ -144,12 +147,8 @@ if __name__ == "__main__":
                 d[key] = ""
 
     for d in old_data:
-        if d.kind != "old":
-            continue
-        ref = d[REF]
-        if ref and any(nd for nd in new_data if ref == nd["point_id"]):
-            continue
-        d.kind = "del"
+        if d.data["id"] in old_node_ids:
+            d.kind = "del"
 
     old_data.sort(key=lambda d: d[REF])
 
