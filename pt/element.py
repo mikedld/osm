@@ -60,6 +60,7 @@ def fetch_level1_data():
                     "title": el.xpath(".//div[@class='title-ginasio']/text()")[0].strip(),
                 }
                 for el in result_tree.xpath("//div[@class='container-ginasio-home']")
+                if not el.xpath(".//*[contains(@class, 'pre-venda')]")
             ]
         )
         if not result_tree.xpath("//nav[@class='elementor-pagination']/a[contains(@class, 'next')]/@href"):
@@ -106,6 +107,10 @@ if __name__ == "__main__":
 
     for nd in new_data:
         public_id = nd["id"].lstrip("0")
+        if not public_id:
+            continue
+        tags_to_reset = set()
+
         d = next((od for od in old_data if od[REF] == public_id), None)
         coord = [float(nd["extra"]["latitude"]), float(nd["extra"]["longitude"])]
         if coord[1] > 0:
@@ -121,8 +126,6 @@ if __name__ == "__main__":
             d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
             new_node_id -= 1
-
-        tags_to_reset = set()
 
         d[REF] = public_id
         d["leisure"] = "fitness_centre"
