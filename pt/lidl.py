@@ -2,22 +2,22 @@
 
 import itertools
 import re
+from datetime import date, datetime
 
 from unidecode import unidecode
 
-from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
+from impl.common import BASE_NAME, DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
 from impl.config import CONFIG
 
 
-DATA_URL = "https://spatial.virtualearth.net/REST/v1/data/e470ca5678c5440aad7eecf431ff461a/Filialdaten-PT/Filialdaten-PT"
+XCONFIG = CONFIG[BASE_NAME]
+
+DATA_URL = "https://live.api.schwarz/odj/stores-api/v2/myapi/stores-frontend/stores"
 
 REF = "ref"
 
-DAYS = ["Se", "Te", "Qu", "Qu", "Se", "Sá", "Do"]
 CITIES = {
-    "1170-221": "Lisboa",
     "1495-070": "Algés",
-    "1700-330": "Lisboa",
     "2135-002": "Samora Correia",
     "2475-011": "Benedita",
     "2560-546": "Silveira",
@@ -46,6 +46,7 @@ CITIES = {
     "2805-312": "Pragal",
     "2810-035": "Feijó",
     "2815-756": "Sobreda",
+    "2820-205": "Charneca de Caparica",
     "2829-516": "Monte de Caparica",
     "2830-239": "Santo André",
     "2835-418": "Lavradio",
@@ -83,7 +84,6 @@ CITIES = {
     "4615-013": "Lixa",
     "4740-415": "Fonte Boa",
     "4760-706": "Ribeirão",
-    "4764-501": "Vila Nova de Famalicão",
     "4770-409": "Pousada de Saramagos",
     "4795-007": "Aves",
     "4835-297": "Pevidém",
@@ -98,8 +98,10 @@ CITIES = {
 }
 BRANCH_ABBREVS = [
     [r"–", "-"],
+    [r"\s*/\s*", " / "],
     [r"\bav\.? ", "avenida "],
     [r"\bd\.\s*", "dom "],
+    [r"\bdr\.\s*", "doutor "],
     [r"\beng\.º? ", "engenheiro "],
     [r"\bestr\. ", "estrada "],
     [r"\bmt\.\s*", "monte "],
@@ -117,67 +119,78 @@ BRANCH_ABBREVS = [
     [r"\bg\.delgado\b", "general delgado"],
     [r"\bj\.\s*", "josé "],
 ]
-BRANCHES = {
-    "vila franca de xira - póvoa santa iria": "vila franca de xira - póvoa de santa iria",
+CITY_FIXES = {
+    "charneca da caparica": "charneca de caparica",
     "ponte de sôr": "ponte de sor",
-    "lisboa - rua engenheiro paulo barros": "lisboa - rua engenheiro paulo de barros",
-    "lisboa - avenida visconde valmor": "lisboa - avenida visconde de valmor",
-    "matosinhos - monte burgos": "matosinhos - monte dos burgos",
-    "santo tirso - rua jornal de são tirso": "santo tirso - rua do jornal santo tirso",
-    "vila nova de gaia - s.marinha": "vila nova de gaia - santa marinha",
-    "matosinhos - s.hora": "matosinhos - senhora da hora",
-    "lagos - avenida república": "lagos - avenida da república",
-    "braga - avenida rua smith": "braga - avenida robert smith",
-    "porto - avenida camilo": "porto - avenida de camilo",
-    "sintra - mercado rio mouro": "sintra - mercado de rio de mouro",
-    "silves - rua cruz da palmeira": "silves - rua da cruz de palmeira",
-    "monção - en 101 - monção": "monção - en 101",
-    "porto - avenida fernão de magalhães": "porto - avenida de fernão de magalhães",
-    "braga - avenida im. conc.": "braga - avenida imaculada conceição",
-    "leiria 25abril": "leiria - 25 de abril",
-    "famalicão avenida engenheiro pinheiro braga": "famalicão - avenida engenheiro pinheiro braga",
-    "são joão madeira - oliveira junior": "são joão da madeira - oliveira júnior",
+    "são joão madeira": "são joão da madeira",
 }
-STREET_ABBREVS = [
-    [r"\bav\.? ", "avenida "],
-    [r"\beng\. ", "engenheiro "],
-    [r"\bengº ", "engenheiro "],
-    [r"\bd\. ", "dom "],
-    [r"\bdr\. ", "doutor "],
-    [r"\bnª ", "nossa "],
-    [r"\bprof\. ", "professor "],
-    [r"\bqta\. ", "quinta "],
-    [r"\br\. ", "rua "],
-    [r"\bs\. ", "são "],
-    [r"\bsao ", "são "],
-]
+CITY_LOC_FIXES = {
+    "25abril": "25 de Abril",
+    "avenida camilo": "avenida de camilo",
+    "avenida fernão de magalhães": "avenida de fernão de magalhães",
+    "avenida im. conc.": "avenida imaculada conceição",
+    "avenida principal / en1": "avenida principal / en 1",
+    "avenida república": "avenida da república",
+    "avenida rua smith": "avenida robert smith",
+    "avenida visconde valmor": "avenida visconde de valmor",
+    "en 101 - monção": "en 101",
+    "mercado rio mouro": "mercado de rio de mouro",
+    "monte burgos": "monte dos burgos",
+    "oliveira junior": "oliveira júnior",
+    "porto mós": "porto de mós",
+    "póvoa santa iria": "póvoa de santa iria",
+    "rua cruz da palmeira": "rua da cruz de palmeira",
+    "rua engenheiro paulo barros": "rua engenheiro paulo de barros",
+    "rua horta das figueiras": "rua da horta das figueiras",
+    "rua jornal de são tirso": "rua do jornal santo tirso",
+    "s.hora": "senhora da hora",
+    "s.marinha": "santa marinha",
+    "santa iria da azóia": "santa iria da azoia",
+}
 
 
 def fetch_data():
     page_size = 250
     result = []
+    headers = {
+        "x-apikey": XCONFIG["api_key"],
+    }
     while True:
         params = {
-            "$select": "*",
-            "$filter": "CountryRegion eq 'PT'",
-            "key": CONFIG["lidl"]["api_key"],
-            "$format": "json",
-            "$orderby": "EntityID",
-            "$skip": len(result),
-            "$top": page_size,
+            "country_code": "PT",
+            "offset": len(result),
+            "limit": page_size,
         }
-        page = fetch_json_data(DATA_URL, params=params)["d"]["results"]
+        page = fetch_json_data(DATA_URL, params=params, headers=headers)["items"]
         result.extend(page)
         if len(page) < page_size:
             break
-    for r in result:
-        r["icons"] = []
-        for k in [x for x in r if x.startswith("INFOICON")]:
-            if v := r[k]:
-                r["icons"].append(v)
-            r.pop(k)
-        r["OpeningTimes"] = re.sub(r"</?b>", "", r["OpeningTimes"]).split("<br>")
     return result
+
+
+def fix_branch(branch):
+    for r in BRANCH_ABBREVS:
+        branch = re.sub(r[0], r[1], branch.lower())
+    branch = re.sub(
+        (
+            r"^(aveiro|barcelos|batalha|famalicão|faro|gondomar|guimarães|leiria|loulé|moita|montijo|porto(?! alto)|sintra"
+            r"|trofa|vila do conde)\b(?:\s*-)?\s*(.+)$"
+        ),
+        r"\1 - \2",
+        branch,
+    )
+    if m := re.fullmatch(r"(.+?)\s+-\s+(.+)", branch):
+        city, loc = m[1], m[2]
+        city = CITY_FIXES.get(city, city)
+        if m := re.fullmatch(r"(.+?)\s+(\d+)", loc):
+            loc = f"{CITY_LOC_FIXES.get(m[1], m[1])} {m[2]}"
+        else:
+            loc = CITY_LOC_FIXES.get(loc, loc)
+        branch = f"{city} - {loc}"
+    else:
+        branch = CITY_FIXES.get(branch, branch)
+        branch = CITY_LOC_FIXES.get(branch, branch)
+    return re.sub(r"\b(En \d+|Ikea|Aep)\b", lambda m: m[0].upper(), titleize(branch))
 
 
 def get_url_part(value):
@@ -193,25 +206,27 @@ if __name__ == "__main__":
 
     old_data = [DiffDict(e) for e in overpass_query('nwr[shop][~"^(name|brand)$"~"lidl",i](area.country);')]
 
+    new_node_id = -10000
     old_node_ids = {d.data["id"] for d in old_data}
 
     for nd in new_data:
-        public_id = nd["EntityID"]
+        public_id = nd["objectNumber"]
+        addr = nd["address"]
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = [float(addr["latitude"]), float(addr["longitude"])]
         if d is None:
-            coord = [float(nd["Latitude"]), float(nd["Longitude"])]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:
                 d = ds[0]
         if d is None:
             d = DiffDict()
             d.data["type"] = "node"
-            d.data["id"] = f"-{public_id}"
-            d.data["lat"] = float(nd["Latitude"])
-            d.data["lon"] = float(nd["Longitude"])
+            d.data["id"] = str(new_node_id)
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
+            new_node_id -= 1
         else:
             old_node_ids.remove(d.data["id"])
 
@@ -221,32 +236,22 @@ if __name__ == "__main__":
         d["brand"] = "Lidl"
         d["brand:wikidata"] = "Q151954"
         d["brand:wikipedia"] = "pt:Lidl"
-        if branch := nd["ShownStoreName"]:
-            for r in BRANCH_ABBREVS:
-                branch = re.sub(r[0], r[1], branch.lower())
-            branch = BRANCHES.get(branch, branch)
-            if re.sub(r"\W+", "", d["branch"].lower()) != re.sub(r"\W+", "", branch.lower()):
-                d["branch"] = titleize(branch)
+        d["branch"] = fix_branch(nd["storeName"])
 
-        # if "freeWiFi" in nd["icons"]:
-        #    d["internet_access"] = "yes"  # noqa: ERA001
-        #    d["internet_access:fee"] = "no"  # noqa: ERA001
+        # icons = {x["name"] for x in nd["marketingData"]["infoIcons"]}  # noqa: ERA001
+        # if "freeWiFi" in icons:
+        #     d["internet_access"] = "yes"  # noqa: ERA001
+        #     d["internet_access:fee"] = "no"  # noqa: ERA001
 
-        schedule = [re.split(r"\s+", x) for x in nd["OpeningTimes"]]
-        days = list(DAYS)
-        if sorted([x[0] for x in schedule]) == sorted(days):
-            days_offset = 0
-            while days != [x[0] for x in schedule]:
-                days = [*days[1:], days[0]]
-                days_offset += 1
-        else:
-            schedule = []
         schedule = [
             {
-                "d": (x[0] + days_offset) % 7,
-                "t": "off" if x[1][1] == "Fechado" else x[1][1],
+                "d": date.fromisoformat(x["date"]).weekday(),
+                "t": "-".join(
+                    [datetime.fromisoformat(y["from"]).strftime("%H:%M"), datetime.fromisoformat(y["to"]).strftime("%H:%M")]
+                ),
             }
-            for x in enumerate(schedule)
+            for x in nd["openingHours"]["items"]
+            for y in x["timeRanges"]
         ]
         schedule = [
             {
@@ -262,8 +267,13 @@ if __name__ == "__main__":
                 d["source:opening_hours"] = "website"
 
         d["contact:phone"] = "+351 210 207 000"
-        d["website"] = (
-            f"https://www.lidl.pt/s/pt-PT/pesquisa-de-loja/{get_url_part(nd['Locality'])}/{get_url_part(nd['AddressLine'])}/"
+        d["website"] = "/".join(
+            [
+                "https://www.lidl.pt/s/pt-PT/pesquisa-de-loja",
+                get_url_part(addr["city"]),
+                get_url_part("-".join(x for x in [addr["streetName"], addr["streetNumber"]] if x)),
+                "",
+            ]
         )
         d["contact:facebook"] = "lidlportugal"
         d["contact:youtube"] = "https://www.youtube.com/user/LidlPortugal"
@@ -276,46 +286,17 @@ if __name__ == "__main__":
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"
 
-        postcode = nd["PostalCode"]
+        postcode = addr["zip"]
         if len(postcode) == 4:
             if len(d["addr:postcode"]) == 8 and postcode == d["addr:postcode"][:4]:
                 postcode = d["addr:postcode"]
             else:
                 postcode += "-000"
         d["addr:postcode"] = postcode
-        city = CITIES.get(postcode, nd["Locality"])
+        city = CITIES.get(postcode, addr["city"])
         d["addr:city"] = city
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
-            if m := re.fullmatch(
-                r"(.+?),?\s+(([Ll]oja |[Ll]ote )?\d+\w?((-|\s+[ae]\s+|\s*[/,]\s*)\d+\w?)*|[Ss]/[Nn]|[Kk][Mm]\s*\d.*)",
-                nd["AddressLine"],
-            ):
-                street, num = m[1].lower(), m[2]
-                for r in STREET_ABBREVS:
-                    street = re.sub(r[0], r[1], street.lower())
-                street = titleize(street)
-                if re.match(r"^(Quinta|Casal|Villas)\b.+", street):
-                    d["addr:place"] = street
-                elif re.match(r"^(Urbanização)\b.+", street):
-                    d["addr:suburb"] = street
-                elif re.match(r"^(Mercado)\b.+", street):
-                    d["addr:housename"] = street
-                else:
-                    d["addr:street"] = street
-                if num.lower() == "s/n":
-                    d["nohousenumber"] = "yes"
-                    tags_to_reset.update({"addr:housenumber", "addr:milestone", "addr:unit"})
-                elif num.lower().startswith("km"):
-                    d["addr:milestone"] = re.sub(r"^km\s*", "", num, flags=re.IGNORECASE).replace(",", ".")
-                    tags_to_reset.update({"addr:housenumber", "nohousenumber", "addr:unit"})
-                elif num.lower().startswith("loja"):
-                    d["addr:unit"] = titleize(num)
-                    tags_to_reset.update({"addr:housenumber", "nohousenumber", "addr:milestone"})
-                else:
-                    d["addr:housenumber"] = re.sub(r"\s+a\s+", "-", re.sub(r"\s*e\s*", ";", re.sub(r"\s*[/,]\s*", ";", num)))
-                    tags_to_reset.update({"nohousenumber", "addr:milestone", "addr:unit"})
-            else:
-                d["x-dld-addr"] = nd["AddressLine"]
+            d["x-dld-addr"] = "; ".join(x for x in [addr["streetName"], addr["streetNumber"]] if x)
 
         for key in tags_to_reset:
             if d[key]:
