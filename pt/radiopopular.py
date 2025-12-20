@@ -21,6 +21,12 @@ SCHEDULE_DAYS = {
     "Segunda a Sábado": "Mo-Sa",
     "Sexta e Sabado": "Fr,Sa",
     "Sexta, Sábado e Vésperas de Feriados": "Fr,Sa,PH -1 days",
+    "Dia 24 dezembro": "Dec 24",
+    "Dia 31 dezembro": "Dec 31",
+    "Dia 24 e 31 dezembro": "Dec 24,Dec 31",
+    "Dias 15 a 23 dezembro": "Dec 15-23",
+    "Dias 16 a 23 dezembro": "Dec 16-23",
+    "Dias 19 a 23 dezembro": "Dec 19-23",
     "Todos os dias": "Mo-Su",
 }
 SCHEDULE_HOURS_MAPPING = {
@@ -108,6 +114,7 @@ if __name__ == "__main__":
         schedule = [
             [y.strip() for y in x.replace("<br>", "").strip().split(":", 1)]
             for x in re.sub(r"(?<=\D)(?<!\dh)\b\s*-\s*(?=\d)", ": ", nd["schedule"].strip()).split("\n")
+            if x.strip() and not re.search(r"\b2025\b", x)
         ]
         schedule = [" ".join([SCHEDULE_DAYS.get(x[0]), schedule_time(x[1])]) for x in schedule]
         d["opening_hours"] = "; ".join(schedule)
