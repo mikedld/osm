@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
+import itertools
 import re
 
-from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, format_phonenumber, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.agriloja.pt/pt/as-nossas-lojas_596.html"
@@ -101,7 +102,15 @@ if __name__ == "__main__":
         d["shop"] = "agrarian"
         d["name"] = "Agriloja"
 
-        schedule = nd["schedule"].split("<br>")
+        schedule = [x for x in nd["schedule"].split("<br>") if x]
+        if (
+            parts := [
+                next(g).lower() if k else list(g)
+                for k, g in itertools.groupby(schedule, lambda x: x.lower() in ("loja", "centro veterinário"))
+            ]
+        ) and len(parts) > 1:
+            parts = dict(itertools.batched(parts, 2))
+            schedule = parts.get("loja", [])
         if schedule:
             result = ""
             for line in schedule:
@@ -125,8 +134,11 @@ if __name__ == "__main__":
             d["opening_hours"] = result
 
         phone = nd["phone"]
-        if phone:
-            d["contact:phone"] = f"+351 {phone[7:18]}"
+        if (parts := [x for x in re.split(r"(?:^|\s*\|\s*)\b([^:]+):\s*", phone) if x]) and len(parts) > 1:
+            parts = {k.lower(): v for k, v in itertools.batched(parts, 2)}
+            phone = parts.get("loja", "")
+        if phone := format_phonenumber(phone):
+            d["contact:phone"] = phone
         else:
             tags_to_reset.add("contact:phone")
         d["website"] = "https://www.agriloja.pt/"
