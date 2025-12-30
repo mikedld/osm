@@ -20,7 +20,7 @@ from shapely.geometry import Point, Polygon, shape
 
 import __main__
 
-from .config import ENABLE_CACHE, ENABLE_GMAPS_CACHE, ENABLE_OVERPASS_CACHE, PROXIES
+from .config import ENABLE_CACHE, ENABLE_GMAPS_CACHE, ENABLE_OVERPASS_CACHE, OVERPASS_API_URL, PROXIES
 
 
 BASE_DIR = Path(__main__.__file__).parent
@@ -176,7 +176,7 @@ def overpass_query(query, country="PT"):
     cache_file = cache_name(full_query).with_suffix(".cache.overpass.gz")
     if not ENABLE_OVERPASS_CACHE or not cache_file.exists():
         # print(f"Querying Overpass: {full_query}")  # noqa: ERA001
-        r = requests.post("http://overpass-api.de/api/interpreter", data=full_query, timeout=300)
+        r = requests.post(f"{OVERPASS_API_URL}/interpreter", data=full_query, timeout=300)
         r.raise_for_status()
         result = r.json()["elements"]
         if ENABLE_OVERPASS_CACHE:

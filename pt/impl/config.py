@@ -15,6 +15,7 @@ except OSError:
 CONFIG = _config
 
 ENABLE_CACHE = CONFIG.get("general", {}).get("enable_cache", True)
+OVERPASS_API_URL = CONFIG.get("general", {}).get("overpass_api_url", "http://overpass-api.de/api")
 ENABLE_OVERPASS_CACHE = CONFIG.get("general", {}).get("enable_overpass_cache", True)
 ENABLE_GMAPS_CACHE = CONFIG.get("general", {}).get("enable_gmaps_cache", True)
 
