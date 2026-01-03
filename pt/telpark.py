@@ -84,7 +84,7 @@ def lookup_title(items, title):
 
 
 def fixup_price(price):
-    price = "-".join([x.replace(",", ".").strip("€ ").removesuffix(".00") for x in price.split("/")])
+    price = "-".join([x.replace(",", ".").strip("€ ").removesuffix(".00") for x in re.sub(r"</?p>", "", price).split("/")])
     return f"{price} EUR"
 
 
@@ -167,7 +167,9 @@ if __name__ == "__main__":
         if (info := lookup_title(nd["info_list"], r"horários")) and (
             schedule := lookup_title(info["items"], r"hor[aá]rios? de serviç?o")
         ):
-            d["opening_hours"] = SCHEDULE_MAPPING.get(schedule["content"].lower(), f"<ERR:{schedule['content']}>")
+            d["opening_hours"] = SCHEDULE_MAPPING.get(
+                re.sub(r"</?p>", "", schedule["content"]).lower(), f"<ERR:{schedule['content']}>"
+            )
             d["source:opening_hours"] = "website"
 
         if phones := [x for x in re.split(r"[/,]", nd.get("tlf", "").replace(" ", "")) if x]:
