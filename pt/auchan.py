@@ -243,7 +243,7 @@ if __name__ == "__main__":
                     launch_break = f"{m[1]}:{m[2]},{m[3]}:{m[4]}-"
                     events.remove(ea)
                     break
-            opens = {x["opens"] for x in schedule if x}
+            opens = sorted((len(list(g)), k) for k, g in itertools.groupby(sorted(x["opens"] for x in schedule if x)))[-1][1]
             schedule = [
                 {
                     "d": DAYS.index(x["dayOfWeek"]),
@@ -263,21 +263,16 @@ if __name__ == "__main__":
                 for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
             ]
             schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
-            if events:
-                events.sort(key=lambda x: -ord(x[0]))
-                if len(opens) == 1:
-                    opens = next(iter(opens))
-                    for ea in events:
-                        if "Auchan Saúde e Bem-Estar:" in ea:
-                            continue
-                        eb = f"<ERR:{ea}>"
-                        for ema, emb in EVENTS_MAPPING.items():
-                            if re.fullmatch(ema, ea) is not None:
-                                eb = re.sub(ema, emb, ea)
-                                break
-                        schedule.append(eb.replace("{opens-}", f"{opens}-"))
-                else:
-                    schedule.append(f"<ERR:{opens}>")
+            events.sort(key=lambda x: -ord(x[0]))
+            for ea in events:
+                if "Auchan Saúde e Bem-Estar:" in ea:
+                    continue
+                eb = f"<ERR:{ea}>"
+                for ema, emb in EVENTS_MAPPING.items():
+                    if re.fullmatch(ema, ea) is not None:
+                        eb = re.sub(ema, emb, ea)
+                        break
+                schedule.append(eb.replace("{opens-}", f"{opens}-"))
             schedule = "; ".join(schedule)
             if d["opening_hours"].replace(" ", "") != schedule.replace(" ", ""):
                 d["opening_hours"] = schedule
