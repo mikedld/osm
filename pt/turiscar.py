@@ -52,7 +52,7 @@ def fetch_level1_data():
             "lat": x[2],
             "lon": x[3],
             "addr": [
-                y.strip()
+                y.strip().replace("–", "-")
                 for y in etree.fromstring(x[4].split("</strong>")[1].split("<center>")[0], etree.HTMLParser()).xpath("//text()")
                 if y.strip()
             ],
@@ -180,6 +180,8 @@ if __name__ == "__main__":
 
         if len(nd["addr"]) == 1:
             nd["addr"].append(" ")
+        elif not re.match(r"\d{4}-\d{3}\s+", nd["addr"][-1]):
+            nd["addr"][-1] = " " + nd["addr"][-1]
         postcode, city = nd["addr"].pop(-1).split(" ", 1)
         if postcode:
             d["addr:postcode"] = postcode
