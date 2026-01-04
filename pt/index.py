@@ -30,6 +30,7 @@ SCRIPTS = (
     "jysk.py",
     "kidtokid.py",
     "lidl.py",
+    "maxmat.py",
     "mcdonalds.py",
     "mercadona.py",
     "meusuper.py",
