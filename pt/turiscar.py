@@ -40,6 +40,7 @@ SCHEDULE_HOURS_MAPPING = {
 def fetch_level1_data():
     def post_process(page):
         page = re.sub(r"^.*var\s+aLocais\s*=\s*\[(.+?)\];.*$", r"[\1]", page, flags=re.DOTALL)
+        page = re.sub(r",\s*-\s+(\d+)", r",-\1", page)
         page = page.replace('"', '\\"')
         page = page.replace("'", '"')
         return page
