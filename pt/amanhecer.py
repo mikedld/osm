@@ -3,14 +3,20 @@
 import html
 import itertools
 import re
-from urllib.parse import urlsplit
 
-from lxml import etree
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_json_data,
+    format_phonenumber,
+    opening_weekdays,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
-from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
 
-
-DATA_URL = "https://amanhecer.pt/wp-admin/admin-ajax.php"
+DATA_URL = "https://www.amanhecer.pt/mobify/bundle/6/site/prod/component/en-US/e85fc00d52a0100b79e376503e3c3b5d/webruntime/csrIslandContainerXes1r3wxwkjt6lxsa3res4fyuiygb5rlgqm1m3p180gnwlq19l9asr4rq3hah7tsmq_cmp.js"
 
 REF = "ref"
 
@@ -80,22 +86,18 @@ CITIES = {
 
 
 def fetch_data():
-    params = {
-        "action": "store_search",
-        "lat": 38.306893,
-        "lng": -17.050891,
-        "max_results": "999",
-        "search_radius": "999",
-        "autoload": "1",
-    }
-    # Certificate is valid, but the chain is incomplete — leading to validation failure.
-    result = fetch_json_data(DATA_URL, params=params, verify_cert=False)
-    result = [x for x in result if x["country"] == "Portugal"]
+    def post_process(page):
+        page = re.sub(r"^.*\{storesJson:'\[(.+)\]',.*$", r"[\1]", page, flags=re.DOTALL)
+        page = page.replace("\\'", "'")
+        page = page.replace('\\\\"', '\\"')
+        return page
+
+    result = fetch_json_data(DATA_URL, post_process=post_process)
     result = [
         {
             **x,
-            "id": urlsplit(x["url"]).path.split("/")[3],
-            "hours": [el.xpath(".//td//text()") for el in etree.fromstring(x["hours"], etree.HTMLParser()).xpath("//tr")],
+            "id": re.sub(r"\D+", "", re.sub(r"^.*?(\d+)@amanhecer\.pt.*$", r"\1", x["email"])),
+            "hours": [],
         }
         for x in result
     ]
@@ -110,11 +112,13 @@ if __name__ == "__main__":
         for e in overpass_query('nwr[shop][shop!=pastry][~"^(name|brand|operator|website)$"~"amanhecer",i](area.country);')
     ]
 
+    new_node_id = -10000
     old_node_ids = {d.data["id"] for d in old_data}
 
     for nd in new_data:
         public_id = nd["id"]
-        branch = titleize(html.unescape(nd["store"]))
+
+        branch = titleize(html.unescape(nd["name"]))
         for a, b in BRANCH_FIXES:
             branch = re.sub(a, b, branch)
         is_warehouse = "Armazém" in branch
@@ -123,29 +127,23 @@ if __name__ == "__main__":
         subname = re.sub(r"\b(" + "|".join(SUBNETS) + r")\s.+$", r"\1", subname)
         tags_to_reset = set()
 
-        d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(nd["lat"] or 38.306893), float(nd["lng"] or -17.050891)]
-        if coord[0] > 180:
-            if m := re.fullmatch(r"\s*(3[789]|4[012])(\d+)", nd["lat"]):
-                coord[0] = float(f"{m[1]}.{m[2]}")
-            else:
-                coord[0] = 38.306893
-        if coord[1] > 0:
-            coord[1] = -coord[1]
+        d = None  # next((od for od in old_data if od[REF] == public_id), None)
+        coord = [nd["latitude"], nd["longitude"]]
         if d is None:
-            ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
+            ds = [x for x in old_data if x.data["id"] in old_node_ids and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
         if d is None:
             d = DiffDict()
             d.data["type"] = "node"
-            d.data["id"] = f"-{public_id}"
+            d.data["id"] = str(new_node_id)
             d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
+            new_node_id -= 1
         else:
             old_node_ids.remove(d.data["id"])
 
-        d[REF] = public_id
+        # d[REF] = public_id  # noqa: ERA001
         d["shop"] = "wholesale" if is_warehouse else (d["shop"] or "convenience")
         d["name"] = f"Amanhecer - {subname}{' - Armazém' if is_warehouse else ''}".replace("Amanhecer - Amanhecer", "Amanhecer")
         d["brand"] = "Amanhecer"
@@ -174,19 +172,10 @@ if __name__ == "__main__":
             d["opening_hours"] = "; ".join(schedule)
             d["source:opening_hours"] = "website"
 
-        phones = []
-        # Website shows `fax` as "Telefone" and `phone` as "Telemovel" :-\
-        for phone in (nd["phone"], nd["fax"]):
-            phone = phone.replace(" ", "")
-            if len(phone) == 13 and phone.startswith("+351"):
-                phone = phone[4:]
-            if len(phone) == 9:
-                phones.append(f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}")
-        if phones:
+        if phones := [x for x in (format_phonenumber(nd["phone"]),) if x]:
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
-        d["website"] = nd["permalink"]
         d["contact:email"] = nd["email"]
         if "lojasamanhecer" not in d["contact:facebook"].split(";"):
             d["contact:facebook"] = f"{d['contact:facebook']};lojasamanhecer".strip(";")
@@ -196,11 +185,9 @@ if __name__ == "__main__":
 
         d["source:contact"] = "website"
 
-        postcode, city = nd["zip"], nd["city"]
-        if " " in postcode:
-            postcode, city = postcode.split(" ", 1)
+        postcode, city = re.sub(r"\s*-\s*", "-", nd["postalCode"]), (nd["city"] or nd["zone"])
         city = re.sub(
-            r"\s+(bcl|cnf|eps|fnd|lga|lnh|lrs|mfr|mgr|ovr|pmz|pnf|sei|srp|tvr|vdg)$",
+            r"\s+(agb|amt|arl|avs|bbr|bcl|brb|brg|cdv|cld|cmn|cnf|ctm|eps|fnd|gmr|lga|lmg|lnh|lrs|mbr|mfr|mgr|ovr|pmz|pnf|pvl|pvz|rgr|scr|sei|smp|snt|srp|str|tvd|tvr|vdg|vgs)$",
             "",
             city.split(",")[0],
             flags=re.IGNORECASE,
@@ -208,7 +195,7 @@ if __name__ == "__main__":
         d["addr:postcode"] = postcode
         d["addr:city"] = CITIES.get(postcode, re.sub(r"\bCôa\b", "Coa", titleize(city)))
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
-            d["x-dld-addr"] = "; ".join([nd["address"], nd["address2"]]).strip("; ")
+            d["x-dld-addr"] = nd["address"].strip("; ")
 
         for key in tags_to_reset:
             if d[key]:
