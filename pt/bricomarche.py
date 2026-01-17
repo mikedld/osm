@@ -101,7 +101,7 @@ if __name__ == "__main__":
         d["branch"] = BRANCHES.get(branch, branch)
 
         schedule = re.sub(r"\s{2,}", " ", re.sub(r"(sábado|domingo) - ", r"\1: ", (nd["schedule"] or "").lower().strip()))
-        if (parts := list(filter(lambda x: x, re.split(r"\s*\|?\s*\b(loja|bâtidrive)\b:?\s*", schedule)))) and len(parts) > 1:
+        if len(parts := list(filter(lambda x: x, re.split(r"(?:^|\s*\|\s*)\b(loja|bâtidrive)\b:?\s*", schedule)))) > 1:
             parts = dict(itertools.batched(parts, 2))
             schedule = parts.get("loja", "")
         schedule = re.split(r"\s*[/|\r\n]+\s*", re.sub(r"(\dh|[:h]\d\d)\s*[-,]?\s*(s[aá]b|dom|fechados)", r"\1|\2", schedule))
