@@ -94,32 +94,33 @@ if __name__ == "__main__":
 
         schedule_parts = nd["hours"].split("<br>")
         schedule = [x.xpath("./span/text()") for x in etree.fromstring(schedule_parts[-1], etree.HTMLParser()).xpath("//div")]
-        holidays_hours = schedule_time(next(x for x in schedule if x[0] == "Feriados")[1])
-        schedule = [
-            {
-                "d": DAYS.index(x[0]),
-                "t": schedule_time(x[1]),
-            }
-            for x in schedule
-            if x[0] != "Feriados"
-        ]
-        schedule = [
-            {
-                "d": sorted([x["d"] for x in g]),
-                "t": k,
-            }
-            for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
-        ]
-        schedule = [(opening_weekdays(x["d"]), x["t"]) for x in sorted(schedule, key=lambda x: x["d"][0])]
-        schedule = [(f"{x[0]},PH" if x[1] == holidays_hours else x[0], x[1]) for x in schedule]
-        if off_days := next((x for x in schedule_parts[:-1] if "está encerrada" in x), None):
-            off_days = [
-                OFF_DAYS_MAPPING.get(x, f"<ERR:{x}>")
-                for x in etree.fromstring(off_days, etree.HTMLParser()).xpath("//strong/text()")
+        if schedule:
+            holidays_hours = schedule_time(next(x for x in schedule if x[0] == "Feriados")[1])
+            schedule = [
+                {
+                    "d": DAYS.index(x[0]),
+                    "t": schedule_time(x[1]),
+                }
+                for x in schedule
+                if x[0] != "Feriados"
             ]
-            schedule.append((",".join(off_days), "off"))
-        schedule = [" ".join(x) for x in schedule]
-        d["opening_hours"] = "; ".join(schedule)
+            schedule = [
+                {
+                    "d": sorted([x["d"] for x in g]),
+                    "t": k,
+                }
+                for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
+            ]
+            schedule = [(opening_weekdays(x["d"]), x["t"]) for x in sorted(schedule, key=lambda x: x["d"][0])]
+            schedule = [(f"{x[0]},PH" if x[1] == holidays_hours else x[0], x[1]) for x in schedule]
+            if off_days := next((x for x in schedule_parts[:-1] if "está encerrada" in x), None):
+                off_days = [
+                    OFF_DAYS_MAPPING.get(x, f"<ERR:{x}>")
+                    for x in etree.fromstring(off_days, etree.HTMLParser()).xpath("//strong/text()")
+                ]
+                schedule.append((",".join(off_days), "off"))
+            schedule = [" ".join(x) for x in schedule]
+            d["opening_hours"] = "; ".join(schedule)
 
         d["contact:phone"] = f"+351 {nd['phone'][0:3]} {nd['phone'][3:6]} {nd['phone'][6:9]}"
         d["website"] = "https://www.staples.pt/"
