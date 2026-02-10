@@ -132,6 +132,9 @@ if __name__ == "__main__":
 
         schedule = []
         for key, days in SCHEDULE_DAYS:
+            if key not in nd:
+                # TODO: Seen `RCH_WeekHours__c` include Saturday, might need to adjust the logic to not depend on keys.
+                continue
             value = re.sub(
                 r"[\s\uFEFF]+", " ", ";".join(etree.fromstring(nd[key], etree.HTMLParser()).xpath("//text()")), flags=re.DOTALL
             )
