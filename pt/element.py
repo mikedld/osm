@@ -16,14 +16,9 @@ SCHEDULE_DAYS = {
     "2ª a 6ª": "Mo-Fr",
     "Sábados, domingos e feriados": "Sa,Su,PH",
 }
-SCHEDULE_TIMES = {
-    "06h30 às 22h30": "06:30-22:30",
-    "07h00 às 22h00": "07:00-22:00",
-    "09h00 às 18h00": "09:00-18:00",
-    "20h30 - 22h30": "20:30-22:30",
-    "6h30 - 9h30": "06:30-09:30",
-    "6h30 - 22h30": "06:30-22:30",
-    "6h30 às 22h30": "06:30-22:30",
+SCHEDULE_HOURS_MAPPING = {
+    r"(\d{1})h(\d{2}) (?:-|às) (\d{2})h(\d{2})": r"0\1:\2-\3:\4",
+    r"(\d{2})h(\d{2}) (?:-|às) (\d{2})h(\d{2})": r"\1:\2-\3:\4",
 }
 
 
@@ -97,6 +92,16 @@ def fetch_level2_data(data):
     }
 
 
+def schedule_time(v, mapping):
+    sa = v
+    sb = f"<ERR:{v}>"
+    for sma, smb in mapping.items():
+        if re.fullmatch(sma, sa) is not None:
+            sb = re.sub(sma, smb, sa)
+            break
+    return sb
+
+
 if __name__ == "__main__":
     new_data = fetch_level1_data()
     with Pool(4) as p:
@@ -138,7 +143,10 @@ if __name__ == "__main__":
 
         schedule = nd["schedule"]
         schedule = [re.split(r"\s*-\s*", x, maxsplit=1) for x in schedule]
-        schedule = [[SCHEDULE_DAYS[x[0]], [SCHEDULE_TIMES[y] for y in re.split(r"\s*;\s*", x[1])]] for x in schedule]
+        schedule = [
+            [SCHEDULE_DAYS[x[0]], [schedule_time(y, SCHEDULE_HOURS_MAPPING) for y in re.split(r"\s*;\s*", x[1])]]
+            for x in schedule
+        ]
         schedule = [f"{days} {','.join(times)}" for days, times in schedule]
         d["opening_hours"] = "; ".join(schedule)
         if d["source:opening_hours"] != "survey":
