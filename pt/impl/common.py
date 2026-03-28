@@ -39,6 +39,10 @@ POSTCODE_CITIES = {
     "linda a velha": "linda-a-velha",
 }
 
+COMMON_HTTP_HEADERS = {
+    "user-agent": "mikedld-osm/1.0",
+}
+
 
 class DiffDict:
     def __init__(self, data=None):
@@ -135,7 +139,7 @@ def fetch_json_data(
         # print(f"Querying URL: {url} {params}")  # noqa: ERA001
         common_args = {
             "params": params or {},
-            "headers": {"user-agent": "mikedld-osm/1.0", **(headers or {}), **(var_headers or {})},
+            "headers": {**COMMON_HTTP_HEADERS, **(headers or {}), **(var_headers or {})},
             "proxies": PROXIES,
             "verify": verify_cert,
         }
@@ -159,7 +163,7 @@ def fetch_html_data(url, params=None, *, encoding="utf-8", headers=None):
     cache_file = cache_name(f"{url}:{params}:{headers}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url} {params}")  # noqa: ERA001
-        r = requests.get(url, params=params or {}, headers={"user-agent": "mikedld-osm/1.0", **(headers or {})}, timeout=120)
+        r = requests.get(url, params=params or {}, headers={**COMMON_HTTP_HEADERS, **(headers or {})}, timeout=120)
         r.raise_for_status()
         result = r.content
         if ENABLE_CACHE:
@@ -176,7 +180,7 @@ def overpass_query(query, country="PT"):
     cache_file = cache_name(full_query).with_suffix(".cache.overpass.gz")
     if not ENABLE_OVERPASS_CACHE or not cache_file.exists():
         # print(f"Querying Overpass: {full_query}")  # noqa: ERA001
-        r = requests.post(f"{OVERPASS_API_URL}/interpreter", data=full_query, timeout=300)
+        r = requests.post(f"{OVERPASS_API_URL}/interpreter", data=full_query, headers=COMMON_HTTP_HEADERS, timeout=300)
         r.raise_for_status()
         result = r.json()["elements"]
         if ENABLE_OVERPASS_CACHE:
@@ -309,7 +313,7 @@ def lookup_gmaps_coords(gmaps_url):
     if not m:
         cache_file = cache_name(gmaps_url).with_suffix(".cache.gmaps.url")
         if not ENABLE_GMAPS_CACHE or not cache_file.exists():
-            r = requests.head(gmaps_url, allow_redirects=True, timeout=30)
+            r = requests.head(gmaps_url, headers=COMMON_HTTP_HEADERS, allow_redirects=True, timeout=30)
             r.raise_for_status()
             gmaps_url = r.url
             if ENABLE_GMAPS_CACHE:
@@ -331,7 +335,7 @@ def lookup_postcode(postcode):
             page = requests.get(
                 "https://www.codigo-postal.pt/",
                 params={"cp4": cp[0], "cp3": cp[1] if len(cp) > 1 else ""},
-                headers={"user-agent": "mikedld-osm/1.0"},
+                headers=COMMON_HTTP_HEADERS,
                 timeout=120,
             )
             page.raise_for_status()
