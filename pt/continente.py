@@ -94,10 +94,10 @@ def fetch_level2_data(data):
         ),
         "services": [x.strip().lower() for x in result_tree.xpath("//li[@class='serviceTag']//text()") if x.strip()],
         "schedule": {
-            "".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-day')]/text()")): re.sub(
+            "".join(el.xpath(".//*[contains(@class, 'storeDetailHeaderMap__table-day')]/text()")).strip(): re.sub(
                 r":0(\d\d)",
                 r":\1",
-                "-".join(el.xpath(".//td[contains(@class, 'storeDetailHeaderMap__table-time')]/time/text()")),
+                "-".join(el.xpath(".//*[contains(@class, 'storeDetailHeaderMap__table-time')]/time/text()")),
             )
             for el in result_tree.xpath("//table[contains(@class, 'storeDetailHeaderMap__table')]/tr")
         },
