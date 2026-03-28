@@ -13,21 +13,17 @@ DATA_URL = "https://www.radiopopular.pt/lojas/"
 REF = "ref"
 
 SCHEDULE_DAYS = {
-    "Domingo": "Su",
-    "Domingo a 5ª": "Su-Th",
-    "Domingo a Quinta": "Su-Th",
-    "Domingo e Feriados": "Su,PH",
-    "Domingos e Feriados": "Su,PH",
-    "Segunda a Sábado": "Mo-Sa",
-    "Sexta e Sabado": "Fr,Sa",
-    "Sexta, Sábado e Vésperas de Feriados": "Fr,Sa,PH -1 days",
-    "Dia 24 dezembro": "Dec 24",
-    "Dia 31 dezembro": "Dec 31",
-    "Dia 24 e 31 dezembro": "Dec 24,Dec 31",
-    "Dias 15 a 23 dezembro": "Dec 15-23",
-    "Dias 16 a 23 dezembro": "Dec 16-23",
-    "Dias 19 a 23 dezembro": "Dec 19-23",
-    "Todos os dias": "Mo-Su",
+    r"domingo": "Su",
+    r"domingo a (5ª|quinta)": "Su-Th",
+    r"domingos? e feriados": "Su,PH",
+    r"segunda a sábado": "Mo-Sa",
+    r"sexta e sabado": "Fr,Sa",
+    r"sexta, sábado e vésperas de feriados": "Fr,Sa,PH -1 days",
+    r"dia (\d{2}) dezembro": r"Dec \1",
+    r"dia 24 e 31 dezembro": "Dec 24,Dec 31",
+    r"dias (\d{2}) a (\d{2}) dezembro": r"Dec \1-\2",
+    r"domingo de páscoa - \d+( de)? abril \d+": "easter",
+    r"todos os dias": "Mo-Su",
 }
 SCHEDULE_HOURS_MAPPING = {
     r"(\d{1})h\s*-\s*(\d{2})h": r"0\1:00-\2:00",
@@ -35,6 +31,7 @@ SCHEDULE_HOURS_MAPPING = {
     r"(\d{2})h\s*-\s*(\d{2}):(\d{2})h": r"\1:00-\2:\3",
     r"(\d{2})[:h](\d{2})h?\s*(?:-|às)\s*(\d{2})h": r"\1:\2-\3:00",
     r"(\d{2})[:h](\d{2})h?\s*(?:-|às)\s*(\d{2})[:h](\d{2})h?": r"\1:\2-\3:\4",
+    r"encerrado": "off",
 }
 CITIES = {
     "2400-441": "Leiria",
@@ -58,10 +55,10 @@ def fetch_data():
     return result
 
 
-def schedule_time(v):
+def schedule_time(v, mapping):
     sa = v
     sb = f"<ERR:{v}>"
-    for sma, smb in SCHEDULE_HOURS_MAPPING.items():
+    for sma, smb in mapping.items():
         if re.fullmatch(sma, sa) is not None:
             sb = re.sub(sma, smb, sa)
             break
@@ -112,11 +109,13 @@ if __name__ == "__main__":
         d["branch"] = nd["name"]
 
         schedule = [
-            [y.strip() for y in x.replace("<br>", "").strip().split(":", 1)]
-            for x in re.sub(r"(?<=\D)(?<!\dh)\b\s*-\s*(?=\d)", ": ", nd["schedule"].strip()).split("\n")
+            [y.strip().lower() for y in x.replace("<br>", "").strip().split(":", 1)]
+            for x in re.sub(r"(?<=\D)(?<!\dh)(?<!\b[Pp]áscoa)\b\s*-\s*(?=\d)", ": ", nd["schedule"].strip()).split("\n")
             if x.strip() and not re.search(r"\b2025\b", x)
         ]
-        schedule = [" ".join([SCHEDULE_DAYS.get(x[0]), schedule_time(x[1])]) for x in schedule]
+        schedule = [
+            " ".join([schedule_time(x[0], SCHEDULE_DAYS), schedule_time(x[1], SCHEDULE_HOURS_MAPPING)]) for x in schedule
+        ]
         d["opening_hours"] = "; ".join(schedule)
         if d["source:opening_hours"] != "survey":
             d["source:opening_hours"] = "website"
