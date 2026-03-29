@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
-import itertools
 import re
+from itertools import batched, count, groupby
 
-from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
+from lxml import etree
+
+from impl.common import DiffDict, distance, fetch_json_data, format_phonenumber, overpass_query, write_diff
 
 
-DATA_URL = "https://www.roady.pt/lojas"
+DATA_URL = "https://www.roady.pt/amlocator/index/ajax/"
 
 REF = "ref"
 
@@ -33,10 +35,39 @@ SCHEDULE_HOURS_MAPPING = {
 
 
 def fetch_data():
-    def post_process(page):
-        return re.sub(r"^.*var\s+handover\s*=\s*\{(.+?)\};.*$", r"{\1}", page, flags=re.DOTALL)
-
-    return fetch_json_data(DATA_URL, post_process=post_process)["resources"]["stores"]
+    result = []
+    for page_idx in count(start=1):
+        params = {
+            "p": page_idx,
+        }
+        page = fetch_json_data(DATA_URL, params=params)["items"]
+        result_ids = {x["id"] for x in result}
+        if not {x["id"] for x in page} - result_ids:
+            break
+        result.extend(
+            [
+                {
+                    **x,
+                    "name": el.xpath("//header/text()")[0],
+                    "schedule": [
+                        x.strip()
+                        for x in el.xpath("//div[@class='roady-scheadule-list--item'][1]//text()")
+                        if x.strip() not in ("", "Horário:")
+                    ],
+                    "phones": [
+                        y.strip()
+                        for x in el.xpath("//a[starts-with(@href, 'tel:')]/@href")
+                        for y in x.removeprefix("tel:").split("/")
+                    ],
+                    "emails": [x.removeprefix("mailto:") for x in el.xpath("//a[starts-with(@href, 'mailto:')]/@href")],
+                    "address": [x.strip() for x in el.xpath("//div[contains(@class, 'tx-address')][1]//text()") if x.strip()],
+                }
+                for x in page
+                for el in [etree.fromstring(x["popup_html"], etree.HTMLParser())]
+                if x["id"] not in result_ids
+            ]
+        )
+    return result
 
 
 def schedule_time(v, mapping):
@@ -54,9 +85,9 @@ def schedule_time_for(schedule, kind):
     if isinstance(schedule, dict):
         for k, v in schedule.items():
             if kind in k:
-                result.extend(itertools.batched(v, 2))
+                result.extend(batched(v, 2))
     else:
-        for s in itertools.batched(schedule, 2):
+        for s in batched(schedule, 2):
             if isinstance(s[1], dict):
                 for k, v in s[1].items():
                     if kind in k:
@@ -117,19 +148,19 @@ if __name__ == "__main__":
         d["brand:wikipedia"] = "fr:Roady"
         d["branch"] = branch
 
-        schedule = re.sub(r"(\s*(<br\s*/?>|;)\s*)+", "; ", nd["schedule"].lower()).replace("–", "-").strip()
+        schedule = re.sub(r"(\s*(<br\s*/?>|;)\s*)+", "; ", "; ".join(nd["schedule"]).lower()).replace("–", "-").strip()
         schedule = re.sub(r"\|\s*(dom)", r"; \1", schedule)
         if "loja" in schedule or "oficina" in schedule:
             schedule = re.split(r"[:;(|\s]*(loja e oficina|loja|oficina)[:;)|\s]*", schedule)
             if not schedule[0]:
-                schedule = {k: re.split(r"\s*[:;]\s+", v) for k, v in itertools.batched(schedule[1:], 2)}
+                schedule = {k: re.split(r"\s*[:;]\s+", v) for k, v in batched(schedule[1:], 2)}
             else:
                 schedule = [x for s in schedule for x in re.split(r"\s*[:;]\s+", s)]
                 for i in range(len(schedule) - 1, -1, -1):
                     if schedule[i] in ("loja e oficina", "loja", "oficina"):
                         schedule[i] = (schedule[i], schedule[i + 1])
                         schedule.pop(i + 1)
-                schedule = [[dict(g)] if k else list(g) for k, g in itertools.groupby(schedule, lambda x: isinstance(x, tuple))]
+                schedule = [[dict(g)] if k else list(g) for k, g in groupby(schedule, lambda x: isinstance(x, tuple))]
                 schedule = [x for s in schedule for x in s]
         else:
             schedule = re.split(r"\s*[:;]\s+", schedule)
@@ -143,9 +174,8 @@ if __name__ == "__main__":
         if main_schedule or store_schedule:
             d["source:opening_hours"] = "website"
 
-        phones = [str(x) for x in (nd["phone_number"], nd["cell_phone"]) if x]
-        phones = [f"+351 {x[0:3]} {x[3:6]} {x[6:9]}" for x in phones if len(x) == 9]
-        if phones:
+        phones = [format_phonenumber(x) for x in nd["phones"]]
+        if phones := [x for x in phones if x]:
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
@@ -155,7 +185,7 @@ if __name__ == "__main__":
             d["contact:fax"] = ";".join(faxes)
         else:
             tags_to_reset.add("contact:fax")
-        if emails := [x for x in (nd["main_email"], nd["secundary_email"]) if x]:
+        if emails := nd["emails"]:
             for email in set(emails) - set(d["contact:email"].split(";")):
                 d["contact:email"] = f"{d['contact:email']};{email}".strip("; ")
         else:
@@ -169,16 +199,17 @@ if __name__ == "__main__":
 
         d["source:contact"] = "website"
 
-        if city := titleize(nd["locality"]):
+        postcode, city = nd["address"][-1].split(" ", maxsplit=1)
+        if city:
             d["addr:city"] = d["addr:city"] or city
-        if postcode := nd["postal_code"].removesuffix("-000"):
+        if postcode := postcode.removesuffix("-000"):
             if len(postcode) == 4 and d["addr:postcode"].startswith(f"{postcode}-"):
                 postcode = d["addr:postcode"]
             if len(postcode) == 4:
                 postcode += "-000"
             d["addr:postcode"] = postcode
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
-            d["x-dld-addr"] = re.sub(r"(<br\s*/?>\s*)+", "; ", nd["address"]).strip()
+            d["x-dld-addr"] = "; ".join(nd["address"][0:-1])
 
         for key in tags_to_reset:
             if d[key]:
