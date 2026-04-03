@@ -20,13 +20,14 @@ SCHEDULE_DAYS_MAPPING = {
     r"segunda\s+a\s+sexta": "Mo-Fr",
     r"segunda\s+a\s+domingo": "Mo-Su",
     r"terça\s+e\s+quinta": "Tu,Fr",
+    r"sexta-feira santa": "easter -2 days",
     r"sábados?": "Sa",
     r"sábados?\s*[,;]\s*domingos?\s+e\s+feriados": "Sa,Su,PH",
     r"domingos?\s+e\s+feriados?": "Su,PH",
 }
 SCHEDULE_HOURS_MAPPING = {
-    r"(\d{1})[h:]+(\d{2})\s*:\s*(\d{2})[h:]+(\d{2})": r"0\1:\2-\3:\4",
-    r"(\d{2})[h:]+(\d{2})\s*:\s*(\d{2})[h:]+(\d{2})": r"\1:\2-\3:\4",
+    r"(?:das )?(\d{1})[h:]+(\d{2})\s*:\s*(\d{2})[h:]+(\d{2})": r"0\1:\2-\3:\4",
+    r"(?:das )?(\d{2})[h:]+(\d{2})\s*:\s*(\d{2})[h:]+(\d{2})": r"\1:\2-\3:\4",
     r"encerrad[ao]s?": r"off",
 }
 BRANCHES = {
@@ -130,8 +131,16 @@ if __name__ == "__main__":
         d["branch"] = BRANCHES.get(branch, branch)
         d["ref:vatin"] = f"PT{nd['vat']}"
 
-        schedule = [re.sub(r"^(?:encerrad[ao]\s+aos|loja fechada)\s+(.+)$", r"\1 encerrada", x.lower()) for x in nd["schedule"]]
+        schedule = [
+            re.sub(r"^(?:loja\s+)?(?:encerrad[ao]|fechada)(?:\s+aos)?\s+(.+)$", r"\1 encerrada", x.lower())
+            for x in nd["schedule"]
+        ]
+        schedule = [re.sub(r"loja fechada", r"encerrada", x) for x in schedule]
         schedule = [re.split(r"\s*:\s*", x, maxsplit=1) if re.match(r"[^:]*(sábado)\s*:", x) else [x] for x in schedule]
+        schedule = [
+            re.split(r"\s+aberta\s+", x[0], maxsplit=1) if len(x) == 1 and re.search(r"\s+(?<!loja )aberta\s+", x[0]) else x
+            for x in schedule
+        ]
         schedule = [re.split(r"\s+e\s+", x[0], maxsplit=1) if len(x) == 1 and ":" in x[0] else x for x in schedule]
         schedule = [
             re.split(r"(?:\s+-)?\s+(?=encerrad)", x[0], maxsplit=1) if len(x) == 1 and "encerrad" in x[0] else x
