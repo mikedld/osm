@@ -5,6 +5,7 @@ import html
 import itertools
 import json
 import re
+from urllib.parse import urljoin
 
 from impl.common import (
     BASE_DIR,
@@ -142,7 +143,7 @@ if __name__ == "__main__":
 
         phone = re.sub(r"[^0-9]+", "", nd["contact"])
         d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-        d["website"] = nd["permalink"] if "://" in nd["permalink"] else f"https://www.pingodoce.pt/lojas/{nd['permalink']}/"
+        d["website"] = nd["permalink"] if "://" in nd["permalink"] else urljoin(DATA_URL, nd["permalink"])
         d["contact:facebook"] = "pingodoce"
         d["contact:youtube"] = "pingodocept"
         d["contact:instagram"] = "pingodoce"
