@@ -27,6 +27,7 @@ SCRIPTS = (
     "era.py",
     "espacocasa.py",
     "froiz.py",
+    "gleba.py",
     "jysk.py",
     "kidtokid.py",
     "lidl.py",
