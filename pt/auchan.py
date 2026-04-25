@@ -6,6 +6,7 @@ import re
 from multiprocessing import Pool
 
 from lxml import etree
+from requests import HTTPError
 
 from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, opening_weekdays, overpass_query, write_diff
 
@@ -164,7 +165,23 @@ def fetch_level2_data(data):
     params = {
         "StoreID": store_id,
     }
-    result_tree = fetch_html_data(LEVEL2_DATA_URL, params=params)
+    try:
+        result_tree = fetch_html_data(LEVEL2_DATA_URL, params=params)
+    except HTTPError as e:
+        if e.response.status_code != 404:
+            raise
+        return {
+            "id": store_id,
+            "events": [],
+            "openingHoursSpecification": [],
+            "telephone": "",
+            "address": {
+                "addressLocality": "",
+                "postalCode": "",
+                "streetAddress": "",
+            },
+            **data,
+        }
     return {
         "id": store_id,
         "events": [
