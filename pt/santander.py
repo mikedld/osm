@@ -292,7 +292,7 @@ if __name__ == "__main__":
                 working_days[working_hours] = []
             working_days[working_hours].append(wd)
         for working_hours, days in working_days.items():
-            days.sort(key=lambda s: DAYS.index(s))
+            days.sort(key=DAYS.index)
             if opening_hours != "":
                 opening_hours += "; "
             days = merge_weekdays(days)

@@ -140,7 +140,7 @@ def process_schedule(schedule):
     schedule = [x.split(" das ", 1) for x in schedule if x]
     for x in schedule:
         if len(x) != 2:
-            schedule = [next(g)[0] if k == 1 else list(g) for k, g in groupby(schedule, key=lambda x: len(x))]
+            schedule = [next(g)[0] if k == 1 else list(g) for k, g in groupby(schedule, key=len)]
             schedule = dict(batched(schedule, 2)) if len(schedule) > 1 else schedule[0]
             break
     if isinstance(schedule, str):

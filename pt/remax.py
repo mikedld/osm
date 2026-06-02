@@ -185,7 +185,7 @@ def fixup_media_tiktok(v):
     if "/" in v.strip("/ ") and not v.startswith("http"):
         v = f"https://{v}"
     parts = urlparse(v)
-    if parts.netloc.removeprefix("www.").lower() in ("tiktok.com",):
+    if parts.netloc.removeprefix("www.").lower() == "tiktok.com":
         path_parts = parts.path.strip("/").split("/")
         v = path_parts[0] if len(path_parts) == 1 and path_parts[0].startswith("@") else ""
     elif re.fullmatch(r"@[0-9a-z_.]+", handle := v.strip("/ ")):
@@ -218,7 +218,7 @@ def fixup_media_twitter(v):
     if "/" in v.strip("/ ") and not v.startswith("http"):
         v = f"https://{v}"
     parts = urlparse(v)
-    if parts.netloc.removeprefix("www.").lower() in ("twitter.com",):
+    if parts.netloc.removeprefix("www.").lower() == "twitter.com":
         path_parts = parts.path.strip("/").split("/")
         v = path_parts[0] if len(path_parts) == 1 else ""
     else:
@@ -230,7 +230,7 @@ def fixup_media_youtube(v):
     if "/" in v.strip("/ ") and not v.startswith("http"):
         v = f"https://{v}"
     parts = urlparse(v)
-    if parts.netloc.removeprefix("www.").lower() in ("youtube.com",):
+    if parts.netloc.removeprefix("www.").lower() == "youtube.com":
         path_parts = parts.path.strip("/").split("/")
         if len(path_parts) == 1 and path_parts[0].startswith("@"):
             v = path_parts[0]

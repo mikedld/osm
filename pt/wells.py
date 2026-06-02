@@ -130,7 +130,7 @@ def fetch_data():
     result = [
         {
             "info": etree.fromstring(x["infoWindowHtml"], etree.HTMLParser()),
-            **{k: v for k, v in x.items() if k not in ("infoWindowHtml",)},
+            **{k: v for k, v in x.items() if k != "infoWindowHtml"},
         }
         for x in result
     ]
@@ -145,7 +145,7 @@ def fetch_data():
                 for y in x["info"].xpath("//a[contains(@class, 'w-store-locator-phone')]/text()")
             ],
             "services": [y.strip() for y in x["info"].xpath(".//p[contains(@class, 'w-store-service')]/text()")],
-            **{k: v for k, v in x.items() if k not in ("info",)},
+            **{k: v for k, v in x.items() if k != "info"},
         }
         for x in result
     ]
