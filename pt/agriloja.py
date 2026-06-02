@@ -115,6 +115,8 @@ if __name__ == "__main__":
             result = ""
             for line in schedule:
                 parts = [x.strip() for x in line.split(":")]
+                if len(parts) < 2:
+                    continue
                 days = SCHEDULE_DAYS.get(parts[0])
                 comment = ""
                 if not days:
