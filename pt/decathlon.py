@@ -5,7 +5,17 @@ import re
 
 from unidecode import unidecode
 
-from impl.common import BASE_NAME, DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
+from impl.common import (
+    BASE_NAME,
+    DiffDict,
+    distance,
+    fetch_json_data,
+    format_phonenumber,
+    opening_weekdays,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 from impl.config import CONFIG
 
 
@@ -112,10 +122,8 @@ if __name__ == "__main__":
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"
 
-        phone = nd["contact"].get("phone", "")
-        phone = phone.removeprefix("+351")
-        if phone.replace("0", "") and len(phone) == 9:
-            d["contact:phone"] = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+        if phone := format_phonenumber(nd["contact"].get("phone")):
+            d["contact:phone"] = phone
         else:
             tags_to_reset.add("contact:phone")
         d["website"] = f"https://www.decathlon.pt/store-view/loja-de-desporto-{get_url_part(nd['name'])}-{public_id}"

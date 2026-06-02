@@ -425,7 +425,7 @@ def write_diff(title, ref, diff, *, html=True, osm=True):
 
 
 def format_phonenumber(phone):
-    phone = re.sub(r"\D+", "", phone)
+    phone = re.sub(r"\D+", "", phone or "")
     if not phone:
         return ""
 
