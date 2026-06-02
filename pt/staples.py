@@ -95,14 +95,16 @@ if __name__ == "__main__":
         schedule_parts = nd["hours"].split("<br>")
         schedule = [x.xpath("./span/text()") for x in etree.fromstring(schedule_parts[-1], etree.HTMLParser()).xpath("//div")]
         if schedule:
-            holidays_hours = schedule_time(next(x for x in schedule if x[0] == "Feriados")[1])
+            holidays_hours = schedule_time(
+                next(x for x in schedule if x[0] in ("Feriados", "Feriados nacionais e municipal"))[1]
+            )
             schedule = [
                 {
                     "d": DAYS.index(x[0]),
                     "t": schedule_time(x[1]),
                 }
                 for x in schedule
-                if x[0] != "Feriados"
+                if x[0] not in ("Feriados", "Feriados nacionais e municipal")
             ]
             schedule = [
                 {
