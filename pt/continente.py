@@ -6,7 +6,21 @@ import uuid
 from multiprocessing import Pool
 from urllib.parse import urljoin, urlsplit
 
-from impl.common import DiffDict, distance, fetch_html_data, opening_weekdays, overpass_query, write_diff
+from lxml import etree
+from playwright.sync_api import sync_playwright
+
+from impl.common import (
+    DiffDict,
+    cache_name,
+    cookie_jar_name,
+    distance,
+    fetch_html_data,
+    opening_weekdays,
+    overpass_query,
+    save_cookies,
+    write_diff,
+)
+from impl.config import ENABLE_CACHE, PLAYWRIGHT_CDP_URL, PLAYWRIGHT_CONTEXT_OPTS
 
 
 DATA_URL = "https://feed.continente.pt/lojas"
@@ -68,7 +82,35 @@ CITIES = {
 
 
 def fetch_level1_data():
-    result_tree = fetch_html_data(DATA_URL)
+    def filter_requests(route, request):
+        if (
+            request.resource_type in ("stylesheet", "image", "media", "font", "script")
+            and "kramericaindustries" not in request.url
+        ):
+            # print(f"Aborting request: {request.url}")  # noqa: ERA001
+            route.abort()
+            return
+        # print(f"Making request: {request.url}")  # noqa: ERA001
+        route.continue_()
+
+    cache_file = cache_name(DATA_URL).with_suffix(".cache.html")
+    if not ENABLE_CACHE or not (cache_file.exists() and cookie_jar_name().exists()):
+        # print(f"Querying URL: {DATA_URL}")  # noqa: ERA001
+        with sync_playwright() as p:
+            browser = p.chromium.connect_over_cdp(PLAYWRIGHT_CDP_URL) if PLAYWRIGHT_CDP_URL else p.firefox.launch()
+            context = browser.new_context(**PLAYWRIGHT_CONTEXT_OPTS)
+            page = context.new_page()
+            page.route("**/*", filter_requests)
+            page.goto(DATA_URL)
+            page.wait_for_selector("//li[contains(@class, 'storeMapHeader__store')]", timeout=60000)
+            result = page.content()
+            save_cookies({x["name"]: x["value"] for x in context.cookies()})
+            browser.close()
+        if ENABLE_CACHE:
+            cache_file.write_bytes(result.encode("utf-8"))
+    else:
+        result = cache_file.read_bytes().decode("utf-8")
+    result_tree = etree.fromstring(result, etree.HTMLParser())
     result = [
         {
             "lat": float(el.attrib["data-lat"]),

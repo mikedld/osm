@@ -2,6 +2,7 @@ import datetime
 import fcntl
 import itertools
 import re
+import sys
 from gzip import compress, decompress
 from hashlib import sha256
 from json import dumps as json_dumps
@@ -18,13 +19,18 @@ from retrying import retry
 from shapely import voronoi_polygons
 from shapely.geometry import Point, Polygon, shape
 
-import __main__
-
 from .config import ENABLE_CACHE, ENABLE_GMAPS_CACHE, ENABLE_OVERPASS_CACHE, OVERPASS_API_URL, PROXIES
 
 
-BASE_DIR = Path(__main__.__file__).parent
-BASE_NAME = Path(__main__.__file__).stem
+try:
+    import __main__
+
+    BASE_PATH = Path(__main__.__file__)
+except AttributeError:
+    BASE_PATH = Path(sys.modules["__mp_main__"].__file__)
+
+BASE_DIR = BASE_PATH.parent
+BASE_NAME = BASE_PATH.stem
 
 CACHE_DIR = BASE_DIR / "cache"
 
@@ -122,6 +128,22 @@ def cache_name(key):
     return CACHE_DIR / f"{BASE_NAME}-{today}-{sha256(key.encode()).hexdigest()[:10]}.cache"
 
 
+def cookie_jar_name():
+    today = datetime.datetime.now(datetime.UTC).astimezone(LISBON_TZ).date()
+    return CACHE_DIR / f"{BASE_NAME}-{today}-cookies.json"
+
+
+def save_cookies(cookies):
+    cookie_jar_name().write_text(json_dumps(cookies))
+
+
+def load_cookies():
+    try:
+        return requests.utils.cookiejar_from_dict(json_loads(cookie_jar_name().read_text()))
+    except OSError:
+        return None
+
+
 def fetch_json_data(
     url,
     params=None,
@@ -142,6 +164,7 @@ def fetch_json_data(
             "headers": {**COMMON_HTTP_HEADERS, **(headers or {}), **(var_headers or {})},
             "proxies": PROXIES,
             "verify": verify_cert,
+            "cookies": load_cookies(),
         }
         if data is not None or json is not None:
             r = requests.post(url, **common_args, data=data, json=json, timeout=120)
@@ -163,7 +186,9 @@ def fetch_html_data(url, params=None, *, encoding="utf-8", headers=None):
     cache_file = cache_name(f"{url}:{params}:{headers}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url} {params}")  # noqa: ERA001
-        r = requests.get(url, params=params or {}, headers={**COMMON_HTTP_HEADERS, **(headers or {})}, timeout=120)
+        r = requests.get(
+            url, params=params or {}, headers={**COMMON_HTTP_HEADERS, **(headers or {})}, cookies=load_cookies(), timeout=120
+        )
         r.raise_for_status()
         result = r.content
         if ENABLE_CACHE:
