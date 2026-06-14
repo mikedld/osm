@@ -15,6 +15,7 @@ import requests
 from humanize import naturaltime
 from jinja2 import Environment, FileSystemLoader
 from lxml import etree
+from osm2geojson import json2geojson
 from retrying import retry
 from shapely import voronoi_polygons
 from shapely.geometry import Point, Polygon, shape
@@ -200,8 +201,11 @@ def fetch_html_data(url, params=None, *, encoding="utf-8", headers=None):
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=10000)
-def overpass_query(query, country="PT"):
-    full_query = f'[out:json][timeout:300]; area[admin_level=2]["ISO3166-1"="{country}"] -> .country; {query} out meta center;'
+def overpass_query(query, *, country="PT", center=True):
+    out = "meta"
+    if center:
+        out += " center"
+    full_query = f'[out:json][timeout:300]; area[admin_level=2]["ISO3166-1"="{country}"] -> .country; {query} out {out};'
     cache_file = cache_name(full_query).with_suffix(".cache.overpass.gz")
     if not ENABLE_OVERPASS_CACHE or not cache_file.exists():
         # print(f"Querying Overpass: {full_query}")  # noqa: ERA001
@@ -237,17 +241,13 @@ def distance(a, b):
     return d
 
 
-def relation_polygon(rel_id, params=None):
-    full_params = {
-        "id": rel_id,
-        "params": params or "0",
-    }
-    # TODO: Make BASE_NAME-agnostic to avoid extra fetches.
-    return shape(fetch_json_data("https://polygons.openstreetmap.fr/get_geojson.py", params=full_params))
+def relation_polygon(rel_id):
+    features = json2geojson({"elements": overpass_query(f"rel({rel_id});(._;>;);", center=False)})["features"]
+    return shape(next(x for x in features if x["properties"]["type"] == "relation" and x["properties"]["id"] == rel_id))
 
 
 def country_polygon():
-    return relation_polygon(295480, "0.020000-0.005000-0.005000")
+    return relation_polygon(295480)
 
 
 def offset(c1, distance, bearing):
