@@ -267,13 +267,11 @@ if __name__ == "__main__":
             else:
                 tags_to_reset.add("contact:email")
 
-        if socials := nd.get("socialData"):
-            d["contact:youtube"] = socials.get("youtubeLink", "")
-            d["contact:facebook"] = socials.get("facebookLink", "")
-            d["contact:twitter"] = socials.get("twitterLink", "")
-            d["contact:linkedin"] = socials.get("linkedinLink", "")
-            d["contact:instagram"] = socials.get("instagramLink", "")
-            d["contact:tiktok"] = socials.get("tiktokLink", "")
+        d["contact:youtube"] = "@santanderpt"
+        d["contact:facebook"] = "santanderpt"
+        d["contact:twitter"] = "santanderpt"
+        d["contact:linkedin"] = "https://www.linkedin.com/company/santanderpt/"
+        d["contact:instagram"] = "santanderpt"
 
         d["website"] = nd.get("urlDetailPage", "") or "https://www.santander.pt/"
         d["source:contact"] = "website"
