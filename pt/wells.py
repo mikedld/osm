@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 import re
+from functools import reduce
 
 from lxml import etree
 
-from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, format_phonenumber, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://wells.pt/lojas-wells"
@@ -194,10 +195,11 @@ if __name__ == "__main__":
         tags_to_reset.update({"amenity", "dispensing", "healthcare"})
 
         schedule = re.split(
-            r"\s*<p>\s*",
+            r"\s*<(?:p|br)>\s*",
             re.sub(r"(\d+[h:]\d+)\.", r"\1;", re.sub(r"horário:|^<p>|</p>", "", nd["storeHours"].lower())),
             flags=re.DOTALL,
         )
+        schedule = reduce(lambda r, x: r.append(x) or r if x not in r else r, schedule, [])
         schedule = [
             [y.strip() for y in re.sub(r"^([^0-9:]*?)\s*(?=\d(?!ª)|das |encerrad|:h)", r"\1: ", x).split(":", 1)]
             for x in schedule
@@ -235,11 +237,11 @@ if __name__ == "__main__":
 
         phones = []
         for comment, phone in nd["phones"]:
-            if len(phone) == 9:
-                phone = f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
+            if phone := format_phonenumber(phone):
                 if comment:
                     phone += f' "{comment}"'
-                phones.append(phone)
+                if phone not in phones:
+                    phones.append(phone)
         if phones:
             d["contact:phone"] = ";".join(phones)
         else:
