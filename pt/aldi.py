@@ -14,9 +14,16 @@ REF = "ref"
 
 CITIES = {
     "1350-321": "Lisboa",
+    "1500-378": "Lisboa",
+    "1685-654": "Famões",
+    "1900-134": "Lisboa",
+    "2645-175": "Alcabideche",
+    "2700-314": "Amadora",
     "2710-694": "Quinta da Beloura I",
+    "4100-321": "Porto",
     "4405-520": "Vilar do Paraíso",
     "4420-356": "Gondomar",
+    "4835-106": "Guimarães",
     "8700-224": "Olhão",
 }
 STREET_ABBREVS = [
@@ -97,13 +104,14 @@ if __name__ == "__main__":
                 d["source:opening_hours"] = "website"
 
         d["website"] = (
-            f"https://www.aldi.pt/tools/lojas-e-horarios-de-funcionamento.html/l/{get_url_part(nd['city'])}/{get_url_part(nd['streetAndNumber'])}/{nd['id']}"
+            f"https://www.aldi.pt/lojas-e-horarios/{get_url_part(nd['city'])}/{get_url_part(nd['streetAndNumber'])}/{nd['id']}.html"
         )
         d["contact:email"] = "portugal@aldi.pt"
         d["contact:facebook"] = "AldiSupermercados.pt"
         d["contact:youtube"] = "https://www.youtube.com/@aldi.portugal"
         d["contact:instagram"] = "aldi.portugal"
         d["contact:linkedin"] = "https://linkedin.com/company/aldi-portugal"
+        d["contact:tiktok"] = "aldi.portugal"
 
         tags_to_reset.update({"phone", "mobile", "email", "contact:website"})
 

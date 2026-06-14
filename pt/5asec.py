@@ -20,6 +20,9 @@ LEVEL2_DATA_URL = "https://www.5asec.pt/pt-pt/node/{id}"
 
 REF = "ref"
 
+BRANCHES = {
+    "João Crisostomo": "João Crisóstomo",
+}
 DAYS = ["2ª feira", "3ª feira", "4ª feira", "5ª feira", "6ª feira", "Sábado", "Domingo"]
 CITIES = {
     "4425-500": "Ermesinde",
@@ -62,6 +65,8 @@ if __name__ == "__main__":
 
     for nd in new_data:
         public_id = nd["nid"]
+        branch = titleize(nd["title"].strip())
+
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
@@ -86,7 +91,7 @@ if __name__ == "__main__":
         d["brand"] = "5àsec"
         d["brand:wikidata"] = "Q2817899"
         d["brand:wikipedia"] = "pt:5àsec"
-        d["branch"] = titleize(nd["title"].strip())
+        d["branch"] = BRANCHES.get(branch, branch)
         if d["self_service"] not in ("", "no"):
             d["self_service"] = "no"
 
@@ -129,7 +134,13 @@ if __name__ == "__main__":
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"
 
-        d["addr:postcode"] = nd["zip-code"]
+        postcode = nd["zip-code"]
+        if len(postcode) == 4:
+            if d["addr:postcode"].startswith(postcode):
+                postcode = d["addr:postcode"]
+            else:
+                postcode += "-000"
+        d["addr:postcode"] = postcode
         d["addr:city"] = CITIES.get(nd["zip-code"], titleize(nd["city"]))
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
             street = [*nd["address"].split(",", 1), ""]

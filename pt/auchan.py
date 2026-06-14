@@ -18,14 +18,22 @@ REF = "ref"
 
 CITY_FIXES = {
     "Alcácer Sal": "Alcácer do Sal",
+    "Arcos Valdevez": "Arcos de Valdevez",
     "Caldas Rainha": "Caldas da Rainha",
+    "Carrazeda Ansiães": "Carrazeda de Ansiães",
+    "Castêlo Maia": "Castêlo da Maia",
+    "Freixo de Espada-a-Cinta": "Freixo de Espada à Cinta",
     "Marco Canaveses": "Marco de Canaveses",
+    "Moimenta Beira": "Moimenta da Beira",
     "Porto Mós": "Porto de Mós",
     "Rio Mouro": "Rio de Mouro",
     "S.Brás de Alportel": "São Brás de Alportel",
+    "S. Pedro do Sul": "São Pedro do Sul",
     "Sta Maria Lamas": "Santa Maria de Lamas",
+    "Vila Nova Paiva": "Vila Nova de Paiva",
 }
 CITY_LOC_FIXES = {
+    "1 Dezembro": "1º de Dezembro",
     "1 Maio": "1 de Maio",
     "25 Abril": "25 de Abril",
     "5 Outubro": "5 de Outubro",
@@ -35,12 +43,14 @@ CITY_LOC_FIXES = {
     "Alameda Oceanos": "Alameda dos Oceanos",
     "Alfredo Silva": "Alfredo da Silva",
     "Alvares Cabral": "Álvares Cabral",
+    "António Conceição Bento": "António da Conceição Bento",
     "Arístides Sousa Mendes": "Aristides de Sousa Mendes",
     "Avenida D. João II": "Avenida Dom João II",
     "Bento Jesus Caraça": "Bento de Jesus Caraça",
     "Bernardo Francisco Costa": "Bernardo Francisco da Costa",
     "Bomb Voluntários Algés": "Bombeiros Voluntários de Algés",
     "Calçada Quintinha": "Calçada da Quintinha",
+    "Campo 25 Abril": "Campo 25 de Abril",
     "Campo Futebol": "Campo de Futebol",
     "Cândido Reis": "Cândido dos Reis",
     "Casal Serra": "Casal da Serra",
@@ -64,7 +74,10 @@ CITY_LOC_FIXES = {
     "Diogo Silves": "Diogo de Silves",
     "Direita Dafundo": "Direita do Dafundo",
     "Direita Massamá": "Direita de Massamá",
+    "Domingos Pereira Araújo": "Domingos Pereira de Araújo",
+    "Dr António Durães": "Doutor António Durães",
     "Dr António Elvas": "Doutor António Elvas",
+    "Dr António José Almeida": "Doutor António José Almeida",
     "Dr Aresta Branco": "Doutor Aresta Branco",
     "Dr Dário Gandra Nunes": "Doutor Dário Gandra Nunes",
     "Dr Francisco Sá Carneiro": "Doutor Francisco Sá Carneiro",
@@ -72,6 +85,7 @@ CITY_LOC_FIXES = {
     "Dr Henrique de Barros": "Doutor Henrique de Barros",
     "Dr João Santos": "Doutor João Santos",
     "Dr João Silva": "Doutor João Silva",
+    "Dr Luís Olaio": "Doutor Luis Olaio",
     "Duque Loulé": "Duque de Loulé",
     "E11": "EN 11",
     "Eng Duarte Pacheco": "Engenheiro Duarte Pacheco",
@@ -81,6 +95,7 @@ CITY_LOC_FIXES = {
     "Est Luz": "Estrada da Luz",
     "Est Marquês Pombal": "Estrada Marquês de Pombal",
     "Est Mem Martins": "Estrada de Mem Martins",
+    "Est Nova": "Estrada Nova",
     "Est S Domingos": "Estrada de São Domingos",
     "Fontes Pereira Melo": "Fontes Pereira de Melo",
     "Forno Tijolo": "Forno do Tijolo",
@@ -88,12 +103,14 @@ CITY_LOC_FIXES = {
     "Gabriel Ferreira Castro": "Gabriel Ferreira de Castro",
     "Gen Humberto Delgado": "General Humberto Delgado",
     "Helena Vaz Silva": "Helena Vaz da Silva",
+    "Heróis Concelho": "Heróis do Concelho",
     "Heróis Liberdade": "Heróis da Liberdade",
     "Infante D Augusto": "Infante Dom Augusto",
     "Infante D Henrique": "Infante Dom Henrique",
     "Infante D Pedro": "Infante Dom Pedro",
     "Infante Sagres": "Infante de Sagres",
     "Jaime Mota": "Jaime da Mota",
+    "Joaquim N Santos": "Joaquim Neves dos Santos",
     "João Barros": "João de Barros",
     "João Deus Ramos": "João de Deus Ramos",
     "José Conceição Nunes": "José da Conceição Nunes",
@@ -105,12 +122,17 @@ CITY_LOC_FIXES = {
     "Major Neutel Abreu": "Major Neutel de Abreu",
     "Marquês Pombal": "Marquês de Pombal",
     "Marquês Sá Bandeira": "Marquês Sá da Bandeira",
+    "Merc Municipal": "Mercado Municipal",
     "Mouzinho Albuquerque": "Mouzinho de Albuquerque",
     "N1": "EN 1",
+    "N109": "EN 109",
     "Oscar Monteiro Torres": "Óscar Monteiro Torres",
     "Padre Manuel Nóbrega": "Padre Manuel da Nóbrega",
     "Pct Bento Gonçalves": "Praceta Bento Gonçalves",
+    "Pe António Diogo": "Padre António Diogo",
     "Penha França": "Penha de França",
+    "Ponte Moinho": "Ponte do Moinho",
+    "Portela Vila": "Portela da Vila",
     "Proença Nova": "Proença-a-Nova",
     "Prof Dr Augusto Abreu Lopes": "Professor Doutor Augusto Abreu Lopes",
     "Prof Egas Moniz": "Professor Egas Moniz",
@@ -122,6 +144,7 @@ CITY_LOC_FIXES = {
     "Qta Lomba": "Quinta da Lomba",
     "Qta Rosa": "Quinta da Rosa",
     "Rua da Beneficiência": "Rua da Beneficência",
+    "Rua Estrada": "Rua da Estrada",
     "Rui Gomes Silva": "Rui Gomes da Silva",
     "S Bento": "São Bento",
     "S Francisco Xavier": "São Francisco Xavier",
@@ -130,11 +153,14 @@ CITY_LOC_FIXES = {
     "S Sebastião": "São Sebastião",
     "Sá Bandeira": "Sá da Bandeira",
     "Saraiva Carvalho": "Saraiva de Carvalho",
+    "Sta Maria Maior": "Santa Maria Maior",
     "Sto António Olivais": "Santo António dos Olivais",
     "Terreiro Bispo": "Terreiro do Bispo",
     "Ulisses Alves": "Ulysses Alves",
+    "Urb Cerveira": "Urbanização Cerveira",
     "Urb Qta Sto Amaro": "Urbanização Quinta de Santo Amaro",
     "Vasco Gama": "Vasco da Gama",
+    "Veiga Cima": "Veiga de Cima",
     "Vieira Silva": "Vieira da Silva",
     "Vilar Andorinho": "Vilar de Andorinho",
     "Visconde Santarém": "Visconde de Santarém",
@@ -196,7 +222,7 @@ def fetch_level2_data(data):
 
 def fix_branch(branch):
     branch = re.sub(r"^(Algés|Lisboa)(?:\s+-)?\s+(.+)$", r"\2 - \1", branch)
-    branch = re.sub(r"(?<!-)(?<!\s)\s+(Almada|Campolide|Graça|Guarda|Porto)$", r" - \1", branch)
+    branch = re.sub(r"(?<!-)(?<!\s)\s+(Almada|Campolide|Chaves|Graça|Guarda|Porto)$", r" - \1", branch)
     branch = re.sub(r"\s*-(Penela)$", r" - \1", branch)
     if m := re.fullmatch(r"(.+?) - (.+)", branch):
         loc, city = m[1], m[2]
@@ -253,11 +279,15 @@ if __name__ == "__main__":
         else:
             old_node_ids.remove(d.data["id"])
 
-        name = re.sub(r"^(Auchan( Supermercado)?|My Auchan( Saúde e Bem-Estar)?|Auchan).+", r"\1", nd["name"])
+        name = re.sub(
+            r"^(Auchan( Supermercado)?|My Auchan( Saúde e Bem-Estar)?|Auchan|Mais Perto byAuchan).+", r"\1", nd["name"]
+        )
         branch = fix_branch(re.sub(r"[ ]{2,}", " ", nd["name"][len(name) :]).strip())
+        name = name.removesuffix(" byAuchan")
         is_super = name == "Auchan Supermercado"
         is_my = name == "My Auchan"
         is_my_saude = name == "My Auchan Saúde e Bem-Estar"
+        is_mais_perto = name == "Mais Perto"
         tags_to_reset = set()
 
         d[REF] = public_id
@@ -265,7 +295,7 @@ if __name__ == "__main__":
             d["amenity"] = "pharmacy"
             tags_to_reset.add("shop")
         else:
-            d["shop"] = d["shop"] or ("convenience" if is_my else "supermarket")
+            d["shop"] = d["shop"] or ("convenience" if (is_my or is_mais_perto) else "supermarket")
             tags_to_reset.add("amenity")
         d["name"] = name
         d["branch"] = branch
@@ -273,7 +303,7 @@ if __name__ == "__main__":
         d["brand:wikidata"] = "Q115800307" if is_my or is_my_saude else ("Q105857776" if is_super else "Q758603")
         d["brand:wikipedia"] = "pt:Auchan"
 
-        if (old_name := d.old_tags.get("name")) and "Auchan" not in old_name:
+        if (old_name := d.old_tags.get("name")) and ("Mais Perto" if is_mais_perto else "Auchan") not in old_name:
             d["old_name"] = old_name
 
         if d["operator"] not in (None, "Auchan"):

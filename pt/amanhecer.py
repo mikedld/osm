@@ -3,6 +3,7 @@
 import html
 import itertools
 import re
+from urllib.parse import urljoin
 
 from impl.common import (
     DiffDict,
@@ -16,7 +17,7 @@ from impl.common import (
 )
 
 
-DATA_URL = "https://www.amanhecer.pt/mobify/bundle/6/site/prod/component/en-US/e85fc00d52a0100b79e376503e3c3b5d/webruntime/csrIslandContainerXes1r3wxwkjt6lxsa3res4fyuiygb5rlgqm1m3p180gnwlq19l9asr4rq3hah7tsmq_cmp.js"
+DATA_URL = "https://www.amanhecer.pt/lojas"
 
 REF = "ref"
 
@@ -86,13 +87,19 @@ CITIES = {
 
 
 def fetch_data():
-    def post_process(page):
+    def post_process1(page):
+        return re.sub(r"^.*(?<=Object.assign\(globalThis.LWR, \{)(.+?)\}\);.*$", r"{\1}", page, flags=re.DOTALL)
+
+    app_info = fetch_json_data(DATA_URL, post_process=post_process1)
+    data_url = urljoin(DATA_URL, app_info["importMappings"]["imports"]["c/amh_Stores"])
+
+    def post_process2(page):
         page = re.sub(r"^.*\{storesJson:'\[(.+)\]',.*$", r"[\1]", page, flags=re.DOTALL)
         page = page.replace("\\'", "'")
         page = page.replace('\\\\"', '\\"')
         return page
 
-    result = fetch_json_data(DATA_URL, post_process=post_process)
+    result = fetch_json_data(data_url, post_process=post_process2)
     result = [
         {
             **x,
@@ -127,10 +134,10 @@ if __name__ == "__main__":
         subname = re.sub(r"\b(" + "|".join(SUBNETS) + r")\s.+$", r"\1", subname)
         tags_to_reset = set()
 
-        d = None  # next((od for od in old_data if od[REF] == public_id), None)
+        d = next((od for od in old_data if od[REF] == public_id), None) if public_id else None
         coord = [nd["latitude"], nd["longitude"]]
         if d is None:
-            ds = [x for x in old_data if x.data["id"] in old_node_ids and distance([x.lat, x.lon], coord) < 250]
+            ds = [x for x in old_data if not x[REF] and x.data["id"] in old_node_ids and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:
                 d = ds[0]
         if d is None:
@@ -143,7 +150,7 @@ if __name__ == "__main__":
         else:
             old_node_ids.remove(d.data["id"])
 
-        # d[REF] = public_id  # noqa: ERA001
+        d[REF] = public_id
         d["shop"] = "wholesale" if is_warehouse else (d["shop"] or "convenience")
         d["name"] = f"Amanhecer - {subname}{' - Armazém' if is_warehouse else ''}".replace("Amanhecer - Amanhecer", "Amanhecer")
         d["brand"] = "Amanhecer"
@@ -172,7 +179,7 @@ if __name__ == "__main__":
             d["opening_hours"] = "; ".join(schedule)
             d["source:opening_hours"] = "website"
 
-        if phones := [x for x in (format_phonenumber(nd["phone"]),) if x]:
+        if phones := [x for x in (format_phonenumber(y) for y in nd["phone"].split(";")) if x]:
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
