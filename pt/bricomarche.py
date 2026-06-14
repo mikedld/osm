@@ -12,21 +12,21 @@ REF = "ref"
 
 SCHEDULE_DAYS_MAPPING = {
     r"seg(unda)?( a |-)sex(ta?)?": "Mo-Fr",
-    r"seg(unda)?( [-a] |-)s[aá]b(ado)?": "Mo-Sa",
+    r"(2ª|seg(unda)?)( [-a] |-)s[aá]b(ado)?": "Mo-Sa",
     r"(de )?seg(unda)?(-feira)?( [-a] |-)dom(ingo)?|todos os dias": "Mo-Su",
     r"s[aá]b(ado)?": "Sa",
     r"sab-dom": "Sa,Su",
-    r"dom(ingo)?": "Su",
+    r"dom(ingos?)?": "Su",
     r"dom(ingo)? e feriados?": "Su,PH",
     r"páscoa, natal e ano novo": "easter,Dec 25,Jan 01",
 }
 SCHEDULE_HOURS_MAPPING = {
     r"(\d{1})h?[:.h](\d{2})[hm]?(?: (?:-|[aà]s) |-)(\d{2})h?[:.h](\d{2})[hm]?": r"0\1:\2-\3:\4",
-    r"(?:das )?(\d{1})h(?: (?:-|às) |-)(\d{2})h": r"0\1:00-\2:00",
+    r"(?:das )?(\d{1})h(?:\s*(?:-|às)\s*)(\d{2})h": r"0\1:00-\2:00",
     r"(\d{1})h(?: - |-)(\d{2})[:.h](\d{2})h?": r"0\1:00-\2:\3",
     r"(\d{1})h(\d{2})-(\d{1})h": r"0\1:\2-0\3:00",
-    r"(\d{1})h(\d{2})-(\d{2})h": r"0\1:\2-\3:00",
-    r"(?:das )?(\d{2})[:h](\d{2})[hm]?(?: (?:-|as) |-)(\d{2})[:h](\d{2})[hm.]?": r"\1:\2-\3:\4",
+    r"(\d{1})[:h](\d{2})h?-(\d{2})h": r"0\1:\2-\3:00",
+    r"(?:das )?(\d{2})[:h](\d{2})[hm]?(?: (?:-|[aà]s) |-)(\d{2})[:h](\d{2})[hm.]?": r"\1:\2-\3:\4",
     r"(?:das )?(\d{2})[:h](\d{2})h?(?: às |-)(\d{2})h": r"\1:\2-\3:00",
     r"(\d{2})h(?: (?:-|às) |-)(\d{2})h": r"\1:00-\2:00",
     r"(?:das )?(\d{2})h-(\d{2})[:h](\d{2})h?": r"\1:00-\2:\3",
@@ -100,11 +100,17 @@ if __name__ == "__main__":
         d["brand:wikipedia"] = "en:Bricomarché"
         d["branch"] = BRANCHES.get(branch, branch)
 
-        schedule = re.sub(r"\s{2,}", " ", re.sub(r"(sábado|domingo) - ", r"\1: ", (nd["schedule"] or "").lower().strip()))
+        schedule = re.sub(
+            r"\s{2,}", " ", re.sub(r"(sábado|domingos?)( - |(?=\s+\d))", r"\1: ", (nd["schedule"] or "").lower().strip())
+        )
         if len(parts := list(filter(lambda x: x, re.split(r"(?:^|\s*\|\s*)\b(loja|bâtidrive)\b:?\s*", schedule)))) > 1:
             parts = dict(itertools.batched(parts, 2))
             schedule = parts.get("loja", "")
-        schedule = re.split(r"\s*[/|\r\n]+\s*", re.sub(r"(\dh|[:h]\d\d)\s*[-,]?\s*(s[aá]b|dom|fechados)", r"\1|\2", schedule))
+        schedule = [
+            x
+            for x in re.split(r"\s*[/|\r\n]+\s*", re.sub(r"(\dh|[:h]\d\d)\s*[-,]?\s*(s[aá]b|dom|fechados)", r"\1|\2", schedule))
+            if x
+        ]
         schedule = [re.split(r"\s*[:,]\s+|\s+das\s+", x, maxsplit=1) for x in schedule]
         schedule = [["seg-dom", x[0]] if len(x) == 1 else x for x in schedule]
         schedule = [[x[1], x[0]] if "fechado" in x[0] else x for x in schedule]
