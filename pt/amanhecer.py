@@ -91,7 +91,7 @@ def fetch_data():
         return re.sub(r"^.*(?<=Object.assign\(globalThis.LWR, \{)(.+?)\}\);.*$", r"{\1}", page, flags=re.DOTALL)
 
     app_info = fetch_json_data(DATA_URL, post_process=post_process1)
-    data_url = urljoin(DATA_URL, app_info["importMappings"]["imports"]["c/amh_Stores"])
+    data_url = urljoin(DATA_URL, app_info["importMappings"]["imports"]["@view/lojas"])
 
     def post_process2(page):
         page = re.sub(r"^.*\{storesJson:'\[(.+)\]',.*$", r"[\1]", page, flags=re.DOTALL)
