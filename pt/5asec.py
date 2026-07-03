@@ -3,6 +3,8 @@
 import itertools
 from multiprocessing import Pool
 
+from requests.exceptions import HTTPError
+
 from impl.common import (
     DiffDict,
     distance,
@@ -36,7 +38,10 @@ def fetch_level1_data():
 
 
 def fetch_level2_data(data):
-    result_tree = fetch_html_data(LEVEL2_DATA_URL.format(id=data["nid"]))
+    try:
+        result_tree = fetch_html_data(LEVEL2_DATA_URL.format(id=data["nid"]))
+    except HTTPError:
+        return data
     return {
         **data,
         "link": result_tree.xpath("//head/link[@rel='canonical']/@href")[0],
@@ -100,7 +105,7 @@ if __name__ == "__main__":
                 "d": DAYS.index(x["label"]),
                 "t": ",".join([f"{(t[0] + '00')[:5]}-{(t[1] + '00')[:5]}" for t in x["items"]]).replace("H", ":") or "off",
             }
-            for x in nd["schedule"]
+            for x in nd.get("schedule", [])
         ]
         schedule = [
             {
@@ -117,14 +122,14 @@ if __name__ == "__main__":
 
         phones = [
             f"+351 {phone[0:3]} {phone[3:6]} {phone[6:9]}"
-            for phone in nd["phone"].replace(" ", "").split("/")
+            for phone in nd.get("phone", "").replace(" ", "").split("/")
             if len(phone) == 9
         ]
         if phones:
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
-        d["website"] = nd["link"]
+        d["website"] = nd.get("link", "")
         d["contact:facebook"] = "5asecportugal"
         d["contact:youtube"] = "https://www.youtube.com/@5asecpt"
         d["contact:instagram"] = "5asecportugal"
@@ -134,16 +139,16 @@ if __name__ == "__main__":
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"
 
-        postcode = nd["zip-code"]
+        postcode = nd.get("zip-code", "")
         if len(postcode) == 4:
             if d["addr:postcode"].startswith(postcode):
                 postcode = d["addr:postcode"]
             else:
                 postcode += "-000"
         d["addr:postcode"] = postcode
-        d["addr:city"] = CITIES.get(nd["zip-code"], titleize(nd["city"]))
+        d["addr:city"] = CITIES.get(postcode, titleize(nd.get("city", "")))
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
-            street = [*nd["address"].split(",", 1), ""]
+            street = [*nd.get("address", "").split(",", 1), ""]
             d["addr:street"] = street[0].strip()
             d["addr:housenumber"] = street[1].strip()
 
