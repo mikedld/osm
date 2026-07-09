@@ -318,7 +318,7 @@ if __name__ == "__main__":
 
         tags_to_reset.add("shop")
 
-        new_langs = {x["languageCode"].lower() for x in nd["languagesSpoken"]}
+        new_langs = {x["languageCode"].lower() for x in (nd["languagesSpoken"] or [])}
         old_langs = {k[9:] for k in d.data["tags"] if k.startswith("language:")}
         for lang in new_langs | old_langs:
             d[f"language:{lang}"] = "yes" if lang in new_langs else ""
@@ -332,7 +332,7 @@ if __name__ == "__main__":
         else:
             tags_to_reset.add("contact:email")
         d["website"] = f"https://www.remax.pt/{nd['publicName']}"
-        medias = {x["socialMediaChannelName"].lower(): x["socialMediaURL"] for x in nd["socialMediaUrls"]}
+        medias = {x["socialMediaChannelName"].lower(): x["socialMediaURL"] for x in (nd["socialMediaUrls"] or [])}
         for media in ("instagram", "tiktok", "facebook", "twitter", "youtube", "linkedin"):
             d[f"contact:{media}"] = globals()[f"fixup_media_{media}"](medias.get(media, "").strip())
 
