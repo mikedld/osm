@@ -10,8 +10,6 @@ DATA_URL = "https://www.audika.pt/api/clinics/getclinics/{347A23B3-5B62-480A-984
 
 REF = "ref"
 
-DAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
-
 
 def fetch_data():
     return fetch_json_data(DATA_URL)
@@ -82,10 +80,10 @@ if __name__ == "__main__":
 
         schedule = [
             {
-                "d": DAYS.index(re.sub(r"(domin)[dg]o", r"\1go", re.sub(r"(-feira)s?", r"\1", x["DayName"].strip().lower()))),
+                "d": i,
                 "t": schedule_time(x["DayHours"]),
             }
-            for x in nd["BusinessHours"]
+            for i, x in enumerate(nd["BusinessHours"])
         ]
         schedule = [
             {
