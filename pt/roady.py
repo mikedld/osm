@@ -50,9 +50,10 @@ def fetch_data():
                     **x,
                     "name": el.xpath("//header/text()")[0],
                     "schedule": [
-                        x.strip()
-                        for x in el.xpath("//div[@class='roady-scheadule-list--item'][1]//text()")
-                        if x.strip() not in ("", "Horário:")
+                        y.strip()
+                        for x in el.xpath("//div[@class='roady-scheadule-list--item']")
+                        for y in x.xpath(".//text()")
+                        if y.strip() not in ("", "Horário:") and "Horário:" in ";".join(x.xpath(".//text()"))
                     ],
                     "phones": [
                         y.strip()
@@ -60,7 +61,12 @@ def fetch_data():
                         for y in x.removeprefix("tel:").split("/")
                     ],
                     "emails": [x.removeprefix("mailto:") for x in el.xpath("//a[starts-with(@href, 'mailto:')]/@href")],
-                    "address": [x.strip() for x in el.xpath("//div[contains(@class, 'tx-address')][1]//text()") if x.strip()],
+                    "address": [
+                        y.strip()
+                        for x in el.xpath("//div[@class='roady-scheadule-list--item']")
+                        for y in x.xpath(".//text()")
+                        if y.strip() not in ("", "Morada:") and "Morada:" in ";".join(x.xpath(".//text()"))
+                    ],
                 }
                 for x in page
                 for el in [etree.fromstring(x["popup_html"], etree.HTMLParser())]
@@ -199,6 +205,8 @@ if __name__ == "__main__":
 
         d["source:contact"] = "website"
 
+        if len(nd["address"]) == 1:
+            nd["address"] = re.split(r"\b(?=\d{4}(?:-\d{3})?\s+[^\W\d])", nd["address"][0])
         postcode, city = nd["address"][-1].split(" ", maxsplit=1)
         if city:
             d["addr:city"] = d["addr:city"] or city
@@ -209,7 +217,7 @@ if __name__ == "__main__":
                 postcode += "-000"
             d["addr:postcode"] = postcode
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"] and not d["addr:housename"]:
-            d["x-dld-addr"] = "; ".join(nd["address"][0:-1])
+            d["x-dld-addr"] = "; ".join(x.strip() for x in nd["address"][0:-1])
 
         for key in tags_to_reset:
             if d[key]:
