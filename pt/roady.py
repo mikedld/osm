@@ -52,7 +52,7 @@ def fetch_data():
                     "schedule": [
                         y.strip()
                         for x in el.xpath("//div[@class='roady-scheadule-list--item']")
-                        for y in x.xpath(".//text()")
+                        for y in x.xpath(".//*[not(self::style)]/text()")
                         if y.strip() not in ("", "Horário:") and "Horário:" in ";".join(x.xpath(".//text()"))
                     ],
                     "phones": [
