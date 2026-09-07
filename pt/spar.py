@@ -95,7 +95,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(nd["latitude"]), float(nd["longitude"])]
+        coord = [float(nd["latitude"].rstrip(",")), float(nd["longitude"])]
         if coord[1] > 0:
             coord[1] = -coord[1]
         if d is None:
