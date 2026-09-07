@@ -134,6 +134,7 @@ if __name__ == "__main__":
         schedule = [
             re.sub(r"^(?:loja\s+)?(?:encerrad[ao]|fechada)(?:\s+aos)?\s+(.+)$", r"\1 encerrada", x.lower())
             for x in nd["schedule"]
+            if x
         ]
         schedule = [re.sub(r"loja fechada", r"encerrada", x) for x in schedule]
         schedule = [re.split(r"\s*:\s*", x, maxsplit=1) if re.match(r"[^:]*(sábado)\s*:", x) else [x] for x in schedule]
