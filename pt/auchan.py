@@ -216,7 +216,7 @@ def fetch_level2_data(data):
             if x.strip()
         ],
         **data,
-        **json.loads(result_tree.xpath("//script[@type='application/ld+json']/text()")[0]),
+        **json.loads(result_tree.xpath("//script[@type='application/ld+json']/text()")[1]),
     }
 
 
