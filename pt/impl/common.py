@@ -309,12 +309,20 @@ def cover_polygon(g, radius, query):
         geoms.append(g)
 
 
-def opening_weekdays(days):
+def opening_weekdays(days: list[str]):
+    real_days = list(days)
+    try:
+        real_days.remove(7)
+        ph = True
+    except ValueError:
+        ph = False
     ranges = []
-    for _k, g in itertools.groupby(enumerate(days), lambda x: x[0] - x[1]):
+    for _k, g in itertools.groupby(enumerate(real_days), lambda x: x[0] - x[1]):
         g = list(g)
         ranges.append((g[0][1], g[-1][1]))
     ranges = [DAYS[a] if a == b else (f"{DAYS[a]},{DAYS[b]}" if a == b - 1 else f"{DAYS[a]}-{DAYS[b]}") for a, b in ranges]
+    if ph:
+        ranges.append("PH")
     return ",".join(ranges)
 
 

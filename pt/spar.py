@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
 
+import itertools
 import json
 import re
-from itertools import batched, dropwhile, groupby, islice, takewhile
+from itertools import dropwhile, islice, takewhile
 from multiprocessing import Pool
 
-from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, overpass_query, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_html_data,
+    fetch_json_data,
+    format_phonenumber,
+    opening_weekdays,
+    overpass_query,
+    write_diff,
+)
 
 
 LEVEL1_DATA_URL = "https://www.spar.pt/loja/resumo"
@@ -20,13 +30,15 @@ CONTACT_GROUPS = {
     "Aderente ao Folheto",
 }
 SCHEDULE_DAYS = {
-    "Seg. a Sex:": "Mo-Fr",
-    "Sábado:": "Sa",
-    "Domingo:": "Su",
-    "Feriados:": "PH",
-    "Mo-Fr,Sa": "Mo-Sa",
-    "Mo-Fr,Sa,Su": "Mo-Su",
-    "Mo-Fr,Sa,Su,PH": "Mo-Su,PH",
+    "segunda a sexta": [0, 1, 2, 3, 4],
+    "sábado": [5],
+    "domingo": [6],
+    "feriados": [7],
+}
+SCHEDULE_HOURS_MAPPING = {
+    r"(\d{1})[:.](\d{2})\s*-\s*(\d{2})[:.](\d{2})": r"0\1:\2-\3:\4",
+    r"(\d{2})[:.](\d{2})\s*-\s*(\d{2})[:.](\d{2})": r"\1:\2-\3:\4",
+    r"encerrad[ao]": r"off",
 }
 BRANCHES = {
     "305": "Furnas I",
@@ -64,20 +76,29 @@ def extract_contact_info(v, group):
 def fetch_level2_data(data):
     url = LEVEL2_DATA_URL.format(id=data["id"])
     result_tree = fetch_html_data(url)
-    details_el = result_tree.xpath("//*[@class='loja-detalhe']")[0]
-    info = [x.strip() for x in details_el.xpath(".//text()") if x.strip()]
-    info.pop(0)
-    info = [next(g).lower() if k else list(g) for k, g in groupby(info, lambda x: x in ("Morada", "Horário", "Contactos"))]
-    info = dict(batched(info, 2))
-    info["horário"] = info.get("horário") or []
-    info["contactos"] = info.get("contactos") or []
+    details_el = result_tree.xpath("//*[@class='loja-ficha-info']")[0]
     return {
         **data,
         "url": url,
-        "schedule": list(batched(info["horário"], 2)),
-        "phone": extract_contact_info(info["contactos"], "Telefone:"),
-        "email": extract_contact_info(info["contactos"], "Email:"),
+        "schedule": {
+            el.xpath("(./dt)[1]/text()")[0]: el.xpath("(./dd)[1]/text()")[0]
+            for el in details_el.xpath(".//*[@class='loja-horario-linha']")
+        },
+        "phones": [x.removeprefix("tel:") for x in details_el.xpath(".//a[starts-with(@href, 'tel:')]/@href")],
+        "emails": [x.removeprefix("mailto:") for x in details_el.xpath(".//a[starts-with(@href, 'mailto:')]/@href")],
     }
+
+
+def schedule_time(v, mapping):
+    if not isinstance(v, str):
+        return ",".join(schedule_time(x, mapping) for x in v)
+    sa = v
+    sb = f"<ERR:{v}>"
+    for sma, smb in mapping.items():
+        if re.fullmatch(sma, sa) is not None:
+            sb = re.sub(sma, smb, sa)
+            break
+    return sb
 
 
 if __name__ == "__main__":
@@ -95,7 +116,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(nd["latitude"].rstrip(",")), float(nd["longitude"])]
+        coord = [float((nd["latitude"] or "38.306893").rstrip(",")), float(nd["longitude"] or "-17.050891")]
         if coord[1] > 0:
             coord[1] = -coord[1]
         if d is None:
@@ -124,28 +145,33 @@ if __name__ == "__main__":
             tags_to_reset.add("operator")
 
         schedule = nd["schedule"]
-        if len(schedule) > 1 or (len(schedule) == 1 and schedule[0][0] != "Sem horário disponível"):
+        if schedule:
             schedule = [
-                [
-                    f"{SCHEDULE_DAYS[x[0]]}",
-                    re.sub(r"^encerrad[ao]$", "off", re.sub(r"\b(\d:)", r"0\1", x[1].replace(" ", "").lower())).replace(
-                        "|", ","
-                    ),
-                ]
-                for x in schedule
+                {
+                    "d": d,
+                    "t": schedule_time(re.split(r" [|/] ", v.lower()), SCHEDULE_HOURS_MAPPING),
+                }
+                for k, v in schedule.items()
+                for d in SCHEDULE_DAYS[k.lower()]
             ]
-            schedule = [(",".join(x[0] for x in g), k) for k, g in groupby(schedule, lambda x: x[1])]
-            schedule = [(SCHEDULE_DAYS.get(x[0], x[0]), x[1]) for x in schedule]
-            schedule = [" ".join(x) for x in schedule]
-            d["opening_hours"] = "; ".join(schedule)
+            schedule = [
+                {
+                    "d": sorted([x["d"] for x in g]),
+                    "t": k,
+                }
+                for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
+            ]
+            schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
+            schedule = "; ".join(schedule)
+            d["opening_hours"] = schedule
             if d["source:opening_hours"] != "survey":
                 d["source:opening_hours"] = "website"
 
-        if phones := [f"+351 {x[0:3]} {x[3:6]} {x[6:9]}" for x in nd["phone"]]:
+        if phones := [format_phonenumber(x) for x in nd["phones"]]:
             d["contact:phone"] = ";".join(phones)
         else:
             tags_to_reset.add("contact:phone")
-        if emails := nd["email"]:
+        if emails := nd["emails"]:
             d["contact:email"] = ";".join(emails)
         else:
             tags_to_reset.add("contact:email")
