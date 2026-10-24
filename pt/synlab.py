@@ -21,8 +21,11 @@ BRANCHES = {
 SCHEDULE_DAYS_MAPPING = {
     "n/a": "",
     "2ª feira": "Mo",
+    "2ª 4ª e 6ª feira": "Mo,We,Fr",
     "2ª, 3ª feira": "Mo,Tu",
+    "2ª, 3ª, 4ª e 6ª feira": "Mo,Tu,We,Fr",
     "2ª, 4ª, 6ª feira": "Mo,We,Fr",
+    "2ª, 4ª, 6ª feiras": "Mo,We,Fr",
     "2ª, 4ª e 6ª feira": "Mo,We,Fr",
     "2ª, 4ª feira": "Mo,We",
     "2.ª, 4.ª feira e sábado": "Mo,We,Sa",
@@ -59,8 +62,11 @@ SCHEDULE_HOURS_MAPPING = {
     r"(\d{1}):(\d{2}) às (\d{2}):(\d{2})": r"0\1:\2-\3:\4",
     r"(\d{1}):(\d{2}) às (\d{2}):(\d{2}) e das (\d{2}):(\d{2}) às (\d{2}):(\d{2})": r"0\1:\2-\3:\4,\5:\6-\7:\8",
     r"(\d{2})[:.](\d{2})\s*[àá]s\s*(\d{2})[:.](\d{2})": r"\1:\2-\3:\4",
-    r"(\d{2}):(\d{2}) às (\d{2}):(\d{2}) e(?: das)? (\d{2}):(\d{2}) (?:a|às) (\d{2}):(\d{2})": r"\1:\2-\3:\4,\5:\6-\7:\8",
-    r"(\d{2}):(\d{2}) às (\d{2}):(\d{2}) \(por marcação\)": r'\1:\2-\3:\4 "por marcação"',
+    r"(\d{2})[:.](\d{2})\s*[àá]s\s*(\d{2})[:.]0": r"\1:\2-\3:00",
+    r"(\d{2})[:.]0\s*[àá]s\s*(\d{2})[:.](\d{2})": r"\1:00-\2:\3",
+    r"(\d{2}):(\d{2}) às (\d{2}):(\d{2}) (?:e(?: das)?|às) (\d{2}):(\d{2}) (?:a|às) (\d{2}):(\d{2})": r"\1:\2-\3:\4,\5:\6-\7:\8",
+    r"(\d{2}):(\d{2}) às (\d{2}):(\d{2})\s+\((por marcação|mediante marcação prévia)\)": r'\1:\2-\3:\4 "por marcação"',
+    r"por marcação": r'"por marcação"',
 }
 CITIES = {
     "2840-009": "Seixal",
@@ -134,19 +140,23 @@ def process_schedule(schedule):
     schedule = re.split(
         r"\s*[;|]\s*|(?<!\bfeira)(?<!ª)(?<!\bsábado)(?<!\bsábados)(?<!\bdomingo)(?<!\bdomingos)\b\s+e\s+\b(?!das\b|\d)"
         r"|"
-        r"(piso\s+\S+\s+\([^)]+\)|edifício\s+\S+|atendimento|levantamento de resultados)\s*(?:[:-]\s*)?",
+        r"(piso\s+\S+\s+\([^)]+\)|edifício\s+\S+|atendimento|levantamento de resultados|colheitas ao domicilio)\s*(?:[:-]\s*)?",
         schedule,
     )
-    schedule = [x.split(" das ", 1) for x in schedule if x]
+    schedule = [re.split(r" das | (?=por marcação)", x, maxsplit=1) for x in schedule if x]
     for x in schedule:
         if len(x) != 2:
             schedule = [next(g)[0] if k == 1 else list(g) for k, g in groupby(schedule, key=len)]
+            if not isinstance(schedule[0], str):
+                schedule.insert(0, "")
             schedule = dict(batched(schedule, 2)) if len(schedule) > 1 else schedule[0]
             break
     if isinstance(schedule, str):
         schedule = SCHEDULE_DAYS_MAPPING.get(schedule, f"<ERR:{schedule}>")
     elif isinstance(schedule, dict):
-        schedule = " || ".join(["; ".join([f'{x} "{k}"' for x in process_valid_schedule(v)]) for k, v in schedule.items()])
+        schedule = " || ".join(
+            ["; ".join([f'{x} "{k}"' if k else x for x in process_valid_schedule(v)]) for k, v in schedule.items()]
+        )
     else:
         schedule = "; ".join(process_valid_schedule(schedule))
     if urgency_274:
