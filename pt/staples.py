@@ -93,7 +93,11 @@ if __name__ == "__main__":
         d["branch"] = nd["name"]
 
         schedule_parts = nd["hours"].split("<br>")
-        schedule = [x.xpath("./span/text()") for x in etree.fromstring(schedule_parts[-1], etree.HTMLParser()).xpath("//div")]
+        try:
+            schedule_etree = etree.fromstring(schedule_parts[-1], etree.HTMLParser())
+        except AttributeError:
+            schedule_etree = None
+        schedule = [x.xpath("./span/text()") for x in schedule_etree.xpath("//div")] if schedule_etree is not None else None
         if schedule:
             holidays_hours = schedule_time(
                 next(x for x in schedule if x[0] in ("Feriados", "Feriados nacionais e municipal"))[1]
