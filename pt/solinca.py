@@ -69,11 +69,17 @@ def fetch_level2_data(data):
                 location = lookup_postcode(postcode.split("-", 1)[0])
         if location:
             location.append(postcode)
+    horario_idx = info.index("Horário")
+    try:
+        contacto_idx = info.index("Contacto")
+    except ValueError:
+        contacto_idx = info.index("Contactos")
+    localizacao_idx = info.index("Localização")
     return {
         **data,
         "location": location,
-        "schedule": [re.sub(r"\s+", " ", x) for x in info[info.index("Horário") + 1 : info.index("Contacto")]],
-        "contacts": [re.sub(r"\s+", "", x) for x in info[info.index("Contacto") + 1 : info.index("Localização")]],
+        "schedule": [re.sub(r"\s+", " ", x) for x in info[horario_idx + 1 : contacto_idx]],
+        "contacts": [re.sub(r"\s+", "", x) for x in info[contacto_idx + 1 : localizacao_idx]],
         "address": address,
     }
 
