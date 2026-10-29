@@ -9,6 +9,7 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from math import asin, atan2, cos, degrees, pi, radians, sin, sqrt
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytz
 import requests
@@ -124,23 +125,30 @@ class Locker:
         self.fp.close()
 
 
-def cache_name(key):
+def url_host(url: str):
+    parts = (urlsplit(url, allow_fragments=False).hostname or "").split(".")
+    return ".".join(reversed(parts))
+
+
+def cache_name(url: str, key: str | None = None):
+    if key is None:
+        key = url
     today = datetime.datetime.now(datetime.UTC).astimezone(LISBON_TZ).date()
-    return CACHE_DIR / f"{BASE_NAME}-{today}-{sha256(key.encode()).hexdigest()[:10]}.cache"
+    return CACHE_DIR / f"{url_host(url)}-{today}-{sha256(key.encode()).hexdigest()[:10]}.cache"
 
 
-def cookie_jar_name():
+def cookie_jar_name(url: str):
     today = datetime.datetime.now(datetime.UTC).astimezone(LISBON_TZ).date()
-    return CACHE_DIR / f"{BASE_NAME}-{today}-cookies.json"
+    return CACHE_DIR / f"{url_host(url)}-{today}-cookies.json"
 
 
-def save_cookies(cookies):
-    cookie_jar_name().write_text(json_dumps(cookies))
+def save_cookies(url: str, cookies):
+    cookie_jar_name(url).write_text(json_dumps(cookies))
 
 
-def load_cookies():
+def load_cookies(url: str):
     try:
-        return requests.utils.cookiejar_from_dict(json_loads(cookie_jar_name().read_text()))
+        return requests.utils.cookiejar_from_dict(json_loads(cookie_jar_name(url).read_text()))
     except OSError:
         return None
 
@@ -157,7 +165,7 @@ def fetch_json_data(
     post_process=None,
     verify_cert=True,
 ):
-    cache_file = cache_name(f"{url}:{params}:{headers}:{data}:{json}").with_suffix(".cache.data.gz")
+    cache_file = cache_name(url, f"{url}:{params}:{headers}:{data}:{json}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url} {params}")  # noqa: ERA001
         common_args = {
@@ -165,7 +173,7 @@ def fetch_json_data(
             "headers": {**COMMON_HTTP_HEADERS, **(headers or {}), **(var_headers or {})},
             "proxies": PROXIES,
             "verify": verify_cert,
-            "cookies": load_cookies(),
+            "cookies": load_cookies(url),
         }
         if data is not None or json is not None:
             r = requests.post(url, **common_args, data=data, json=json, timeout=120)
@@ -184,11 +192,11 @@ def fetch_json_data(
 
 
 def fetch_html_data(url, params=None, *, encoding="utf-8", headers=None):
-    cache_file = cache_name(f"{url}:{params}:{headers}").with_suffix(".cache.data.gz")
+    cache_file = cache_name(url, f"{url}:{params}:{headers}").with_suffix(".cache.data.gz")
     if not ENABLE_CACHE or not cache_file.exists():
         # print(f"Querying URL: {url} {params}")  # noqa: ERA001
         r = requests.get(
-            url, params=params or {}, headers={**COMMON_HTTP_HEADERS, **(headers or {})}, cookies=load_cookies(), timeout=120
+            url, params=params or {}, headers={**COMMON_HTTP_HEADERS, **(headers or {})}, cookies=load_cookies(url), timeout=120
         )
         r.raise_for_status()
         result = r.content
@@ -206,7 +214,7 @@ def overpass_query(query, *, country="PT", center=True):
     if center:
         out += " center"
     full_query = f'[out:json][timeout:300]; area[admin_level=2]["ISO3166-1"="{country}"] -> .country; {query} out {out};'
-    cache_file = cache_name(full_query).with_suffix(".cache.overpass.gz")
+    cache_file = cache_name(OVERPASS_API_URL, full_query).with_suffix(".cache.overpass.gz")
     if not ENABLE_OVERPASS_CACHE or not cache_file.exists():
         # print(f"Querying Overpass: {full_query}")  # noqa: ERA001
         r = requests.post(f"{OVERPASS_API_URL}/interpreter", data=full_query, headers=COMMON_HTTP_HEADERS, timeout=300)

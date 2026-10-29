@@ -94,7 +94,7 @@ def fetch_level1_data():
         route.continue_()
 
     cache_file = cache_name(DATA_URL).with_suffix(".cache.html")
-    if not ENABLE_CACHE or not (cache_file.exists() and cookie_jar_name().exists()):
+    if not ENABLE_CACHE or not (cache_file.exists() and cookie_jar_name(DATA_URL).exists()):
         # print(f"Querying URL: {DATA_URL}")  # noqa: ERA001
         with sync_playwright() as p:
             browser = p.chromium.connect_over_cdp(PLAYWRIGHT_CDP_URL) if PLAYWRIGHT_CDP_URL else p.firefox.launch()
@@ -105,7 +105,7 @@ def fetch_level1_data():
             page.locator("(//li[contains(@class, 'storeMapHeader__store')])[1]").wait_for(timeout=60000)
             page.wait_for_load_state(timeout=60000)
             result = page.content()
-            save_cookies({x["name"]: x["value"] for x in context.cookies()})
+            save_cookies(DATA_URL, {x["name"]: x["value"] for x in context.cookies()})
             browser.close()
         if ENABLE_CACHE:
             cache_file.write_bytes(result.encode("utf-8"))
