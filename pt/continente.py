@@ -18,6 +18,7 @@ from impl.common import (
     opening_weekdays,
     overpass_query,
     save_cookies,
+    titleize,
     write_diff,
 )
 from impl.config import ENABLE_CACHE, PLAYWRIGHT_CDP_URL, PLAYWRIGHT_CONTEXT_OPTS
@@ -44,13 +45,18 @@ CITIES = {
     "1685-581": "Caneças",
     "1700-086": "Lisboa",
     "1885-003": "Moscavide",
+    "2600-660": "Castanheira do Ribatejo",
+    "2635-600": "Cacém",
     "2685-010": "Sacavém",
     "2700-279": "Amadora",
     "2925-148": "Azeitão",
     "4200-008": "Porto",
+    "4410-151": "Espinho",
     "4425-116": "Maia",
     "4460-841": "Senhora da Hora",
     "4520-605": "São João de Ver",
+    "4560-232": "Penafiel",
+    "4615-000": "Lixa",
     "4770-405": "Pousada de Saramagos",
     "9135-060": "Camacha",
     "9230-085": "Santana",
@@ -60,6 +66,7 @@ CITIES = {
     "AlvercaDoRibatejo": "Alverca do Ribatejo",
     "Braganca": "Bragança",
     "Covilha": "Covilhã",
+    "Evora": "Évora",
     "Fundao": "Fundão",
     "Grandola": "Grândola",
     "Loule": "Loulé",
@@ -67,6 +74,7 @@ CITIES = {
     "Nazare": "Nazaré",
     "Olhao": "Olhão",
     "Oliveira de Azemeis": "Oliveira de Azeméis",
+    "Ourem": "Ourém",
     "Pacos de Ferreira": "Paços de Ferreira",
     "Pte. da Barca": "Ponte da Barca",
     "Pte. da Pedra": "Ponte da Pedra",
@@ -157,6 +165,60 @@ def fetch_level2_data(data):
     }
 
 
+def process_schedule(d, nd):
+    if schedule := nd["schedule"]:
+        schedule = [
+            {
+                "d": DAYS.index(k),
+                "t": v,
+            }
+            for k, v in schedule.items()
+        ]
+        schedule = [
+            {
+                "d": sorted([x["d"] for x in g]),
+                "t": k,
+            }
+            for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
+        ]
+        schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
+        schedule = "; ".join(schedule)
+        d["opening_hours"] = schedule
+        if d["source:opening_hours"] != "survey":
+            d["source:opening_hours"] = "website"
+
+
+def process_contacts(d, nd):
+    phone = nd["phone"]
+    if not phone.startswith("+351"):
+        phone = f"+351{phone}"
+    if len(phone) == 13:
+        d["contact:phone"] = f"+351 {phone[4:7]} {phone[7:10]} {phone[10:13]}"
+    else:
+        tags_to_reset.add("contact:phone")
+    d["website"] = nd["url"]
+
+
+def process_address(d, nd):
+    address = (nd["addr"] or []) + ["", ""]
+    postcode = re.sub(r".*\b(\d{4}(-\d{3})?)\s*$", r"\1", address[0])
+    if len(postcode) == 4:
+        postcode += "-000"
+    if len(postcode) == 8:
+        d["addr:postcode"] = postcode
+    elif postcode:
+        d["addr:postcode"] = f"<ERR:{postcode}>"
+    if city := address[1]:
+        d["addr:city"] = titleize(CITIES.get(postcode, CITIES.get(city, city)))
+    if (
+        not d["addr:street"]
+        and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"])
+        and not d["addr:place"]
+        and not d["addr:suburb"]
+    ):
+        d["x-dld-addr"] = "; ".join(address).strip("; ")
+
+
 if __name__ == "__main__":
     new_data = fetch_level1_data()
     with Pool(4) as p:
@@ -212,35 +274,9 @@ if __name__ == "__main__":
         )
         d["branch"] = BRANCHES.get(branch, branch)
 
-        if schedule := nd["schedule"]:
-            schedule = [
-                {
-                    "d": DAYS.index(k),
-                    "t": v,
-                }
-                for k, v in schedule.items()
-            ]
-            schedule = [
-                {
-                    "d": sorted([x["d"] for x in g]),
-                    "t": k,
-                }
-                for k, g in itertools.groupby(sorted(schedule, key=lambda x: x["t"]), lambda x: x["t"])
-            ]
-            schedule = [f"{opening_weekdays(x['d'])} {x['t']}" for x in sorted(schedule, key=lambda x: x["d"][0])]
-            schedule = "; ".join(schedule)
-            d["opening_hours"] = schedule
-            if d["source:opening_hours"] != "survey":
-                d["source:opening_hours"] = "website"
+        process_schedule(d, nd)
 
-        phone = nd["phone"]
-        if not phone.startswith("+351"):
-            phone = f"+351{phone}"
-        if len(phone) == 13:
-            d["contact:phone"] = f"+351 {phone[4:7]} {phone[7:10]} {phone[10:13]}"
-        else:
-            tags_to_reset.add("contact:phone")
-        d["website"] = nd["url"]
+        process_contacts(d, nd)
         d["contact:facebook"] = "continenteoficial"
         d["contact:youtube"] = "https://www.youtube.com/user/continentept"
         d["contact:instagram"] = "continente"
@@ -250,21 +286,7 @@ if __name__ == "__main__":
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"
 
-        postcode = re.sub(r".*\b(\d{4}(-\d{3})?)\s*$", r"\1", (nd["addr"] or [""])[0])
-        if len(postcode) == 4:
-            postcode += "-000"
-        if len(postcode) == 8:
-            d["addr:postcode"] = postcode
-        elif postcode:
-            d["addr:postcode"] = "<ERR>"
-        d["addr:city"] = CITIES.get(postcode, CITIES.get(nd["city"], nd["city"]))
-        if (
-            not d["addr:street"]
-            and not (d["addr:housenumber"] or d["addr:housename"] or d["nohousenumber"])
-            and not d["addr:place"]
-            and not d["addr:suburb"]
-        ):
-            d["x-dld-addr"] = "; ".join(nd["addr"])
+        process_address(d, nd)
 
         for key in tags_to_reset:
             if d[key]:
