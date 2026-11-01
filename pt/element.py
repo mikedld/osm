@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
-import json
 import re
-from itertools import count
+from html import unescape
 from multiprocessing import Pool
 
-from impl.common import DiffDict, distance, fetch_html_data, overpass_query, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, overpass_query, titleize, write_diff
 
 
-DATA_URL = "https://elementgyms.pt/ginasio/"
+DATA_URL = "https://elementgyms.pt/wp-json/wp/v2/gym"
 
 REF = "ref"
 
@@ -22,63 +21,39 @@ SCHEDULE_HOURS_MAPPING = {
 }
 
 
-def fetch_level1_data():
-    extra_title_mapping = {
-        "braga": "braga centro",
-        "coimbra": "coimbra solum",
-        "covilha": "covilhã",
-        "lisboa - campo pequeno": "campo pequeno",
-        "gaia": "gaia centro",
-        "s. mamede": "s.mamede",
-        "tagus park": "taguspark",
-    }
-
-    def match_title(x, e):
-        xt = x["title"].strip().lower()
-        et = e["title"].strip().lower()
-        return xt == extra_title_mapping.get(et, et)
-
+def fetch_paged_data(url, params):
+    page_size = 100
     result = []
-    extras = []
-    for page_idx in count(start=1):
-        params = {
-            "sf_paged": page_idx,
+    while True:
+        page_params = {
+            "offset": len(result),
+            "per_page": page_size,
         }
-        result_tree = fetch_html_data(DATA_URL, params=params)
-        if not extras:
-            extras = result_tree.xpath("//script[@id='solinca-element-js-extra']/text()")[0]
-            extras = re.sub(r"^.*var\s+gymsData\s*=\s*\{(.+)\};.*$", r"{\1}", extras, flags=re.DOTALL)
-            extras = json.loads(extras)["gyms"]
-        result.extend(
-            [
-                {
-                    "url": el.xpath(".//a[@class='elementor-post__read-more']/@href")[0],
-                    "title": el.xpath(".//div[@class='title-ginasio']/text()")[0].strip(),
-                }
-                for el in result_tree.xpath("//div[@class='container-ginasio-home']")
-                if not el.xpath(".//*[contains(@class, 'pre-venda')]")
-            ]
-        )
-        if not result_tree.xpath("//nav[@class='elementor-pagination']/a[contains(@class, 'next')]/@href"):
+        page = fetch_json_data(url, params={**params, **page_params})
+        result.extend(page)
+        if len(page) < page_size:
             break
-    result = [
-        {
-            **x,
-            "extra": next(
-                (e for e in extras if match_title(x, e)),
-                {"step_url": "=", "latitude": 38.306893, "longitude": -17.050891, "address": "?"},
-            ),
-        }
-        for x in result
-    ]
     return result
+
+
+def fetch_level1_data():
+    return [
+        {
+            "id": x["acf"]["api_cedis_id"],
+            "url": x["link"],
+            "title": unescape(x["title"]["rendered"]),
+            "address": " ".join(unescape(x["acf"]["morada"]).split("<br>")),
+            **x["acf"]["coordenadas"],
+        }
+        for x in fetch_paged_data(DATA_URL, {})
+        if not x["parent"]
+    ]
 
 
 def fetch_level2_data(data):
     result_tree = fetch_html_data(data["url"])
     return {
         **data,
-        "id": data["extra"]["step_url"].split("=")[1],
         "schedule": [
             x.strip().replace("–", "-")
             for x in (
@@ -119,7 +94,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(nd["extra"]["latitude"]), float(nd["extra"]["longitude"])]
+        coord = [float(nd["latitude"] or "38.306893"), float(nd["longitude"] or "-17.050891")]
         if coord[1] > 0:
             coord[1] = -coord[1]
         if d is None:
@@ -163,8 +138,8 @@ if __name__ == "__main__":
         if d["source:contact"] != "survey":
             d["source:contact"] = "website"
 
-        address = nd["extra"]["address"]
-        if m := re.fullmatch(r"(.+?)\s*,\s*(\d{4}-\d{3})\s*,\s*(.+)", address, flags=re.DOTALL):
+        address = nd["address"]
+        if m := re.fullmatch(r"(.+?)\s+(\d{4}-\d{3})(?:\s*,)?\s+(.+)", address, flags=re.DOTALL):
             d["addr:postcode"] = m[2]
             d["addr:city"] = titleize(m[3])
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"]:
