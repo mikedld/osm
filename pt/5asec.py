@@ -2,6 +2,7 @@
 
 import itertools
 from multiprocessing import Pool
+from urllib.parse import urljoin
 
 from requests.exceptions import HTTPError
 
@@ -44,7 +45,7 @@ def fetch_level2_data(data):
         return data
     return {
         **data,
-        "link": result_tree.xpath("//head/link[@rel='canonical']/@href")[0],
+        "link": urljoin(LEVEL2_DATA_URL, result_tree.xpath("//article[contains(@class, 'view-mode-full')]/@about")[0]),
         "address": "".join(result_tree.xpath("//*[contains(@class,'field-name-field-address')]//text()")).strip(),
         "zip-code": "".join(result_tree.xpath("//*[contains(@class,'field-name-field-zip-code')]//text()")).strip(),
         "city": "".join(result_tree.xpath("//*[contains(@class,'field-name-field-city')]//text()")).strip(),
