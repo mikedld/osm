@@ -4,7 +4,16 @@ import re
 from html import unescape
 from multiprocessing import Pool
 
-from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_html_data,
+    fetch_json_data,
+    lookup_postcode,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 DATA_URL = "https://elementgyms.pt/wp-json/wp/v2/gym"
@@ -144,6 +153,13 @@ if __name__ == "__main__":
             d["addr:city"] = titleize(m[3])
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"]:
             d["x-dld-addr"] = address
+
+        if (
+            (not nd["latitude"] or not nd["longitude"])
+            and d["addr:postcode"]
+            and (postcode := lookup_postcode(d["addr:postcode"]))
+        ):
+            d.data["lat"], d.data["lon"] = postcode[0]
 
         for key in tags_to_reset:
             if d[key]:
