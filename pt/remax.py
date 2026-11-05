@@ -16,6 +16,7 @@ from impl.common import (
 
 
 DATA_URL = "https://remax.pt/api/Office/PaginatedSearch"
+LANGS_URL = "https://remax.pt/api/Reference/LanguagesSpoken"
 
 REF = "ref"
 
@@ -291,6 +292,9 @@ def fixup_media_linkedin(v):
 if __name__ == "__main__":
     new_data = fetch_data()
 
+    langs = {x["id"]: x["languageFlagURL"].lower() for x in fetch_json_data(LANGS_URL)}
+    langs = {k: "en" if v == "gb" else v for k, v in langs.items()}
+
     old_data = [
         DiffDict(e)
         for e in overpass_query(
@@ -335,7 +339,7 @@ if __name__ == "__main__":
 
         tags_to_reset.add("shop")
 
-        new_langs = {x["languageCode"].lower() for x in (nd["languagesSpoken"] or [])}
+        new_langs = {langs[x] for x in (nd["languagesSpokenIds"] or [])}
         old_langs = {k[9:] for k in d.data["tags"] if k.startswith("language:")}
         for lang in new_langs | old_langs:
             d[f"language:{lang}"] = "yes" if lang in new_langs else ""
