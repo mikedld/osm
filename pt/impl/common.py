@@ -9,7 +9,7 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from math import asin, atan2, cos, degrees, pi, radians, sin, sqrt
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlparse, urlsplit
 
 import pytz
 import requests
@@ -553,3 +553,104 @@ def merge_weekdays(days):
 
     days = [f"{DAYS[start]}-{DAYS[end]}" if start != end else DAYS[start] for start, end in days_ranges]
     return days
+
+
+def normalize_instagram(v):
+    if "/" in v.strip("/ ") and not v.startswith("http"):
+        v = f"https://{v}"
+    parts = urlparse(v)
+    if parts.netloc.removeprefix("www.").lower() in ("instagram.com", "instagram.pt"):
+        path_parts = parts.path.strip("/").split("/")
+        v = parts.path.strip("/ ") if len(path_parts) == 1 else ""
+    elif re.fullmatch(r"[0-9a-z_.]+", handle := v.strip("/ ")):
+        v = handle
+    else:
+        v = ""
+    return v
+
+
+def normalize_tiktok(v):
+    if "/" in v.strip("/ ") and not v.startswith("http"):
+        v = f"https://{v}"
+    parts = urlparse(v)
+    if parts.netloc.removeprefix("www.").lower() == "tiktok.com":
+        path_parts = parts.path.strip("/").split("/")
+        v = unquote(path_parts[0]) if len(path_parts) == 1 and path_parts[0].startswith("@") else ""
+    elif re.fullmatch(r"@[0-9a-z_.]+", handle := v.strip("/ ")):
+        v = handle
+    else:
+        v = ""
+    return v
+
+
+def normalize_facebook(v):
+    if "/" in v.strip("/ ") and not v.startswith("http"):
+        v = f"https://{v}"
+    parts = urlparse(v)
+    if parts.netloc.removeprefix("www.").lower() in ("facebook.com", "facebook.pt", "m.facebook.com", "pt-pt.facebook.com"):
+        path_parts = parts.path.strip("/").split("/")
+        if len(path_parts) == 1:
+            v = unquote(path_parts[0])
+        elif len(path_parts) == 3 and path_parts[0] == "people":
+            pass
+        else:
+            v = ""
+    else:
+        v = ""
+    return v
+
+
+def normalize_twitter(v):
+    if "/" in v.strip("/ ") and not v.startswith("http"):
+        v = f"https://{v}"
+    parts = urlparse(v)
+    if parts.netloc.removeprefix("www.").lower() == "twitter.com":
+        path_parts = parts.path.strip("/").split("/")
+        v = unquote(path_parts[0]) if len(path_parts) == 1 else ""
+    else:
+        v = ""
+    return v
+
+
+def normalize_youtube(v, *, channels=None, exceptions=None):
+    if "/" in v.strip("/ ") and not v.startswith("http"):
+        v = f"https://{v}"
+    parts = urlparse(v)
+    channels = channels or {}
+    exceptions = exceptions or {}
+    if parts.netloc.removeprefix("www.").lower() == "youtube.com":
+        path_parts = parts.path.strip("/").split("/")
+        if exception := exceptions.get("/".join(path_parts)):
+            v = exception
+        elif len(path_parts) == 1 and path_parts[0].startswith("@"):
+            v = unquote(path_parts[0])
+        elif len(path_parts) == 2 and path_parts[0] in ("user", "c"):
+            v = f"https://www.youtube.com/{path_parts[0]}/{path_parts[1]}"
+        elif len(path_parts) >= 2 and path_parts[0] == "channel" and (handle := channels.get(path_parts[1])):
+            v = handle
+        else:
+            v = ""
+    else:
+        v = ""
+    return v or ""
+
+
+def normalize_linkedin(v, *, companies=None):
+    if "/" in v.strip("/ ") and not v.startswith("http"):
+        v = f"https://{v}"
+    parts = urlparse(v)
+    companies = companies or {}
+    if parts.netloc.removeprefix("www.").lower() in ("linkedin.com", "pt.linkedin.com"):
+        path_parts = parts.path.strip("/").split("/")
+        if len(path_parts) >= 2 and path_parts[0] == "company":
+            if handle := companies.get(path_parts[1]) if re.fullmatch(r"[0-9]+", path_parts[1]) else path_parts[1]:
+                v = f"https://www.linkedin.com/company/{handle}/"
+            else:
+                v = ""
+        elif len(path_parts) >= 2 and path_parts[0] == "in":
+            v = f"https://www.linkedin.com/in/{path_parts[1]}/"
+        else:
+            v = ""
+    else:
+        v = ""
+    return v or ""

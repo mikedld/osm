@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 
 import re
-from urllib.parse import urlparse
+from multiprocessing import Pool
 
 from impl.common import (
     DiffDict,
     distance,
+    fetch_html_data,
     fetch_json_data,
     fixup_coords,
     format_phonenumber,
+    normalize_facebook,
+    normalize_instagram,
+    normalize_linkedin,
+    normalize_tiktok,
+    normalize_twitter,
+    normalize_youtube,
     overpass_query,
     titleize,
     write_diff,
@@ -106,7 +113,7 @@ YOUTUBE_CHANNELS = {
     "UCcEZfPvmXLMOHaPckoLQTyg": "@gruporemaxinn",
     "UCD0s8cZEakAIT5_4Bu1OeJQ": "@remaxpassioncenter",
     "UCdwVHpygvBsRMeSlxp-bbmQ": "@remaxvila1923",
-    "UCex8Sjs2PygctGLgvPiizwg": "https://www.youtube.com/c/GrupoREMAXNeg%C3%B3cios",
+    "UCex8Sjs2PygctGLgvPiizwg": "@GrupoREMAXNegócios",
     "UCeYDPra6bK60bslIPUNCLCg": "@gruporemaxteam",
     "UCf4tIhn4dfcdTUPSAoPbIsg": "@remax.capitulo",
     "UCfAYsDqU8hFaTwqdbUypYlw": "@grupoon3785",
@@ -143,8 +150,12 @@ YOUTUBE_CHANNELS = {
     "UCZZs6J71PCUbBCIwh6P9PFQ": "@remaxmarques1240",
 }
 YOUTUBE_EXCEPTIONS = {
+    "c/GRUPOREMAXIDEAL": "@GRUPOREMAXIDEAL",
     "expogrouptv": "@ExpoGroupTV",
     "remaxpaixao": "@RemaxPaixao",
+    "user/28031010": "@ricardojoaoneves",
+    "user/Barcovez": "@Barcovez",
+    "user/Bouubela": "@RemaxReOrientePortugal",
 }
 LINKEDIN_COMPANIES = {
     "10564050": "re-max-matosinhos",
@@ -157,7 +168,7 @@ LINKEDIN_COMPANIES = {
 }
 
 
-def fetch_data():
+def fetch_level1_data():
     results = []
     page_idx = 1
     while True:
@@ -176,6 +187,16 @@ def fetch_data():
     return results
 
 
+def fetch_level2_data(data):
+    result_tree = fetch_html_data(f"https://www.remax.pt/{data['publicName']}")
+    socials = {
+        re.sub(r"^.*?([^-]+)-link", r"\1", el.attrib["data-id"]).lower(): el.attrib["href"]
+        for el in result_tree.xpath("//main//a[@data-id]")
+        if el.attrib["data-id"].endswith("-link")
+    }
+    return {**data, "socials": socials}
+
+
 def fixup_operator(v):
     v = titleize(re.sub(r"\s*[-–]\s*", " - ", v))
     for a, b in OPERATOR_FIXES:
@@ -184,113 +205,45 @@ def fixup_operator(v):
 
 
 def fixup_media_instagram(v):
-    if "/" in v.strip("/ ") and not v.startswith("http"):
-        v = f"https://{v}"
-    parts = urlparse(v)
-    if parts.netloc.removeprefix("www.").lower() in ("instagram.com", "instagram.pt"):
-        path_parts = parts.path.strip("/").split("/")
-        v = parts.path.strip("/ ") if len(path_parts) == 1 else ""
-    elif re.fullmatch(r"[0-9a-z_.]+", handle := v.strip("/ ")):
-        v = handle
-    else:
-        v = ""
+    v = normalize_instagram(v)
     if v != "remaxportugal":
         v = f"{v};remaxportugal".strip(";")
     return v
 
 
 def fixup_media_tiktok(v):
-    if "/" in v.strip("/ ") and not v.startswith("http"):
-        v = f"https://{v}"
-    parts = urlparse(v)
-    if parts.netloc.removeprefix("www.").lower() == "tiktok.com":
-        path_parts = parts.path.strip("/").split("/")
-        v = path_parts[0] if len(path_parts) == 1 and path_parts[0].startswith("@") else ""
-    elif re.fullmatch(r"@[0-9a-z_.]+", handle := v.strip("/ ")):
-        v = handle
-    else:
-        v = ""
-    return v
+    return normalize_tiktok(v)
 
 
 def fixup_media_facebook(v):
-    if "/" in v.strip("/ ") and not v.startswith("http"):
-        v = f"https://{v}"
-    parts = urlparse(v)
-    if parts.netloc.removeprefix("www.").lower() in ("facebook.com", "facebook.pt", "m.facebook.com", "pt-pt.facebook.com"):
-        path_parts = parts.path.strip("/").split("/")
-        if len(path_parts) == 1:
-            v = path_parts[0]
-        elif len(path_parts) == 3 and path_parts[0] == "people":
-            pass
-        else:
-            v = ""
-    else:
-        v = ""
+    v = normalize_facebook(v)
     if v != "remaxportugal":
         v = f"{v};remaxportugal".strip(";")
     return v
 
 
 def fixup_media_twitter(v):
-    if "/" in v.strip("/ ") and not v.startswith("http"):
-        v = f"https://{v}"
-    parts = urlparse(v)
-    if parts.netloc.removeprefix("www.").lower() == "twitter.com":
-        path_parts = parts.path.strip("/").split("/")
-        v = path_parts[0] if len(path_parts) == 1 else ""
-    else:
-        v = ""
-    return v
+    return normalize_twitter(v)
 
 
 def fixup_media_youtube(v):
-    if "/" in v.strip("/ ") and not v.startswith("http"):
-        v = f"https://{v}"
-    parts = urlparse(v)
-    if parts.netloc.removeprefix("www.").lower() == "youtube.com":
-        path_parts = parts.path.strip("/").split("/")
-        if len(path_parts) == 1 and path_parts[0].startswith("@"):
-            v = path_parts[0]
-        elif len(path_parts) == 2 and path_parts[0] in ("user", "c"):
-            v = f"https://www.youtube.com/{path_parts[0]}/{path_parts[1]}"
-        elif len(path_parts) >= 2 and path_parts[0] == "channel" and (handle := YOUTUBE_CHANNELS.get(path_parts[1])):
-            v = handle
-        elif exception := YOUTUBE_EXCEPTIONS.get("/".join(path_parts)):
-            v = exception
-        else:
-            v = ""
-    else:
-        v = ""
+    v = normalize_youtube(v, channels=YOUTUBE_CHANNELS, exceptions=YOUTUBE_EXCEPTIONS)
     if v != "@remaxportugal314":
         v = f"{v};@remaxportugal314".strip(";")
-    return v or ""
+    return v
 
 
 def fixup_media_linkedin(v):
-    if "/" in v.strip("/ ") and not v.startswith("http"):
-        v = f"https://{v}"
-    parts = urlparse(v)
-    if parts.netloc.removeprefix("www.").lower() in ("linkedin.com", "pt.linkedin.com"):
-        path_parts = parts.path.strip("/").split("/")
-        if len(path_parts) >= 2 and path_parts[0] == "company":
-            if handle := LINKEDIN_COMPANIES.get(path_parts[1]) if re.fullmatch(r"[0-9]+", path_parts[1]) else path_parts[1]:
-                v = f"https://www.linkedin.com/company/{handle}/"
-            else:
-                v = ""
-        elif len(path_parts) >= 2 and path_parts[0] == "in":
-            v = f"https://www.linkedin.com/in/{path_parts[1]}/"
-        else:
-            v = ""
-    else:
-        v = ""
+    v = normalize_linkedin(v, companies=LINKEDIN_COMPANIES)
     if not v.endswith("/company/remaxportugal/"):
         v = f"{v};https://www.linkedin.com/company/remaxportugal/".strip(";")
-    return v or ""
+    return v
 
 
 if __name__ == "__main__":
-    new_data = fetch_data()
+    new_data = fetch_level1_data()
+    with Pool(4) as p:
+        new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
     langs = {x["id"]: x["languageFlagURL"].lower() for x in fetch_json_data(LANGS_URL)}
     langs = {k: "en" if v == "gb" else v for k, v in langs.items()}
@@ -353,9 +306,8 @@ if __name__ == "__main__":
         else:
             tags_to_reset.add("contact:email")
         d["website"] = f"https://www.remax.pt/{nd['publicName']}"
-        medias = {x["socialMediaChannelName"].lower(): x["socialMediaURL"] for x in (nd["socialMediaUrls"] or [])}
         for media in ("instagram", "tiktok", "facebook", "twitter", "youtube", "linkedin"):
-            d[f"contact:{media}"] = globals()[f"fixup_media_{media}"](medias.get(media, "").strip())
+            d[f"contact:{media}"] = globals()[f"fixup_media_{media}"](nd["socials"].get(media, "").strip())
 
         tags_to_reset.update({"phone", "mobile", "url", "contact:mobile", "contact:website"})
 
