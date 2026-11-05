@@ -59,8 +59,8 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = [float(nd["lat"]) or 38.306893, float(nd["lng"]) or -17.050891]
         if d is None:
-            coord = [float(nd["lat"]), float(nd["lng"])]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
@@ -68,8 +68,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{int(public_id[2:])}"
-            d.data["lat"] = float(nd["lat"])
-            d.data["lon"] = float(nd["lng"])
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
         else:
             old_node_ids.remove(d.data["id"])
