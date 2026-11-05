@@ -260,11 +260,11 @@ def fixup_coords_ex(lat, lon):
     if not lon:
         lon = -17.050891
         valid = False
-    elif lon > 0:
-        lon = -lon
 
     if lat > -9.6 and lat < -6.3 and lon > 36.8 and lon < 42.3:
         lat, lon = lon, lat
+    if lon > 0:
+        lon = -lon
 
     return [lat, lon], valid
 
