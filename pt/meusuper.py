@@ -4,7 +4,7 @@ import html
 import re
 import unicodedata
 
-from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, fixup_coords, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.meusuper.pt/lojas/"
@@ -162,9 +162,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(nd["latitude"]), float(nd["longitude"])]
-        if coord[1] > 0:
-            coord[1] = -coord[1]
+        coord = fixup_coords(nd["latitude"], nd["longitude"])
         if coord[1] < -180 and "." not in nd["longitude"]:
             lng = str(int(coord[1]))
             if re.match(r"-[6-9]", lng):

@@ -14,6 +14,7 @@ from impl.common import (
     DiffDict,
     distance,
     fetch_json_data,
+    fixup_coords,
     gregorian_easter,
     opening_weekdays,
     overpass_query,
@@ -72,7 +73,7 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = nd["id"]
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(nd["lat"] or 38.306893), float(nd["long"] or -17.050891)]
+        coord = fixup_coords(nd["lat"], nd["long"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:

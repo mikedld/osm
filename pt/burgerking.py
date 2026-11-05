@@ -3,7 +3,16 @@
 import itertools
 import re
 
-from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_json_data,
+    fixup_coords,
+    opening_weekdays,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 # DATA_URL = "https://www.burgerking.pt/api/whitelabel"  # noqa: ERA001
@@ -286,8 +295,8 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = fixup_coords(nd["latitude"], nd["longitude"])
         if d is None:
-            coord = [nd["latitude"], nd["longitude"]]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
@@ -295,8 +304,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id}"
-            d.data["lat"] = nd["latitude"] or 38.306893
-            d.data["lon"] = nd["longitude"] or -17.050891
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
         else:
             old_node_ids.remove(d.data["id"])

@@ -13,6 +13,7 @@ from impl.common import (
     cache_name,
     cookie_jar_name,
     distance,
+    fixup_coords,
     overpass_query,
     save_cookies,
     write_diff,
@@ -87,7 +88,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(nd["lat"]), float(nd["lon"])]
+        coord = fixup_coords(nd["lat"], nd["lon"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:

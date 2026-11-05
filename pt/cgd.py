@@ -4,7 +4,7 @@ import json
 import re
 from multiprocessing import Pool
 
-from impl.common import DiffDict, distance, fetch_html_data, overpass_query, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_html_data, fixup_coords, overpass_query, titleize, write_diff
 
 
 AGENCIAS_DATA_URL = "https://www.cgd.pt/Corporativo/Rede-CGD/Pages/Agencias.aspx"
@@ -113,9 +113,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [nd["lat"], nd["lon"]]
-        if coord[1] > 0:
-            coord[1] = -coord[1]
+        coord = fixup_coords(nd["lat"], nd["lon"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 75]
             if len(ds) == 1:

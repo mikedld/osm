@@ -5,7 +5,7 @@ import re
 from itertools import batched, groupby
 from urllib.parse import urljoin
 
-from impl.common import DiffDict, distance, fetch_html_data, format_phonenumber, overpass_query, write_diff
+from impl.common import DiffDict, distance, fetch_html_data, fixup_coords, format_phonenumber, overpass_query, write_diff
 
 
 DATA_URL = "https://www.synlab.pt/onde-estamos"
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = None  # next((od for od in old_data if od[REF] == public_id), None)
-        coord = [nd["lat"], nd["lng"]]
+        coord = fixup_coords(nd["lat"], nd["lng"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:

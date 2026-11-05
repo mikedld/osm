@@ -9,6 +9,7 @@ from impl.common import (
     DiffDict,
     distance,
     fetch_json_data,
+    fixup_coords,
     format_phonenumber,
     opening_weekdays,
     overpass_query,
@@ -135,7 +136,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None) if public_id else None
-        coord = [nd["latitude"], nd["longitude"]]
+        coord = fixup_coords(nd["latitude"], nd["longitude"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and x.data["id"] in old_node_ids and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:

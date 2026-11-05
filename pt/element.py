@@ -9,6 +9,7 @@ from impl.common import (
     distance,
     fetch_html_data,
     fetch_json_data,
+    fixup_coords_ex,
     lookup_postcode,
     overpass_query,
     titleize,
@@ -103,9 +104,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(nd["latitude"] or "38.306893"), float(nd["longitude"] or "-17.050891")]
-        if coord[1] > 0:
-            coord[1] = -coord[1]
+        coord, coord_valid = fixup_coords_ex(nd["latitude"], nd["longitude"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
@@ -154,11 +153,7 @@ if __name__ == "__main__":
         if not d["addr:street"] and not d["addr:place"] and not d["addr:suburb"]:
             d["x-dld-addr"] = address
 
-        if (
-            (not nd["latitude"] or not nd["longitude"])
-            and d["addr:postcode"]
-            and (postcode := lookup_postcode(d["addr:postcode"]))
-        ):
+        if not coord_valid and d["addr:postcode"] and (postcode := lookup_postcode(d["addr:postcode"])):
             d.data["lat"], d.data["lon"] = postcode[0]
 
         for key in tags_to_reset:

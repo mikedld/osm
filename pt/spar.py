@@ -11,6 +11,7 @@ from impl.common import (
     distance,
     fetch_html_data,
     fetch_json_data,
+    fixup_coords,
     format_phonenumber,
     opening_weekdays,
     overpass_query,
@@ -116,9 +117,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float((nd["latitude"] or "38.306893").rstrip(",")), float(nd["longitude"] or "-17.050891")]
-        if coord[1] > 0:
-            coord[1] = -coord[1]
+        coord = fixup_coords((nd["latitude"] or "").rstrip(","), nd["longitude"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:

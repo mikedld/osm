@@ -240,6 +240,39 @@ def frange(x, y, step):
         x += step
 
 
+def fixup_coords_ex(lat, lon):
+    valid = True
+
+    try:
+        lat = round(float(lat), 7)
+    except (ValueError, TypeError):
+        lat = 0
+
+    if not lat:
+        lat = 38.306893
+        valid = False
+
+    try:
+        lon = round(float(lon), 7)
+    except (ValueError, TypeError):
+        lon = 0
+
+    if not lon:
+        lon = -17.050891
+        valid = False
+    elif lon > 0:
+        lon = -lon
+
+    if lat > -9.6 and lat < -6.3 and lon > 36.8 and lon < 42.3:
+        lat, lon = lon, lat
+
+    return [lat, lon], valid
+
+
+def fixup_coords(lat, lon):
+    return fixup_coords_ex(lat, lon)[0]
+
+
 def distance(a, b):
     dlat = radians(b[0]) - radians(a[0])
     dlon = radians(b[1]) - radians(a[1])

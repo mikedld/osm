@@ -7,7 +7,7 @@ import re
 from lxml import etree
 from playwright.sync_api import sync_playwright
 
-from impl.common import DiffDict, cache_name, distance, format_phonenumber, overpass_query, titleize, write_diff
+from impl.common import DiffDict, cache_name, distance, fixup_coords, format_phonenumber, overpass_query, titleize, write_diff
 from impl.config import ENABLE_CACHE, PLAYWRIGHT_CDP_URL, PLAYWRIGHT_CONTEXT_OPTS
 
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [nd["lat"], nd["lng"]]
+        coord = fixup_coords(nd["lat"], nd["lng"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:

@@ -3,7 +3,16 @@
 import re
 from urllib.parse import urlparse
 
-from impl.common import DiffDict, distance, fetch_json_data, format_phonenumber, overpass_query, titleize, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_json_data,
+    fixup_coords,
+    format_phonenumber,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 DATA_URL = "https://remax.pt/api/Office/PaginatedSearch"
@@ -293,7 +302,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [nd["latitude"], nd["longitude"]]
+        coord = fixup_coords(nd["latitude"], nd["longitude"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:

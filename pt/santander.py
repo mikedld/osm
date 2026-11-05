@@ -10,6 +10,7 @@ from impl.common import (
     cover_polygon,
     distance,
     fetch_json_data,
+    fixup_coords,
     format_phonenumber,
     merge_weekdays,
     overpass_query,
@@ -197,8 +198,8 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = fixup_coords(nd["location"]["coordinates"][1], nd["location"]["coordinates"][0])
         if d is None:
-            coord = [nd["location"]["coordinates"][1], nd["location"]["coordinates"][0]]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:
                 d = ds[0]
@@ -206,8 +207,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = str(new_node_id)
-            d.data["lat"] = nd["location"]["coordinates"][1]
-            d.data["lon"] = nd["location"]["coordinates"][0]
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
             new_node_id -= 1
         else:

@@ -15,6 +15,7 @@ from impl.common import (
     cookie_jar_name,
     distance,
     fetch_html_data,
+    fixup_coords,
     opening_weekdays,
     overpass_query,
     save_cookies,
@@ -241,8 +242,8 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = fixup_coords(nd["lat"], nd["lon"])
         if d is None:
-            coord = [nd["lat"], nd["lon"]]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
@@ -255,8 +256,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = str(new_node_id)
-            d.data["lat"] = nd["lat"]
-            d.data["lon"] = nd["lon"]
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
             new_node_id -= 1
         else:

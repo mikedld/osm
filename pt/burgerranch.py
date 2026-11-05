@@ -2,7 +2,7 @@
 
 import re
 
-from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, fixup_coords, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.burgerranch.com/localizacoes/"
@@ -30,8 +30,8 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = None  # next((od for od in old_data if od[REF] == public_id), None)
+        coord = fixup_coords(nd["latitude"], nd["longitude"])
         if d is None:
-            coord = [float(nd["latitude"]), float(nd["longitude"])]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
@@ -39,8 +39,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = str(new_node_id)
-            d.data["lat"] = float(nd["latitude"])
-            d.data["lon"] = float(nd["longitude"])
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
             new_node_id -= 1
         else:

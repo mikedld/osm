@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 from lxml import etree
 from more_itertools import flatten
 
-from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, fixup_coords, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.turiscar.pt/pt/estacoes"
@@ -95,8 +95,8 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = str(nd["id"])
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = fixup_coords(nd["lat"], nd["lon"])
         if d is None:
-            coord = [nd["lat"], nd["lon"]]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
@@ -104,8 +104,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id}"
-            d.data["lat"] = nd["lat"]
-            d.data["lon"] = nd["lon"]
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
         else:
             old_node_ids.remove(d.data["id"])

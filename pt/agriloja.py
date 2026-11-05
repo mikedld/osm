@@ -3,7 +3,16 @@
 import itertools
 import re
 
-from impl.common import DiffDict, distance, fetch_json_data, format_phonenumber, overpass_query, titleize, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_json_data,
+    fixup_coords,
+    format_phonenumber,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 DATA_URL = "https://www.agriloja.pt/pt/as-nossas-lojas_596.html"
@@ -82,7 +91,7 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = nd["id"]
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = list(map(float, re.split(r"\s*[,;]\s*", nd["coordinates"].strip())))[:2]
+        coord = fixup_coords(*re.split(r"\s*[,;]\s*", nd["coordinates"].strip())[:2])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:

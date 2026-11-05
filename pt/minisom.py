@@ -7,7 +7,17 @@ from multiprocessing import Pool
 
 from unidecode import unidecode
 
-from impl.common import BASE_NAME, LISBON_TZ, DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, write_diff
+from impl.common import (
+    BASE_NAME,
+    LISBON_TZ,
+    DiffDict,
+    distance,
+    fetch_json_data,
+    fixup_coords,
+    opening_weekdays,
+    overpass_query,
+    write_diff,
+)
 from impl.config import CONFIG
 
 
@@ -82,8 +92,8 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = fixup_coords(nd["latitude"], nd["longitude"])
         if d is None:
-            coord = [nd["latitude"], nd["longitude"]]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
@@ -91,8 +101,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id.strip('c')}"
-            d.data["lat"] = nd["latitude"]
-            d.data["lon"] = nd["longitude"]
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
         else:
             old_node_ids.remove(d.data["id"])

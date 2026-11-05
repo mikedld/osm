@@ -6,7 +6,17 @@ from datetime import date, datetime
 
 from unidecode import unidecode
 
-from impl.common import BASE_NAME, DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
+from impl.common import (
+    BASE_NAME,
+    DiffDict,
+    distance,
+    fetch_json_data,
+    fixup_coords,
+    opening_weekdays,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 from impl.config import CONFIG
 
 
@@ -215,7 +225,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(addr["latitude"]), float(addr["longitude"])]
+        coord = fixup_coords(addr["latitude"], addr["longitude"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:

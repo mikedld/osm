@@ -8,6 +8,7 @@ from impl.common import (
     DiffDict,
     distance,
     fetch_html_data,
+    fixup_coords,
     lookup_gmaps_coords,
     lookup_postcode,
     overpass_query,
@@ -96,8 +97,8 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = nd["id"]
         d = next((od for od in old_data if od[REF] == public_id), None)
-        if d is None and nd["location"]:
-            coord = nd["location"][0]
+        coord = fixup_coords(*(nd["location"] or [[None, None]])[0])
+        if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
@@ -105,8 +106,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id}"
-            d.data["lat"] = nd["location"][0][0]
-            d.data["lon"] = nd["location"][0][1]
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
         else:
             old_node_ids.remove(d.data["id"])

@@ -6,7 +6,16 @@ from multiprocessing import Pool
 import requests
 from lxml import etree
 
-from impl.common import DiffDict, distance, fetch_json_data, format_phonenumber, overpass_query, titleize, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_json_data,
+    fixup_coords,
+    format_phonenumber,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 PAGE_URL = "https://www.era.pt/agencias"
@@ -158,7 +167,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [nd["Location"]["lat"], nd["Location"]["lng"]]
+        coord = fixup_coords(nd["Location"]["lat"], nd["Location"]["lng"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:

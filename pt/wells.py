@@ -5,7 +5,16 @@ from functools import reduce
 
 from lxml import etree
 
-from impl.common import DiffDict, distance, fetch_json_data, format_phonenumber, overpass_query, titleize, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_json_data,
+    fixup_coords,
+    format_phonenumber,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 DATA_URL = "https://wells.pt/lojas-wells"
@@ -167,10 +176,8 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [nd["latitude"] or 38.306893, nd["longitude"] or -17.050891]
-        if coord[0] > -9.6 and coord[0] < -6.3 and coord[1] > 36.8 and coord[1] < 42.3:
-            coord = [coord[1], coord[0]]
-        if d is None and nd["latitude"] is not None and nd["longitude"] is not None:
+        coord = fixup_coords(nd["latitude"], nd["longitude"])
+        if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]

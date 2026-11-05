@@ -6,7 +6,7 @@ from multiprocessing import Pool
 from lxml import etree
 from unidecode import unidecode
 
-from impl.common import DiffDict, distance, fetch_json_data, overpass_query, titleize, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, fixup_coords, overpass_query, titleize, write_diff
 
 
 DATA_URL = "https://www.recheio.pt/portal/pt-PT/webruntime/api/apex/execute"
@@ -103,10 +103,8 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = (
-            [nd["RCH_LatitudeLongitude__c"]["latitude"], nd["RCH_LatitudeLongitude__c"]["longitude"]]
-            if "RCH_LatitudeLongitude__c" in nd
-            else [38.306893, -17.050891]
+        coord = fixup_coords(
+            nd.get("RCH_LatitudeLongitude__c", {}).get("latitude"), nd.get("RCH_LatitudeLongitude__c", {}).get("longitude")
         )
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]

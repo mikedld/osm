@@ -3,7 +3,7 @@
 import re
 from multiprocessing import Pool
 
-from impl.common import DiffDict, RedoIter, distance, fetch_json_data, overpass_query, write_diff
+from impl.common import DiffDict, RedoIter, distance, fetch_json_data, fixup_coords, overpass_query, write_diff
 
 
 LEVEL1_DATA_URL = "https://www.telpark.com/pt/wp-json/wp/v2/country"
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id and od.data["type"] == old_type), None)
-        coord = [float(nd["latitude"]), float(nd["longitude"])]
+        coord = fixup_coords(nd["latitude"], nd["longitude"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and x.data["type"] == old_type and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:

@@ -11,6 +11,7 @@ from impl.common import (
     DiffDict,
     distance,
     fetch_json_data,
+    fixup_coords,
     overpass_query,
     titleize,
     write_diff,
@@ -78,7 +79,7 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = str(nd["id"])
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [nd["lt"], nd["lg"]]
+        coord = fixup_coords(nd["lt"], nd["lg"])
         if d is None:
             ds = [x for x in old_data if (not x[REF] or len(x[REF]) == 4) and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
@@ -87,8 +88,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = f"-{public_id}"
-            d.data["lat"] = nd["lt"]
-            d.data["lon"] = nd["lg"]
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
         else:
             old_node_ids.remove(d.data["id"])

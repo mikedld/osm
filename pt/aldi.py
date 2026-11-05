@@ -5,7 +5,16 @@ import re
 
 from unidecode import unidecode
 
-from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, titleize, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_json_data,
+    fixup_coords,
+    opening_weekdays,
+    overpass_query,
+    titleize,
+    write_diff,
+)
 
 
 DATA_URL = "https://locator.uberall.com/api/storefinders/ALDINORDPT_YTvsWfhEG5TCPruM6ab6sZIi0Xodyx/locations/all"
@@ -59,7 +68,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(nd["lat"]) or 38.306893, float(nd["lng"]) or -17.050891]
+        coord = fixup_coords(nd["lat"], nd["lng"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:

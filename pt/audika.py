@@ -3,7 +3,7 @@
 import itertools
 import re
 
-from impl.common import DiffDict, distance, fetch_json_data, opening_weekdays, overpass_query, write_diff
+from impl.common import DiffDict, distance, fetch_json_data, fixup_coords, opening_weekdays, overpass_query, write_diff
 
 
 DATA_URL = "https://www.audika.pt/api/clinics/getclinics/{347A23B3-5B62-480A-984B-F51C53E516E8}"
@@ -52,8 +52,8 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = nd["ItemId"].lower().strip("}{")
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = fixup_coords(nd["Latitude"], nd["Longitude"])
         if d is None:
-            coord = [float(nd["Latitude"]), float(nd["Longitude"])]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
                 d = ds[0]
@@ -61,8 +61,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = str(new_node_id)
-            d.data["lat"] = float(nd["Latitude"])
-            d.data["lon"] = float(nd["Longitude"])
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
             new_node_id -= 1
         else:

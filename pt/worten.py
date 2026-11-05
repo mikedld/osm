@@ -6,7 +6,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from impl.common import DiffDict, cache_name, distance, overpass_query, titleize, write_diff
+from impl.common import DiffDict, cache_name, distance, fixup_coords, overpass_query, titleize, write_diff
 from impl.config import ENABLE_CACHE, PLAYWRIGHT_CDP_URL, PLAYWRIGHT_CONTEXT_OPTS
 
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = nd["id"]
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = [float(nd["latitude"]), float(nd["longitude"])]
+        coord = fixup_coords(nd["latitude"], nd["longitude"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:

@@ -8,7 +8,16 @@ from multiprocessing import Pool
 from lxml import etree
 from requests import HTTPError
 
-from impl.common import DiffDict, distance, fetch_html_data, fetch_json_data, opening_weekdays, overpass_query, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_html_data,
+    fetch_json_data,
+    fixup_coords,
+    opening_weekdays,
+    overpass_query,
+    write_diff,
+)
 
 
 LEVEL1_DATA_URL = "https://www.auchan.pt/pt/lojas"
@@ -263,8 +272,8 @@ if __name__ == "__main__":
     for nd in new_data:
         public_id = nd["id"]
         d = next((od for od in old_data if od[REF] == public_id), None)
+        coord = fixup_coords(nd["latitude"], nd["longitude"])
         if d is None:
-            coord = [nd["latitude"], nd["longitude"]]
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 100]
             if len(ds) == 1:
                 d = ds[0]
@@ -272,8 +281,7 @@ if __name__ == "__main__":
             d = DiffDict()
             d.data["type"] = "node"
             d.data["id"] = str(new_node_id)
-            d.data["lat"] = nd["latitude"]
-            d.data["lon"] = nd["longitude"]
+            d.data["lat"], d.data["lon"] = coord
             old_data.append(d)
             new_node_id -= 1
         else:

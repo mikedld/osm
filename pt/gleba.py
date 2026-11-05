@@ -4,7 +4,16 @@ import re
 
 from more_itertools import one
 
-from impl.common import DiffDict, distance, fetch_html_data, format_phonenumber, lookup_gmaps_coords, overpass_query, write_diff
+from impl.common import (
+    DiffDict,
+    distance,
+    fetch_html_data,
+    fixup_coords,
+    format_phonenumber,
+    lookup_gmaps_coords,
+    overpass_query,
+    write_diff,
+)
 
 
 DATA_URL = "https://mygleba.com/pt/lojas-gleba"
@@ -66,7 +75,7 @@ if __name__ == "__main__":
         tags_to_reset = set()
 
         d = next((od for od in old_data if od[REF] == public_id), None)
-        coord = nd["coords"]
+        coord = fixup_coords(*nd["coords"])
         if d is None:
             ds = [x for x in old_data if not x[REF] and distance([x.lat, x.lon], coord) < 250]
             if len(ds) == 1:
