@@ -157,14 +157,22 @@ LINKEDIN_COMPANIES = {
 
 
 def fetch_data():
-    payload = {
-        "filters": [],
-        "pageNumber": 1,
-        "pageSize": 9999,
-        "sort": ["OfficeNameToSort"],
-        "searchValue": "",
-    }
-    return fetch_json_data(DATA_URL, json=payload)["results"]
+    results = []
+    page_idx = 1
+    while True:
+        payload = {
+            "filters": [],
+            "pageNumber": page_idx,
+            "pageSize": 100,
+            "sort": ["OfficeNameToSort"],
+            "searchValue": "",
+        }
+        page = fetch_json_data(DATA_URL, json=payload)
+        results.extend(page["results"])
+        if not page["hasNextPage"]:
+            break
+        page_idx += 1
+    return results
 
 
 def fixup_operator(v):
