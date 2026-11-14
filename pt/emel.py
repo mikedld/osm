@@ -78,9 +78,14 @@ def fetch_level2_data(data):
     main_el = result_tree.xpath("//section[contains(@class, 'main')]")[0]
     info_el = main_el.xpath("./div[contains(@class, 'parqueinfo')]")[0]
     locations = re.sub(r".*var\s+locations\s*=\s*\[(.+?)\];.*", r"\1", main_el.xpath(".//script/text()")[0], flags=re.DOTALL)
-    locations = json.loads(
-        re.sub(r",\s*-\s*(?=\d)", r",-", locations.split("// [")[0].replace('"', "&quot;").replace("'", '"'))
-    )
+    if location := locations.split("// [")[0].strip().replace('"', "&quot;").replace("'", '"'):
+        address = [x.strip() for x in json.loads(re.sub(r",\s*-\s*(?=\d)", r",-", location))[3:6]]
+    else:
+        address = [
+            info_el.xpath("./p[contains(./strong/text(), 'Morada:')]/text()")[0].strip(),
+            "",
+            "Lisboa",
+        ]
     return {
         **data,
         "url": url,
@@ -91,7 +96,7 @@ def fetch_level2_data(data):
         "capacity": int(info_el.xpath("./p[contains(./strong/text(), 'Número de Lugares:')]/text()")[0].strip()),
         "capacity:charging": int(info_el.xpath("./p[contains(./strong/text(), 'Lugares de Carregamento:')]/text()")[0].strip()),
         "capacity:disabled": int(
-            info_el.xpath("./p[contains(./strong/text(), 'Lugares para Deficientes:')]/text()")[0].strip()
+            info_el.xpath("./p[contains(./strong/text(), 'Lugares para Mobilidade Condicionada:')]/text()")[0].strip()
         ),
         "charge": list(
             itertools.batched(
@@ -105,7 +110,7 @@ def fetch_level2_data(data):
         "charge_comment": "; ".join(result_tree.xpath(".//li[contains(./h1/text(), 'Tarifário')]/div/text()"))
         .strip("; ")
         .lower(),
-        "address": [x.strip() for x in locations[3:6]],
+        "address": address,
     }
 
 
