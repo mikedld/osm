@@ -26,8 +26,10 @@ STAY_DURATIONS = {
     "até 15 minutos": "15 minutes",
     "até 30 minutos": "30 minutes",
     "15 minutos": "15 minutes",
+    "30 min": "30 minutes",
     "30 mins": "30 minutes",
     "30 minutos": "30 minutes",
+    "45 min": "45 minutes",
     "1 h": "1 hour",
     "1 hora": "1 hour",
     "90 minutos": "90 minutes",
@@ -238,7 +240,7 @@ if __name__ == "__main__":
                 fee_cond.append(f"no @ (customers AND stay <= {fixup_stay_duration(free_for_lidl[0])})")
             d["fee:conditional"] = "; ".join(fee_cond) if fee_cond else ""
 
-            if max_daily_price := pop_price(prices, lambda k, _: k in ("máximo diário", "máximo dia")):
+            if max_daily_price := pop_price(prices, lambda k, _: k in ("máximo diário (12h)", "máximo diário", "máximo dia")):
                 d["charge"] = f"{fixup_price(max_daily_price[1])}/day"
             else:
                 d["charge"] = ""
