@@ -47,8 +47,8 @@ def fetch_data():
         page = re.sub(r"\bvar\s+ocvar\b.*$", "", page, flags=re.DOTALL)
         page = re.sub(
             r"\b("
-            r"tile_map_server|googleapis|showStoresDetail|page|url|shop|CDN|country_code|expressions|addresses|countryID|"
-            r"countryName|stores|id|newid|name|coordinates|street|address1|zip|city|email|phone|fax|short_content|schedule|\d+"
+            r"\d+|address1|addresses|CDN|city|coordinates|country_code|countryID|countryName|email|expressions|fax|googleapis|"
+            r"id|link|name|newid|page|phone|schedule|shop|short_content|showStoresDetail|stores|street|tile_map_server|url|zip"
             r")\s*:",
             r'"\1":',
             page,
