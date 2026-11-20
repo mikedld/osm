@@ -2,10 +2,11 @@
 
 import json
 import re
+from multiprocessing import Pool
 
 from playwright.sync_api import sync_playwright
 
-from impl.common import DiffDict, cache_name, distance, fixup_coords, overpass_query, write_diff
+from impl.common import DiffDict, cache_name, distance, fetch_html_data, fixup_coords, overpass_query, save_cookies, write_diff
 from impl.config import ENABLE_CACHE, PLAYWRIGHT_CDP_URL, PLAYWRIGHT_CONTEXT_OPTS
 
 
@@ -19,28 +20,21 @@ BRANCHES = {
     "Av. Roma": "Avenida de Roma",
 }
 SCHEDULE_DAYS_MAPPING = {
-    r"24 de dezembro": "Dec 24",
     r"2ª a 5ª": "Mo-Th",
     r"2ª a 6ª": "Mo-Fr",
-    r"2ª a dom": "Mo-Su",
-    r"2ª a dom.": "Mo-Su",
-    r"2ª a domingo": "Mo-Su",
+    r"2ª a dom(\.|ingo)?": "Mo-Su",
     r"2ª a sábado": "Mo-Sa",
     r"2ª a sexta": "Mo-Fr",
-    r"31 de dezembro": "Dec 31",
-    r"6ª a sábado": "Fr,Sa",
-    r"6ª e sábado": "Fr,Sa",
-    r"6ª feira, sábado e vésperas de feriado": "Fr,Sa,PH -1 day",
+    r"(\d{2}) de dezembro": r"Dec \1",
+    r"6ª [ae] sábado": "Fr,Sa",
+    r"6ª[- ]feira, sábado e vésperas? de feriado": "Fr,Sa,PH -1 day",
     r"6ª feira santa": "easter -2 days",
     r"6ª feira santa e domingo páscoa": "easter -2 days,easter",
-    r"6ª-feira, sábado e vésperas de feriado": "Fr,Sa,PH -1 day",
     r"domingo": "Su",
     r"domingo a 5ª": "Su-Th",
-    r"domingo a 5ª feira": "Su-Th",
-    r"domingo a 5ª-feira": "Su-Th",
-    r"domingo e feriado": "Su,PH",
-    r"domingo e feriados": "Su,PH",
-    r"domingo páscoa": "easter",
+    r"domingo a 5ª[- ]feira": "Su-Th",
+    r"domingo e feriados?": "Su,PH",
+    r"domingo( de)? páscoa( \(\d+ de abril\))?": "easter",
     r"feriados": "PH",
     r"sábado": "Sa",
     r"segunda-feira a sábado": "Mo-Sa",
@@ -53,7 +47,7 @@ SCHEDULE_HOURS_MAPPING = {
     r"(\d{2}):(\d{2}) às (\d{2}):(\d{2})h": r"\1:\2-\3:\4",
     r"(\d{2}):(\d{2})h às (\d{2})h": r"\1:\2-\3:00",
     r"(\d{2})h às (\d{2}):(\d{2})h": r"\1:00-\2:\3",
-    r"(\d{2})h às (\d{2})h": r"\1:00-\2:00",
+    r"(\d{2})h (?:às|[-–]) (\d{2})h\.?": r"\1:00-\2:00",
     r"(\d{2})h(\d{2}) às (\d{2})h": r"\1:\2-\3:00",
     r"encerrado": "off",
 }
@@ -62,7 +56,7 @@ CITIES = {
 }
 
 
-def fetch_data():
+def fetch_level1_data():
     def filter_requests(route, request):
         if request.resource_type in ("stylesheet", "image", "media", "font", "script") and "cloudflare.com" not in request.url:
             # print(f"Aborting request: {request.url}")  # noqa: ERA001
@@ -85,24 +79,28 @@ def fetch_data():
             page.route("**/*", filter_requests)
             page.goto(DATA_URL)
             result = page.content()
+            save_cookies(DATA_URL, {x["name"]: x["value"] for x in context.cookies()})
             browser.close()
         if ENABLE_CACHE:
             cache_file.write_bytes(result.encode("utf-8"))
     else:
         result = cache_file.read_bytes().decode("utf-8")
-    result = re.sub(r"^.*var\s+stores_obj\s*=\s*JSON.parse\('([^']*)'\);.*$", r"\1", result, flags=re.DOTALL)
-    result = [
-        {
-            "id": k,
-            **v,
-        }
-        for k, v in json.loads(result).items()
-    ]
-    return result
+    result = re.sub(r"^.*var\s+stores\s*=\s*(\[.+?\]);.*$", r"\1", result, flags=re.DOTALL)
+    return json.loads(result)
+
+
+def fetch_level2_data(data):
+    result_tree = fetch_html_data(data["link"])
+    return {
+        **data,
+        "id": re.sub(r"^.*\bcontentmanager-content-(\d+)\b.*$", r"\1", result_tree.xpath("/html/body/@class")[0]),
+    }
 
 
 if __name__ == "__main__":
-    new_data = fetch_data()
+    new_data = fetch_level1_data()
+    with Pool(4) as p:
+        new_data = list(p.imap_unordered(fetch_level2_data, new_data))
 
     old_data = [DiffDict(e) for e in overpass_query('nwr[shop][name="Celeiro"](area.country);')]
 
